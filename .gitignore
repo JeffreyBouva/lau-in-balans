@@ -11,3 +11,10 @@ build/
 !.env.local.example
 supabase/.branches/
 supabase/.temp/
+coverage/
+*.tsbuildinfo
+*.p8
+*.p12
+*.jks
+*.keystore
+*.mobileprovision
