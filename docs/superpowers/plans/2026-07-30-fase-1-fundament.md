@@ -394,6 +394,12 @@ describe('dagTotaal', () => {
   it('geeft lege porties bij geen logs', () => {
     expect(dagTotaal([])).toEqual(LEGE_PORTIES);
   });
+  it('geeft een vers object terug, niet de gedeelde constante', () => {
+    const resultaat = dagTotaal([]);
+    expect(resultaat).not.toBe(LEGE_PORTIES);
+    resultaat.eiwit += 1;
+    expect(LEGE_PORTIES.eiwit).toBe(0);
+  });
 });
 ```
 
@@ -428,7 +434,9 @@ export function telPortiesOp(a: Porties, b: Porties): Porties {
 }
 
 export function dagTotaal(logs: ReadonlyArray<{ porties: Porties }>): Porties {
-  return logs.reduce<Porties>((som, log) => telPortiesOp(som, log.porties), LEGE_PORTIES);
+  // Spread: met een lege logs-array geeft reduce de seed zélf terug — zonder copy
+  // zou de caller de gedeelde LEGE_PORTIES-constante kunnen muteren.
+  return logs.reduce<Porties>((som, log) => telPortiesOp(som, log.porties), { ...LEGE_PORTIES });
 }
 ```
 

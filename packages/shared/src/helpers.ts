@@ -21,5 +21,7 @@ export function telPortiesOp(a: Porties, b: Porties): Porties {
 }
 
 export function dagTotaal(logs: ReadonlyArray<{ porties: Porties }>): Porties {
-  return logs.reduce<Porties>((som, log) => telPortiesOp(som, log.porties), LEGE_PORTIES);
+  // Spread: met een lege logs-array geeft reduce de seed zélf terug — zonder copy
+  // zou de caller de gedeelde LEGE_PORTIES-constante kunnen muteren.
+  return logs.reduce<Porties>((som, log) => telPortiesOp(som, log.porties), { ...LEGE_PORTIES });
 }

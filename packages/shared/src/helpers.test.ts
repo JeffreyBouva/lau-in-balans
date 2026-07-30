@@ -38,4 +38,10 @@ describe('dagTotaal', () => {
   it('geeft lege porties bij geen logs', () => {
     expect(dagTotaal([])).toEqual(LEGE_PORTIES);
   });
+  it('geeft een vers object terug, niet de gedeelde constante', () => {
+    const resultaat = dagTotaal([]);
+    expect(resultaat).not.toBe(LEGE_PORTIES);
+    resultaat.eiwit += 1;
+    expect(LEGE_PORTIES.eiwit).toBe(0);
+  });
 });
