@@ -117,8 +117,10 @@ door Laura = nieuwe versie; de reden staat in de sessienotitie of coach_note.
 
 ### RLS (beveiligingsmodel)
 
-- Klant: uitsluitend rijen met `client_id = auth.uid()`; leesrechten op het eigen actieve
-  profiel, schrijfrechten op eigen messages/food_logs/flags.
+- Klant: uitsluitend rijen met `client_id = auth.uid()`; schrijfrechten op eigen
+  messages/food_logs/flags. Het AI-profiel is **coach-only** — de klant ziet het eigen
+  AI-profiel niet in de app (het is Laura's gereedschap, niet klant-UI). De klant kan wél
+  de **naam van de eigen coach** lezen (voor "je coach: Laura").
 - Coach: alle rijen van klanten met `coach_id = eigen coach-id`; schrijft profielversies,
   notes, sessions, coach-messages, en zet flags op resolved.
 - `ai_profile_versions` is voor klanten onzichtbaar behalve waar nodig; Edge Functions
