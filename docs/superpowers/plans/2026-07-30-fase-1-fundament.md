@@ -655,6 +655,8 @@ git commit -m "feat: @lau/shared — domeintypes, handmaten, helpers (TDD) en de
 Run: `supabase init`
 Expected: `supabase/config.toml` aangemaakt. (Vragen over VS Code/Deno-settings: nee is prima.)
 
+Poorten verplaatst naar het 563xx-blok — sweav-base bezet de defaults (543xx); zelfde conventie als muzo-proposal-tool op 553xx. API draait dus op 56321, db op 56322.
+
 - [ ] **Step 2: Maak de migratie aan**
 
 Run: `supabase migration new schema`
@@ -1311,7 +1313,7 @@ export const supabase = createClient(url, anonKey, {
 `.env.example` (lokale waarden komen uit `supabase status`; iOS-simulator kan bij `127.0.0.1`, een fysiek toestel niet — dat is pas relevant bij het cloud-project):
 
 ```bash
-EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:56321
 EXPO_PUBLIC_SUPABASE_ANON_KEY=<anon key uit `supabase status`>
 ```
 
@@ -1386,7 +1388,7 @@ export const brandSage = colors.sage;
 `.env.local.example`:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:56321
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key uit `supabase status`>
 ```
 
