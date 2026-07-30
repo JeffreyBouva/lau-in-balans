@@ -1,0 +1,20 @@
+{
+  "name": "lau-in-balans",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "vitest run packages/shared",
+    "test:rls": "vitest run tests/rls",
+    "seed": "node scripts/seed.mjs",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "verify": "npm run typecheck && npm run test"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.111.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}
