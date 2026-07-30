@@ -4,13 +4,29 @@
 
 **Goal:** Monorepo-fundament voor Lau in Balans: workspaces, gedeeld domeinpakket, Supabase-schema met RLS en seed-data, en werkende scaffolds voor de Expo klant-app en het Next.js coach-dashboard.
 
-**Architecture:** npm-workspaces-monorepo. `packages/shared` is dependency-vrije TypeScript-source (geen build-stap) die door Metro (Expo), Next (transpilePackages) én later Deno geïmporteerd wordt. Supabase draait lokaal via Docker (`supabase start`); RLS is de beveiligingslaag en wordt met echte ingelogde testgebruikers getest.
+**Architecture:** npm-workspaces-monorepo. `packages/shared` is dependency-vrije TypeScript-source (geen build-stap) die door Metro (Expo), Next (transpilePackages) én later Deno geïmporteerd wordt. RLS is de beveiligingslaag en wordt met echte ingelogde testgebruikers getest.
 
-**Tech Stack:** npm workspaces · TypeScript (strict) · Vitest · Supabase CLI (lokaal, Postgres + Auth + RLS) · Expo (React Native, Expo Router) · Next.js (App Router, Tailwind) · @supabase/supabase-js
+**Tech Stack:** npm workspaces · TypeScript (strict) · Vitest · Supabase (gehost, EU) · Expo (React Native, Expo Router) · Next.js (App Router, Tailwind) · @supabase/supabase-js
 
 **Spec:** `docs/superpowers/specs/2026-07-30-lau-in-balans-mvp-design.md`
 
 ---
+
+> ## ⚠️ Werkwijze: gehoste Supabase — GEEN lokaal Docker
+>
+> Deze laptop loopt vast op de lokale Supabase-stack (Docker Desktop is te zwaar). **Draai
+> nooit `supabase start`, `supabase db reset` of `supabase status`.** We werken tegen een
+> gehost Supabase-project (cloud, EU):
+> - Migraties toepassen: `supabase link --project-ref <ref>` (eenmalig) + `supabase db push`.
+> - Env voor seed + RLS-tests komt uit de **Supabase-dashboard → Project Settings → API**
+>   (project-URL, anon key, service-role key), niet uit `supabase status`. Zet die in een
+>   gitignored `.env` in de repo-root; `scripts/supabase-env.mjs` leest uit `process.env`.
+> - `.env.example`-bestanden gebruiken de cloud-URL `https://<ref>.supabase.co`, niet localhost.
+> - Verificatie van schema/policies gebeurt **gedragsmatig** via de RLS-tests (Taak 10) tegen
+>   de cloud-DB, plus de `supabase db push`-output — niet via lokale `docker exec ... psql`.
+>
+> De stappen hieronder noemen soms nog lokale commando's; volg in plaats daarvan altijd deze
+> cloud-werkwijze. Het 563xx-poortblok in `config.toml` is enkel voor (ongebruikte) lokale runs.
 
 ## File Structure (eindresultaat van deze fase)
 
@@ -36,7 +52,8 @@ lau-in-balans/
 │   ├── config.toml              # via `supabase init`
 │   └── migrations/
 │       ├── <ts>_schema.sql      # 9 tabellen
-│       └── <ts>_rls.sql         # RLS + is_coach_of() + realtime-publicatie
+│       ├── <ts>_rls.sql         # RLS + is_coach_of() + realtime-publicatie
+│       └── <ts>_hardening.sql   # security-review-fixes (C1, I4–I8, I11 + policy-gaten)
 ├── scripts/
 │   ├── local-env.mjs            # leest `supabase status -o env`
 │   └── seed.mjs                 # demo-data uit de handoff (via service role)
@@ -896,6 +913,150 @@ git add supabase/migrations/
 git commit -m "feat: RLS-policies — klant/coach-isolatie + realtime-publicatie"
 ```
 
+### Task 8b: Supabase — hardening-migratie (security-review)
+
+Een security-review van het schema + RLS uit Task 7–8 vond één latente Critical en een reeks hardening-punten. De belangrijkste is C1: `is_coach_of` draaide als `security definer` met een niet-lege `search_path`, waardoor een `authenticated` klant met een eigen `pg_temp.clients`-tabel de coach-check kon kapen (`search_path`-hijack). Deze migratie zet de `search_path` leeg, ontzegt `execute`/`temporary` waar niet nodig, en dicht verder: ontbrekende `WITH CHECK` op update-policies (I4/I5), FK-`on delete set null` voor AVG-verwijdering (I6), extra indexes op hot paths (I7), tijdzone-correcte datumdefaults in Europe/Amsterdam (I8), uniciteit van push-tokens (I11), plus enkele policy-gaten (klant leest de naam van de eigen coach; klant corrigeert eigen voedingslogs).
+
+**Files:**
+
+- Create: `supabase/migrations/<ts>_hardening.sql` (via `supabase migration new hardening`)
+
+- [ ] **Step 1: Maak de migratie aan**
+
+Run: `supabase migration new hardening`
+
+- [ ] **Step 2: Schrijf de hardening-SQL**
+
+```sql
+-- Hardening na security-review fase 1.
+-- Fixt: search_path-hijack op is_coach_of (C1), ontbrekende WITH CHECK op
+-- update-policies (I4/I5), FK-acties voor AVG-verwijdering (I6), ontbrekende
+-- indexes (I7), tijdzone-correcte datumdefaults (I8), push-token-uniciteit (I11),
+-- plus enkele policy-gaten (klant leest eigen coach, klant beheert eigen logs).
+
+-- ── C1: is_coach_of — lege search_path sluit de pg_temp-hijack ──
+create or replace function public.is_coach_of(p_client uuid)
+returns boolean
+language sql stable security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.clients c
+    where c.id = p_client and c.coach_id = auth.uid()
+  );
+$$;
+revoke execute on function public.is_coach_of(uuid) from public, anon;
+grant execute on function public.is_coach_of(uuid) to authenticated;
+revoke temporary on database postgres from public;
+
+-- ── I4: flag alleen open→resolved, met correcte auteur ──
+drop policy klant_maakt_flag on public.flags;
+create policy klant_maakt_flag on public.flags
+  for insert with check (
+    client_id = auth.uid() and status = 'open'
+    and resolved_by is null and resolved_at is null
+  );
+
+drop policy coach_rondt_flag_af on public.flags;
+create policy coach_rondt_flag_af on public.flags
+  for update using (public.is_coach_of(client_id) and status = 'open')
+  with check (
+    public.is_coach_of(client_id)
+    and status = 'resolved'
+    and resolved_by = auth.uid()
+    and resolved_at is not null
+  );
+
+-- ── I5: clients — coach mag alleen status/naam/leeftijd wijzigen ──
+drop policy coach_wijzigt_klanten on public.clients;
+create policy coach_wijzigt_klanten on public.clients
+  for update using (coach_id = auth.uid())
+  with check (coach_id = auth.uid());
+
+create or replace function public.clients_guard_update()
+returns trigger language plpgsql as $$
+begin
+  if new.id <> old.id
+     or new.coach_id <> old.coach_id
+     or new.startdatum <> old.startdatum
+     or new.created_at <> old.created_at then
+    raise exception 'clients: id, coach_id, startdatum en created_at zijn niet wijzigbaar';
+  end if;
+  return new;
+end;
+$$;
+create trigger clients_guard_update before update on public.clients
+  for each row execute function public.clients_guard_update();
+
+-- ── klant leest de naam van de eigen coach (voor "je coach: Laura") ──
+create policy klant_leest_eigen_coach on public.coaches
+  for select using (
+    exists (select 1 from public.clients c
+            where c.coach_id = coaches.id and c.id = auth.uid())
+  );
+
+-- ── klant corrigeert eigen voedingslogs (eten-tab) ──
+create policy klant_wijzigt_eigen_logs on public.food_logs
+  for update using (client_id = auth.uid()) with check (client_id = auth.uid());
+create policy klant_wist_eigen_logs on public.food_logs
+  for delete using (client_id = auth.uid());
+
+-- ── I6: historische auteur/afhandelaar loskoppelen bij coach-verwijdering ──
+alter table public.ai_profile_versions
+  drop constraint ai_profile_versions_author_fkey,
+  add constraint ai_profile_versions_author_fkey
+    foreign key (author) references public.coaches (id) on delete set null;
+alter table public.flags
+  drop constraint flags_resolved_by_fkey,
+  add constraint flags_resolved_by_fkey
+    foreign key (resolved_by) references public.coaches (id) on delete set null;
+
+-- ── I7: indexes voor bewezen hot paths ──
+create index coach_notes_client_datum_idx on public.coach_notes (client_id, datum desc);
+create index weekly_sessions_client_datum_idx on public.weekly_sessions (client_id, datum desc);
+create index messages_unread_idx on public.messages (client_id) where read_at is null;
+create index flags_open_idx on public.flags (created_at desc) where status = 'open';
+create index messages_food_log_idx on public.messages (food_log_id);
+
+-- ── I8: datumdefaults in Europe/Amsterdam ──
+alter table public.clients         alter column startdatum set default ((now() at time zone 'Europe/Amsterdam')::date);
+alter table public.food_logs       alter column datum      set default ((now() at time zone 'Europe/Amsterdam')::date);
+alter table public.coach_notes     alter column datum      set default ((now() at time zone 'Europe/Amsterdam')::date);
+alter table public.weekly_sessions alter column datum      set default ((now() at time zone 'Europe/Amsterdam')::date);
+
+-- ── I11: één device-token hoort bij één klant ──
+alter table public.push_tokens add constraint push_tokens_token_unique unique (expo_push_token);
+```
+
+- [ ] **Step 3: Pas toe en verifieer tegen de live db**
+
+Run: `supabase db reset` (past alle drie de migraties vers toe; verwacht exit 0).
+
+Verifieer C1 gesloten — als échte `authenticated`-rol met de JWT-claims van een niet-coach-klant:
+
+```sql
+set role authenticated;
+set request.jwt.claims to '{"sub":"<een clients.id>","role":"authenticated"}';
+select public.is_coach_of('<andere client id>');           -- f
+create temp table clients(id uuid, coach_id uuid);
+insert into clients values ('<andere client id>', '<een clients.id>');
+select public.is_coach_of('<andere client id>');           -- moet nog steeds f zijn (was voorheen t)
+reset role;
+```
+
+Verder verifiëren:
+
+- `select proconfig from pg_proc where proname='is_coach_of';` → `{search_path=""}`
+- policy-count per tabel opnieuw: flags nog steeds 4 (herdefinieerd), clients nog steeds 3, coaches nu 2, food_logs nu 5.
+- 5 nieuwe indexes aanwezig; `confdeltype='n'` (SET NULL) op de twee gewijzigde FK's; `push_tokens_token_unique` bestaat; trigger `clients_guard_update` bestaat; realtime-publicatie nog steeds exact messages + flags.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add supabase/migrations/
+git commit -m "feat: hardening-migratie — search_path-fix, WITH CHECK-policies, indexes, FK-acties, tz-datums, push-uniek (security-review)"
+```
+
 ### Task 9: Seed-script met handoff-demodata
 
 **Files:**
@@ -1370,9 +1531,10 @@ Run (root): `npm install`
 
 - [ ] **Step 3: Schrijf `apps/coach/src/lib/supabase.ts` en `.env.local.example`**
 
+`src/lib/supabase.ts` (importeert géén `colors` — de env-check zou anders bij `next build` afgaan zodra iets dit bestand in de graph trekt; de transpilePackages-proof zit in `page.tsx`, zie Step 4):
+
 ```ts
 import { createClient } from '@supabase/supabase-js';
-import { colors } from '@lau/shared'; // bewijst transpilePackages; echte UI volgt in fase 4
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -1382,26 +1544,35 @@ if (!url || !anonKey) {
 }
 
 export const supabase = createClient(url, anonKey);
-export const brandSage = colors.sage;
 ```
 
-`.env.local.example`:
+`.env.local.example` (cloud-project — waarden uit Supabase-dashboard → Project Settings → API):
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:56321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key uit `supabase status`>
+NEXT_PUBLIC_SUPABASE_URL=https://<jouw-project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon public key uit de Supabase-dashboard>
 ```
 
-- [ ] **Step 4: Build-smoketest**
+- [ ] **Step 4: Bewijs transpilePackages via een page-import**
 
-Run: `cp apps/coach/.env.local.example apps/coach/.env.local` → vul de echte anon key in (uit `supabase status`) → `npm run build -w apps/coach`
-Expected: build PASS. (`supabase.ts` wordt nog nergens geïmporteerd, dus de env-check kan de build niet breken — de build bewijst vooral dat het scaffold en transpilePackages kloppen.)
+Importeer een gedeelde token in de gegenereerde homepage zodat `next build` `@lau/shared` daadwerkelijk transpileert. In `apps/coach/src/app/page.tsx`: voeg bovenaan de import toe en pas de token toe op het buitenste element. Importeer `supabase.ts` nergens (env-check zou de build breken).
 
-- [ ] **Step 5: Commit**
+```tsx
+import { colors } from '@lau/shared';
+// ...
+<div style={{ borderTop: `3px solid ${colors.sage}` }}>
+```
+
+- [ ] **Step 5: Typecheck + build-smoketest**
+
+Run: `npm run typecheck -w apps/coach` → PASS.
+Run: `npm run build -w apps/coach` → PASS. De build compileert `page.tsx` die `@lau/shared` importeert (bewijst transpilePackages); `supabase.ts` zit niet in de graph, dus de env-check kan de build niet breken. Er is dus géén `.env.local` nodig voor de smoketest.
+
+- [ ] **Step 6: Commit**
 
 ```bash
-git add apps/coach package-lock.json
-git commit -m "feat: Next.js-scaffold coach-dashboard met supabase-client en @lau/shared"
+git add apps/coach package-lock.json docs/superpowers/plans/2026-07-30-fase-1-fundament.md
+git commit -m "feat: Next.js-scaffold coach-dashboard met supabase-client en @lau/shared (cloud env)"
 ```
 
 ### Task 13: Eindverificatie fase 1
@@ -1422,3 +1593,11 @@ git add README.md && git commit -m "docs: verificatiecommando's fase 1" || true
 ```
 
 Definition of done fase 1: `npm run verify` en `npm run test:rls` slagen op een schone checkout met draaiende Docker; beide app-scaffolds bouwen; de seed toont de handoff-demodata in Supabase Studio (`supabase status` → Studio-URL).
+
+## Bewust uitgesteld na security-review
+
+De hardening-migratie (Task 8b) dicht de gevonden Critical + hardening-punten. Drie zaken zijn bewust naar een latere fase geschoven — geen van alle een cross-tenant-disclosure vandaag:
+
+- **`read_at` heeft nog geen schrijf-pad.** Berichten markeren als gelezen komt in fase 4 via service-role of een dedicated RPC; er is nu geen klant/coach-policy die `messages.read_at` mag zetten.
+- **Realtime DELETE-events omzeilen RLS cross-tenant.** De DELETE-payload is enkel een UUID (de primaire sleutel), niet RLS-gefilterd. Zet in fase 4 daarom **NOOIT** `REPLICA IDENTITY FULL` op `messages` (dat zou de volledige oude rij cross-tenant lekken); gebruik soft-delete als je in de UI een `old_record` nodig hebt.
+- **Cross-tenant FK-refs zijn niet afgedwongen.** `messages.food_log_id` en `weekly_sessions.resulting_profile_version` kunnen in theorie naar een rij van een andere klant wijzen. Dit is een integriteits-, geen disclosure-kwestie: reads blijven RLS-gefilterd, dus er lekt niets. Een composite-FK of trigger die tenant-gelijkheid afdwingt volgt in een latere fase.
