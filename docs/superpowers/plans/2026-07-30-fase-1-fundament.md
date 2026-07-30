@@ -64,7 +64,7 @@ Expected: installatie slaagt; `watchman --version` print een versienummer.
 - [ ] **Step 2: Verifieer de rest van de toolchain**
 
 Run: `node --version && supabase --version && docker info --format '{{.ServerVersion}}'`
-Expected: Node ≥ 20, een Supabase CLI-versie, en een Docker-serverversie (draait al). EAS CLI is pas in fase 6 nodig — niet installeren.
+Expected: Node ≥ 22.12, een Supabase CLI-versie, en een Docker-serverversie (draait al). EAS CLI is pas in fase 6 nodig — niet installeren.
 
 ### Task 2: Monorepo-root
 
@@ -78,6 +78,8 @@ Expected: Node ≥ 20, een Supabase CLI-versie, en een Docker-serverversie (draa
 {
   "name": "lau-in-balans",
   "private": true,
+  "engines": { "node": ">=22.12.0" },
+  "packageManager": "npm@11.16.0",
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "test": "vitest run packages/shared",
@@ -99,6 +101,7 @@ Expected: Node ≥ 20, een Supabase CLI-versie, en een Docker-serverversie (draa
     "module": "ESNext",
     "moduleResolution": "bundler",
     "esModuleInterop": true,
+    "isolatedModules": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "noUncheckedIndexedAccess": true
@@ -143,7 +146,7 @@ AI-assisted voedingscoaching: Expo klant-app (iOS/Android) + Next.js coach-dashb
 
 - [ ] **Step 5: Installeer root-devDependencies**
 
-Run: `npm install -D typescript vitest @supabase/supabase-js`
+Run: `npm install -D typescript@^5.9 vitest @supabase/supabase-js`
 Expected: `package-lock.json` ontstaat, geen errors.
 
 - [ ] **Step 6: Commit**
