@@ -18,6 +18,7 @@
 lau-in-balans/
 ├── package.json                 # workspaces + root-scripts (test, seed, typecheck, verify)
 ├── tsconfig.base.json           # gedeelde strict-instellingen
+├── tsconfig.json                # root-typecheck van tests/ (Task 10)
 ├── .gitignore
 ├── README.md
 ├── packages/shared/
@@ -177,7 +178,11 @@ git commit -m "chore: monorepo-root met workspaces en tooling"
 ```json
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "noEmit": true },
+  "compilerOptions": {
+    "noEmit": true,
+    "lib": ["ES2022"],
+    "types": []
+  },
   "include": ["src"]
 }
 ```
@@ -997,7 +1002,8 @@ git commit -m "feat: seed-script met demo-data uit de design handoff"
 
 **Files:**
 
-- Create: `tests/rls/rls.test.ts`
+- Create: `tests/rls/rls.test.ts`, `tsconfig.json` (root)
+- Modify: `package.json` (root — typecheck-script)
 
 - [ ] **Step 1: Schrijf de tests**
 
@@ -1108,10 +1114,33 @@ describe('anoniem', () => {
 Run: `npm run test:rls`
 Expected: alle tests PASS (vereist draaiende `supabase start` + verse `npm run seed`).
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Root-tsconfig zodat tests/scripts meegecheckt worden**
+
+Schrijf root `tsconfig.json`:
+
+```json
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": { "noEmit": true, "types": [] },
+  "include": ["tests"]
+}
+```
+
+En wijzig het typecheck-script in root `package.json` naar:
+
+```json
+"typecheck": "tsc --noEmit && npm run typecheck --workspaces --if-present"
+```
+
+Dit gebeurt in Task 10 en niet eerder omdat er tot nu toe geen `tests/`-map bestaat en `tsc` faalt op een lege `include`.
+
+Run: `npm run typecheck`
+Expected: geen errors (root-tests + alle workspaces).
+
+- [ ] **Step 4: Commit**
 
 ```bash
-git add tests/
+git add tests/ tsconfig.json package.json
 git commit -m "test: RLS-isolatie — klant/coach/anoniem tegen lokale Supabase"
 ```
 
@@ -1214,6 +1243,8 @@ const nextConfig: NextConfig = {
 
 export default nextConfig;
 ```
+
+create-next-app genereert `apps/coach/.gitignore` met een `.env*`-regel die de root-negatie verslaat (nested .gitignore wint). Voeg daarom aan `apps/coach/.gitignore` een regel `!.env.local.example` toe. (Zonder deze regel wordt `apps/coach/.env.local.example` — een Task 12-deliverable — stil overgeslagen door `git add`.)
 
 Run (root): `npm install`
 
