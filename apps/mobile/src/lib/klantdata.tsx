@@ -17,7 +17,7 @@ function waarden(clientId: string) {
   const berichten = useBerichten(clientId);
   const flag = useFlag(clientId);
   const logs = useVoedingslogs(clientId);
-  // Sleutels botsen niet: berichten/verstuur · openFlag/maakFlag · dag/week/quick/pasQuickAan/voegLogToe/herlaad.
+  // Sleutels botsen niet: berichten/verstuur/wachtOpLau · openFlag/maakFlag · dag/week/quick/pasQuickAan/voegLogToe/herlaad.
   return { ...berichten, ...flag, ...logs };
 }
 

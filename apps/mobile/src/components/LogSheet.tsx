@@ -42,12 +42,12 @@ export function LogSheet({ zichtbaar, onSluit }: { zichtbaar: boolean; onSluit: 
       .select('id')
       .single();
     if (log) await supabase.from('messages').insert({ client_id: clientId, sender: 'client', food_log_id: log.id });
+    supabase.functions.invoke('lau-reply').catch(() => {}); // Lau reageert op de log; antwoord komt via realtime
     await herlaad(); // ververs de gedeelde logs zodat de Eten-dagtotaal meteen klopt
     setDraft(legeDraft());
     setBezig(false);
     onSluit();
-    router.replace('/(tabs)/chat'); // de log-bubbel verschijnt daar via realtime
-    // fase 3: hierna reageert de lau-reply Edge Function op de log
+    router.replace('/(tabs)/chat'); // de log-bubbel + Lau's reactie verschijnen daar via realtime
   }
 
   return (
