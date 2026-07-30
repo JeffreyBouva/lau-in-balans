@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500&display=swap" rel="stylesheet" />
+<style>
+  body { margin: 0; background: #EAE6DE; font-family: "DM Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  * { box-sizing: border-box; }
+  a { color: #63805F; text-decoration: none; }
+  a:hover { color: #4C6749; }
+  button { font-family: inherit; cursor: pointer; }
+  input, textarea { font-family: inherit; }
+  @keyframes lauFade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes lauSheet { from { transform: translateY(100%); } to { transform: none; } }
+  @keyframes lauDot { 0%, 60%, 100% { opacity: .25; } 30% { opacity: 1; } }
+</style>
+</helmet>
+
+<div style="min-height: 100vh; padding: 28px 28px 64px; display: flex; flex-direction: column; align-items: center; gap: 22px;">
+
+  <div style="width: 100%; max-width: 1320px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap;">
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <div style="font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: #8C8F84;">MVP v1 · klaar voor development</div>
+      <div style="font-family: 'Newsreader', serif; font-size: 30px; font-weight: 400; color: #262A24; letter-spacing: -.01em;">Lau in Balans</div>
+      <div style="font-size: 13px; color: #6E7168; max-width: 620px; line-height: 1.5;">Concept A als basis · bottom sheet voor Laura · eten bijhouden op handmaten, in de chat én als eigen scherm · coach reageert vanuit het gesprek.</div>
+    </div>
+    <div style="display: flex; background: #FFFFFF; border: 1px solid #E5E0D6; border-radius: 999px; padding: 4px; gap: 2px;">
+      <button onClick="{{ showKlant }}" style="{{ tabKlantStyle }}">Klant-app · mobiel</button>
+      <button onClick="{{ showCoach }}" style="{{ tabCoachStyle }}">Coach-dashboard · desktop</button>
+    </div>
+  </div>
+
+  <sc-if value="{{ isKlant }}" hint-placeholder-val="{{ true }}">
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 18px;">
+
+      <div style="display: flex; gap: 6px; background: #FFFFFF; border: 1px solid #E5E0D6; border-radius: 999px; padding: 4px;">
+        <sc-for list="{{ klantJumps }}" as="j" hint-placeholder-count="5">
+          <button onClick="{{ j.onClick }}" style="{{ j.style }}">{{ j.label }}</button>
+        </sc-for>
+      </div>
+
+      <div style="width: 390px; height: 844px; background: #F6F3ED; border: 1px solid #DCD6CA; border-radius: 30px; overflow: hidden; position: relative; box-shadow: 0 24px 60px -30px rgba(38, 42, 36, .35);">
+
+        <sc-if value="{{ isOnboarding }}" hint-placeholder-val="{{ true }}">
+          <div style="height: 100%; display: flex; flex-direction: column;">
+            <div style="padding: 26px 26px 0; display: flex; flex-direction: column; gap: 14px;">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="font-family: 'Newsreader', serif; font-size: 15px; color: #63805F; letter-spacing: .02em;">Lau in Balans</div>
+                <div style="font-size: 12px; color: #9A9C91;">{{ obLabel }}</div>
+              </div>
+              <div style="height: 3px; background: #E5E0D6; border-radius: 999px; overflow: hidden;">
+                <div style="{{ obBarStyle }}"></div>
+              </div>
+            </div>
+
+            <div style="flex: 1; overflow: auto; padding: 30px 26px 24px;">
+
+              <sc-if value="{{ ob0 }}" hint-placeholder-val="{{ true }}">
+                <div style="display: flex; flex-direction: column; gap: 20px; animation: lauFade .4s ease both;">
+                  <div style="width: 64px; height: 64px; border-radius: 999px; background: #E7EEE3; display: flex; align-items: center; justify-content: center; font-family: 'Newsreader', serif; font-size: 26px; color: #63805F;">L</div>
+                  <div style="font-family: 'Newsreader', serif; font-size: 34px; line-height: 1.2; color: #262A24; letter-spacing: -.015em; text-wrap: pretty;">Fijn dat je er bent.</div>
+                  <div style="font-size: 16px; line-height: 1.65; color: #5E6259; text-wrap: pretty;">Ik ben Lau, je dagelijkse coach in deze app. Laura kent je verhaal, leest mee en stelt mij elke week bij op wat jij nodig hebt.</div>
+                  <div style="font-size: 16px; line-height: 1.65; color: #5E6259;">We beginnen met een paar vragen. Geen formulier — gewoon een kennismaking. Je kunt alles later aanpassen.</div>
+                  <div style="margin-top: 4px; padding: 16px 18px; background: #FFFFFF; border: 1px solid #E5E0D6; border-radius: 18px; font-size: 13px; line-height: 1.6; color: #6E7168;">Lau geeft coaching en leefstijladvies, geen medisch advies. Bij klachten of twijfel verwijzen we je naar je huisarts of diëtist.</div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ ob1 }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: 18px; animation: lauFade .4s ease both;">
+                  <div style="font-family: 'Newsreader', serif; font-size: 28px; line-height: 1.25; color: #262A24; letter-spacing: -.01em; text-wrap: pretty;">Waar wil je naartoe?</div>
+                  <div style="font-size: 15px; line-height: 1.6; color: #6E7168;">Kies wat het meest voor je telt. Meerdere mag.</div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    <sc-for list="{{ doelen }}" as="c" hint-placeholder-count="5">
+                      <button onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.label }}</button>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ ob2 }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: 18px; animation: lauFade .4s ease both;">
+                  <div style="font-family: 'Newsreader', serif; font-size: 28px; line-height: 1.25; color: #262A24; letter-spacing: -.01em; text-wrap: pretty;">Hoe ziet je week eruit?</div>
+                  <div style="font-size: 15px; line-height: 1.6; color: #6E7168;">Zo weet ik wanneer een advies realistisch is.</div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    <sc-for list="{{ weekvorm }}" as="c" hint-placeholder-count="4">
+                      <button onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.label }}</button>
+                    </sc-for>
+                  </div>
+                  <div style="margin-top: 6px; font-size: 13px; color: #9A9C91;">Vertel later gerust meer in de chat — ik onthoud het.</div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ ob3 }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: 18px; animation: lauFade .4s ease both;">
+                  <div style="font-family: 'Newsreader', serif; font-size: 28px; line-height: 1.25; color: #262A24; letter-spacing: -.01em; text-wrap: pretty;">Wat eet je graag?</div>
+                  <div style="font-size: 15px; line-height: 1.6; color: #6E7168;">Ik stel nooit iets voor waar jij niks mee kunt.</div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    <sc-for list="{{ voorkeuren }}" as="c" hint-placeholder-count="5">
+                      <button onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.label }}</button>
+                    </sc-for>
+                  </div>
+                  <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="font-size: 14px; color: #5E6259;">Wat eet je liever niet?</div>
+                    <input value="{{ afkeer }}" onChange="{{ onAfkeer }}" placeholder="bijv. vis, kwark, pittig" style="width: 100%; padding: 14px 16px; border: 1px solid #E5E0D6; border-radius: 14px; background: #FFFFFF; font-size: 15px; color: #262A24; outline: none;" />
+                  </div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ ob4 }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: 18px; animation: lauFade .4s ease both;">
+                  <div style="font-family: 'Newsreader', serif; font-size: 28px; line-height: 1.25; color: #262A24; letter-spacing: -.01em; text-wrap: pretty;">Is er iets waar ik op moet letten?</div>
+                  <div style="font-size: 15px; line-height: 1.6; color: #6E7168;">Allergieën, aandoeningen of medicatie. Alleen wat jij wilt delen.</div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    <sc-for list="{{ beperkingen }}" as="c" hint-placeholder-count="5">
+                      <button onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.label }}</button>
+                    </sc-for>
+                  </div>
+                  <input value="{{ extra }}" onChange="{{ onExtra }}" placeholder="Iets anders? Schrijf het hier" style="width: 100%; padding: 14px 16px; border: 1px solid #E5E0D6; border-radius: 14px; background: #FFFFFF; font-size: 15px; color: #262A24; outline: none;" />
+                  <div style="padding: 15px 18px; background: #FFFFFF; border: 1px solid #E5E0D6; border-radius: 18px; font-size: 13px; line-height: 1.6; color: #6E7168;">Laura leest dit als eerste. Ze bepaalt waar ik voorzichtig mee moet zijn.</div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ ob5 }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: 18px; animation: lauFade .4s ease both;">
+                  <div style="font-family: 'Newsreader', serif; font-size: 28px; line-height: 1.25; color: #262A24; letter-spacing: -.01em; text-wrap: pretty;">Zo houden we je eten bij.</div>
+                  <div style="font-size: 15px; line-height: 1.65; color: #6E7168; text-wrap: pretty;">Geen calorieën, geen weegschaal in de keuken. We werken met je eigen hand als maat — dat is altijd bij je en het schaalt mee met jouw lichaam.</div>
+                  <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <sc-for list="{{ handmaten }}" as="h" hint-placeholder-count="4">
+                      <div style="padding: 15px 17px; background: #FFFFFF; border: 1px solid #E5E0D6; border-radius: 18px; display: flex; align-items: center; gap: 14px;">
+                        <div style="{{ h.markStyle }}"></div>
+                        <div style="display: flex; flex-direction: column; gap: 2px; flex: 1;">
+                          <div style="font-size: 15px; color: #262A24;">{{ h.hand }}</div>
+                          <div style="font-size: 13px; color: #8C8F84;">{{ h.uitleg }}</div>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="font-size: 13px; line-height: 1.6; color: #9A9C91;">Je logt het in twee tikken — in onze chat of op het Eten-scherm. Mis je een dag, dan is dat geen probleem.</div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ ob6 }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: 18px; animation: lauFade .4s ease both;">
+                  <div style="font-family: 'Newsreader', serif; font-size: 28px; line-height: 1.25; color: #262A24; letter-spacing: -.01em; text-wrap: pretty;">Nog één vraag, en die mag je overslaan.</div>
+                  <div style="font-size: 15px; line-height: 1.65; color: #6E7168; text-wrap: pretty;">Heb je nu of eerder een moeilijke relatie met eten of je lichaam gehad? Er is geen goed of fout antwoord.</div>
+                  <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <sc-for list="{{ veiligheid }}" as="c" hint-placeholder-count="3">
+                      <button onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.label }}</button>
+                    </sc-for>
+                  </div>
+                  <div style="padding: 16px 18px; background: #E7EEE3; border-radius: 18px; font-size: 13px; line-height: 1.6; color: #4C6749;">Wat je hier zegt, bepaalt hoe ik met je praat — niet of je welkom bent. Bij zwaardere klachten brengt Laura je in contact met een behandelaar.</div>
+                  <button onClick="{{ obSkip }}" style="align-self: flex-start; background: none; border: none; padding: 4px 0; font-size: 14px; color: #9A9C91; text-decoration: underline; text-underline-offset: 3px;">Sla deze vraag over</button>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ ob7 }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: 20px; animation: lauFade .4s ease both;">
+                  <div style="width: 64px; height: 64px; border-radius: 999px; background: #E7EEE3; display: flex; align-items: center; justify-content: center; font-family: 'Newsreader', serif; font-size: 26px; color: #63805F;">L</div>
+                  <div style="font-family: 'Newsreader', serif; font-size: 30px; line-height: 1.2; color: #262A24; letter-spacing: -.015em; text-wrap: pretty;">Dank je, Sanne. Ik weet genoeg om te beginnen.</div>
+                  <div style="font-size: 16px; line-height: 1.65; color: #5E6259; text-wrap: pretty;">Geen schema's, geen calorieën. We beginnen bij je avonden — daar zit volgens jou de meeste ruimte.</div>
+                  <div style="padding: 18px; background: #FFFFFF; border: 1px solid #E5E0D6; border-radius: 20px; display: flex; flex-direction: column; gap: 10px;">
+                    <div style="font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: #9A9C91;">Je eerste week</div>
+                    <div style="font-size: 15px; line-height: 1.6; color: #5E6259;">Elke ochtend een kort bericht van mij. Reageer wanneer het jou past.</div>
+                    <div style="font-size: 15px; line-height: 1.6; color: #5E6259;">Log je maaltijden op handmaten — twee tikken, wanneer je eraan denkt.</div>
+                    <div style="font-size: 15px; line-height: 1.6; color: #5E6259;">Donderdag 20 aug · eerste gesprek met Laura, 30 minuten.</div>
+                  </div>
+                </div>
+              </sc-if>
+
+            </div>
+
+            <div style="padding: 16px 26px 26px; display: flex; gap: 12px; align-items: center; background: linear-gradient(to top, #F6F3ED 60%, rgba(246,243,237,0));">
+              <sc-if value="{{ obCanBack }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ obBack }}" style="width: 52px; height: 52px; flex: none; border-radius: 999px; border: 1px solid #DCD6CA; background: #FFFFFF; color: #5E6259; font-size: 17px;">←</button>
+              </sc-if>
+              <button onClick="{{ obNext }}" style="flex: 1; height: 52px; border-radius: 999px; border: none; background: #63805F; color: #FFFFFF; font-size: 16px; letter-spacing: .01em;" style-hover="background: #55714F;">{{ obCta }}</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isChat }}" hint-placeholder-val="{{ false }}">
+          <div style="height: 100%; display: flex; flex-direction: column;">
+            <div style="padding: 22px 22px 14px; background: #F6F3ED; border-bottom: 1px solid #E9E4DA; display: flex; align-items: center; gap: 13px;">
+              <div style="width: 42px; height: 42px; flex: none; border-radius: 999px; background: #E7EEE3; display: flex; align-items: center; justify-content: center; font-family: 'Newsreader', serif; font-size: 19px; color: #63805F;">L</div>
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <div style="font-family: 'Newsreader', serif; font-size: 19px; color: #262A24;">Lau.ai</div>
+                <div style="font-size: 12px; color: #8C8F84;">Ingesteld door Laura · week 3</div>
+              </div>
+              <button onClick="{{ openLaura }}" style="{{ lauraBtnStyle }}">
+                <div style="{{ lauraDotStyle }}"></div>
+                Laura
+              </button>
+            </div>
+
+            <div ref="{{ chatRef }}" style="flex: 1; overflow: auto; padding: 22px 22px 8px; display: flex; flex-direction: column; gap: 14px;">
+              <div style="align-self: center; font-size: 12px; color: #A3A59A; padding: 2px 0 6px;">Vandaag</div>
+              <sc-for list="{{ messages }}" as="m" hint-placeholder-count="4">
+                <div style="{{ m.rowStyle }}">
+                  <sc-if value="{{ m.isLog }}" hint-placeholder-val="{{ false }}">
+                    <div style="max-width: 82%; padding: 15px 17px; background: #E7EEE3; border-radius: 20px 20px 6px 20px; display: flex; flex-direction: column; gap: 11px;">
+                      <div style="font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: #6D8A68;">{{ m.moment }}</div>
+                      <div style="display: flex; flex-direction: column; gap: 7px;">
+                        <sc-for list="{{ m.items }}" as="i" hint-placeholder-count="3">
+                          <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="{{ i.markStyle }}"></div>
+                            <div style="font-size: 14.5px; color: #37452F;">{{ i.label }}</div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ m.isText }}" hint-placeholder-val="{{ true }}">
+                    <div style="{{ m.bubbleStyle }}">{{ m.text }}</div>
+                  </sc-if>
+                </div>
+              </sc-for>
+              <sc-if value="{{ typing }}" hint-placeholder-val="{{ false }}">
+                <div style="align-self: flex-start; display: flex; gap: 5px; padding: 14px 18px; background: #FFFFFF; border: 1px solid #E9E4DA; border-radius: 20px 20px 20px 6px;">
+                  <div style="width: 6px; height: 6px; border-radius: 999px; background: #63805F; animation: lauDot 1.2s infinite;"></div>
+                  <div style="width: 6px; height: 6px; border-radius: 999px; background: #63805F; animation: lauDot 1.2s .2s infinite;"></div>
+                  <div style="width: 6px; height: 6px; border-radius: 999px; background: #63805F; animation: lauDot 1.2s .4s infinite;"></div>
+                </div>
+              </sc-if>
+              <div style="padding: 6px 0 2px; display: flex; align-items: center; gap: 10px;">
+                <div style="width: 24px; height: 24px; flex: none; border-radius: 999px; background: #EFEBE2; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #8C8F84;">i</div>
+                <div style="font-size: 12px; line-height: 1.5; color: #9A9C91;">Lau geeft geen medisch advies. Laura leest mee.</div>
+              </div>
+            </div>
+
+            <div style="padding: 0 22px 8px; display: flex; gap: 8px; overflow: auto;">
+              <button onClick="{{ openLog }}" style="flex: none; display: flex; align-items: center; gap: 8px; padding: 10px 15px; border-radius: 999px; border: 1px solid #63805F; background: #E7EEE3; font-size: 13px; color: #3D5539; white-space: nowrap;" style-hover="background: #DEE8D8;">
+                <div style="width: 7px; height: 7px; border-radius: 999px; background: #63805F;"></div>
+                Ik heb gegeten
+              </button>
+              <sc-for list="{{ quickReplies }}" as="q" hint-placeholder-count="3">
+                <button onClick="{{ q.onClick }}" style="flex: none; padding: 10px 15px; border-radius: 999px; border: 1px solid #DCD6CA; background: #FFFFFF; font-size: 13px; color: #5E6259; white-space: nowrap;" style-hover="border-color: #63805F; color: #4C6749;">{{ q.label }}</button>
+              </sc-for>
+            </div>
+
+            <div style="padding: 12px 22px 92px; display: flex; align-items: center; gap: 10px; background: #F6F3ED;">
+              <input value="{{ input }}" onChange="{{ onInput }}" onKeyDown="{{ onKey }}" placeholder="Schrijf iets aan Lau…" style="flex: 1; padding: 15px 18px; border: 1px solid #DCD6CA; border-radius: 999px; background: #FFFFFF; font-size: 15px; color: #262A24; outline: none;" />
+              <button onClick="{{ send }}" style="width: 48px; height: 48px; flex: none; border-radius: 999px; border: none; background: #63805F; color: #FFFFFF; font-size: 17px;" style-hover="background: #55714F;">↑</button>
+            </div>
+
+            <div style="{{ tabbarStyle }}">
+              <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+                <button onClick="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isEten }}" hint-placeholder-val="{{ false }}">
+          <div style="height: 100%; display: flex; flex-direction: column;">
+            <div style="flex: 1; overflow: auto; padding: 28px 24px 110px; display: flex; flex-direction: column; gap: 20px;">
+              <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;">
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                  <div style="font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #9A9C91;">Donderdag 13 aug</div>
+                  <div style="font-family: 'Newsreader', serif; font-size: 28px; line-height: 1.2; color: #262A24; letter-spacing: -.015em;">Vandaag gegeten</div>
+                </div>
+                <button onClick="{{ openLaura }}" style="{{ lauraBtnStyle }}">
+                  <div style="{{ lauraDotStyle }}"></div>
+                  Laura
+                </button>
+              </div>
+
+              <div style="font-size: 14.5px; line-height: 1.6; color: #6E7168; text-wrap: pretty;">Geen calorieën — je eigen hand is de maat. Tik om een portie toe te voegen.</div>
+
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <sc-for list="{{ porties }}" as="p" hint-placeholder-count="4">
+                  <div style="padding: 18px; background: #FFFFFF; border: 1px solid #E5E0D6; border-radius: 20px; display: flex; flex-direction: column; gap: 14px;">
+                    <div style="display: flex; align-items: center; gap: 13px;">
+                      <div style="{{ p.markStyle }}"></div>
+                      <div style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+                        <div style="font-size: 15.5px; color: #262A24;">{{ p.naam }}</div>
+                        <div style="font-size: 12.5px; color: #9A9C91;">{{ p.hand }}</div>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 9px;">
+                        <button onClick="{{ p.onMin }}" style="width: 34px; height: 34px; border-radius: 999px; border: 1px solid #DCD6CA; background: #FFFFFF; color: #5E6259; font-size: 16px; line-height: 1;">−</button>
+                        <div style="min-width: 46px; text-align: center; font-size: 14px; color: #5E6259;">{{ p.telling }}</div>
+                        <button onClick="{{ p.onPlus }}" style="width: 34px; height: 34px; border-radius: 999px; border: none; background: #63805F; color: #FFFFFF; font-size: 16px; line-height: 1;">+</button>
+                      </div>
+                    </div>
+                    <div style="display: flex; gap: 6px;">
+                      <sc-for list="{{ p.slots }}" as="s" hint-placeholder-count="4">
+                        <div style="{{ s.style }}"></div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="padding: 20px; background: #E7EEE3; border-radius: 20px; display: flex; flex-direction: column; gap: 10px;">
+                <div style="font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: #6D8A68;">Lau kijkt mee</div>
+                <div style="font-size: 15px; line-height: 1.6; color: #37452F; text-wrap: pretty;">{{ etenFeedback }}</div>
+              </div>
+
+              <div style="padding: 20px; background: #FFFFFF; border: 1px solid #E5E0D6; border-radius: 20px; display: flex; flex-direction: column; gap: 14px;">
+                <div style="font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: #9A9C91;">Deze week</div>
+                <div style="display: flex; gap: 7px;">
+                  <sc-for list="{{ weekEten }}" as="d" hint-placeholder-count="7">
+                    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                      <div style="{{ d.barStyle }}"></div>
+                      <div style="font-size: 11px; color: #A3A59A;">{{ d.label }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="font-size: 13.5px; line-height: 1.6; color: #8C8F84;">Vijf dagen gelogd. Regelmaat is het punt, geen perfecte week.</div>
+              </div>
+
+              <div style="padding: 18px 20px; border: 1px dashed #D3CCBE; border-radius: 20px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="font-size: 13px; color: #6E7168;">Zo werkt de handmaat</div>
+                <sc-for list="{{ handmaten }}" as="h" hint-placeholder-count="4">
+                  <div style="display: flex; align-items: center; gap: 11px;">
+                    <div style="{{ h.markStyle }}"></div>
+                    <div style="font-size: 13px; color: #8C8F84;">{{ h.hand }} · {{ h.uitleg }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="{{ tabbarStyle }}">
+              <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+                <button onClick="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isVoortgang }}" hint-placeholder-val="{{ false }}">
+          <div style="height: 100%; display: flex; flex-direction: column;">
+            <div style="flex: 1; overflow: auto; padding: 30px 26px 110px; display: flex; flex-direction: column; gap: 22px;">
+              <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;">
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                  <div style="font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #9A9C91;">Week 3</div>
+                  <div style="font-family: 'Newsreader', serif; font-size: 30px; line-height: 1.2; color: #262A24; letter-spacing: -.015em; text-wrap: pretty;">Je vindt je ritme, Sanne.</div>
+                </div>
+                <button onClick="{{ openLaura }}" style="{{ lauraBtnStyle }}">
+                  <div style="{{ lauraDotStyle }}"></div>
+                  Laura
+                </button>
+              </div>
+
+              <div style="padding: 22px; background: #FFFFFF; border: 1px solid #E5E0D6; border-radius: 24px;">
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                  <div style="font-size: 14px; color: #6E7168;">Dagen dat we contact hadden</div>
+                  <div style="display: flex; gap: 8px;">
+                    <sc-for list="{{ dagen }}" as="d" hint-placeholder-count="7">
+                      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                        <div style="{{ d.dotStyle }}"></div>
+                        <div style="font-size: 11px; color: #A3A59A;">{{ d.label }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="font-size: 15px; line-height: 1.6; color: #5E6259; text-wrap: pretty;">Vijf van zeven dagen. Dat is meer dan vorige week, en genoeg om iets te veranderen.</div>
+                </div>
+              </div>
+
+              <div style="padding: 22px; background: #E7EEE3; border-radius: 24px; display: flex; flex-direction: column; gap: 12px;">
+                <div style="font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: #6D8A68;">Wat opvalt</div>
+                <div style="font-family: 'Newsreader', serif; font-size: 21px; line-height: 1.4; color: #37452F; text-wrap: pretty;">Vier avonden koos je bewust voor een warme maaltijd — en daarna had je minder trek.</div>
+                <div style="font-size: 14px; line-height: 1.6; color: #4C6749;">De donderdagavond bleef lastig. Daar gaan we deze week op door.</div>
+              </div>
+
+              <div style="padding: 22px; background: #FFFFFF; border: 1px solid #E5E0D6; border-radius: 24px; display: flex; flex-direction: column; gap: 14px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                  <div style="font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: #9A9C91;">Eten bijhouden</div>
+                  <button onClick="{{ goEten }}" style="padding: 8px 14px; border-radius: 999px; border: 1px solid #DCD6CA; background: #FFFFFF; font-size: 12.5px; color: #5E6259;" style-hover="border-color: #63805F; color: #4C6749;">Openen</button>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                  <sc-for list="{{ portieSamenvatting }}" as="p" hint-placeholder-count="4">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <div style="{{ p.markStyle }}"></div>
+                      <div style="flex: 1; font-size: 14px; color: #5E6259;">{{ p.naam }}</div>
+                      <div style="font-size: 13px; color: #8C8F84;">{{ p.gemiddeld }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="font-size: 13.5px; line-height: 1.55; color: #8C8F84;">Gemiddelde handmaten per dag deze week. Groente is je sterkste punt.</div>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div style="font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: #9A9C91;">Waar we aan werken</div>
+                <sc-for list="{{ focus }}" as="f" hint-placeholder-count="3">
+                  <div style="padding: 16px 18px; background: #FFFFFF; border: 1px solid #E5E0D6; border-radius: 18px; display: flex; align-items: center; gap: 14px;">
+                    <div style="{{ f.markStyle }}"></div>
+                    <div style="flex: 1; font-size: 15px; line-height: 1.5; color: #5E6259;">{{ f.label }}</div>
+                    <div style="font-size: 12px; color: #A3A59A;">{{ f.note }}</div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="padding: 18px 20px; border: 1px dashed #D3CCBE; border-radius: 20px; display: flex; align-items: center; gap: 14px;">
+                <div style="width: 38px; height: 38px; flex: none; border-radius: 999px; background: #EFEBE2; display: flex; align-items: center; justify-content: center; font-family: 'Newsreader', serif; font-size: 15px; color: #8C6A56;">La</div>
+                <div style="flex: 1; font-size: 14px; line-height: 1.5; color: #6E7168;">Donderdag 20 aug · gesprek met Laura, 30 min.</div>
+              </div>
+            </div>
+
+            <div style="{{ tabbarStyle }}">
+              <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+                <button onClick="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ closeSheet }}" style="position: absolute; inset: 0; background: rgba(38, 42, 36, .3); backdrop-filter: blur(2px);"></div>
+        </sc-if>
+
+        <sc-if value="{{ logOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position: absolute; left: 0; right: 0; bottom: 0; max-height: 82%; background: #F6F3ED; border-radius: 30px 30px 0 0; box-shadow: 0 -20px 50px -24px rgba(38,42,36,.4); animation: lauSheet .34s cubic-bezier(.22,.8,.3,1) both; display: flex; flex-direction: column; overflow: hidden;">
+            <div style="padding: 12px 0 4px; display: flex; justify-content: center;">
+              <div style="width: 44px; height: 4px; border-radius: 999px; background: #DCD6CA;"></div>
+            </div>
+            <div style="flex: 1; overflow: auto; padding: 14px 26px 26px; display: flex; flex-direction: column; gap: 18px;">
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div style="font-family: 'Newsreader', serif; font-size: 26px; line-height: 1.2; color: #262A24; letter-spacing: -.01em;">Wat heb je gegeten?</div>
+                <div style="font-size: 14px; line-height: 1.6; color: #8C8F84;">Op handmaten. Bij benadering is goed genoeg.</div>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <sc-for list="{{ momenten }}" as="m" hint-placeholder-count="4">
+                  <button onClick="{{ m.onClick }}" style="{{ m.style }}">{{ m.label }}</button>
+                </sc-for>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <sc-for list="{{ draft }}" as="d" hint-placeholder-count="4">
+                  <div style="padding: 15px 17px; background: #FFFFFF; border: 1px solid #E5E0D6; border-radius: 18px; display: flex; align-items: center; gap: 13px;">
+                    <div style="{{ d.markStyle }}"></div>
+                    <div style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+                      <div style="font-size: 15px; color: #262A24;">{{ d.naam }}</div>
+                      <div style="font-size: 12.5px; color: #9A9C91;">{{ d.hand }}</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 9px;">
+                      <button onClick="{{ d.onMin }}" style="width: 32px; height: 32px; border-radius: 999px; border: 1px solid #DCD6CA; background: #FFFFFF; color: #5E6259; font-size: 15px; line-height: 1;">−</button>
+                      <div style="min-width: 20px; text-align: center; font-size: 15px; color: #262A24;">{{ d.aantal }}</div>
+                      <button onClick="{{ d.onPlus }}" style="width: 32px; height: 32px; border-radius: 999px; border: none; background: #63805F; color: #FFFFFF; font-size: 15px; line-height: 1;">+</button>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display: flex; gap: 10px;">
+                <button onClick="{{ closeSheet }}" style="flex: none; padding: 15px 20px; border-radius: 999px; border: 1px solid #DCD6CA; background: #FFFFFF; font-size: 15px; color: #5E6259;">Later</button>
+                <button onClick="{{ saveLog }}" style="flex: 1; padding: 15px; border-radius: 999px; border: none; background: #63805F; color: #FFFFFF; font-size: 15px;" style-hover="background: #55714F;">Bewaren</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ lauraOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position: absolute; left: 0; right: 0; bottom: 0; max-height: 86%; background: #F6F3ED; border-radius: 30px 30px 0 0; box-shadow: 0 -20px 50px -24px rgba(38,42,36,.4); animation: lauSheet .34s cubic-bezier(.22,.8,.3,1) both; display: flex; flex-direction: column; overflow: hidden;">
+            <div style="padding: 12px 0 4px; display: flex; justify-content: center;">
+              <div style="width: 44px; height: 4px; border-radius: 999px; background: #DCD6CA;"></div>
+            </div>
+
+            <sc-if value="{{ flagIdle }}" hint-placeholder-val="{{ true }}">
+              <div style="flex: 1; overflow: auto; padding: 16px 26px 28px; display: flex; flex-direction: column; gap: 18px;">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                  <div style="width: 58px; height: 58px; flex: none; border-radius: 999px; background: #EFEBE2; display: flex; align-items: center; justify-content: center; font-family: 'Newsreader', serif; font-size: 22px; color: #8C6A56;">La</div>
+                  <div style="display: flex; flex-direction: column; gap: 3px;">
+                    <div style="font-family: 'Newsreader', serif; font-size: 25px; color: #262A24;">Laura</div>
+                    <div style="font-size: 12.5px; color: #8C8F84;">jouw coach · leest je gesprekken mee</div>
+                  </div>
+                </div>
+                <div style="font-size: 15.5px; line-height: 1.65; color: #5E6259; text-wrap: pretty;">Wil je iets aan een mens vragen, of voelt iets niet goed? Laat het hier weten. Laura krijgt een bericht en leest je week terug. Je hoeft niet uit te leggen waarom.</div>
+                <textarea value="{{ flagText }}" onChange="{{ onFlagText }}" placeholder="Wil je iets meegeven? (mag ook leeg)" style="width: 100%; min-height: 104px; padding: 15px 17px; border: 1px solid #E5E0D6; border-radius: 20px; background: #FFFFFF; font-size: 15px; line-height: 1.6; color: #262A24; outline: none; resize: none;"></textarea>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                  <sc-for list="{{ flagReasons }}" as="r" hint-placeholder-count="4">
+                    <button onClick="{{ r.onClick }}" style="{{ r.style }}">{{ r.label }}</button>
+                  </sc-for>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 11px;">
+                  <button onClick="{{ sendFlag }}" style="padding: 17px; border-radius: 999px; border: none; background: #63805F; color: #FFFFFF; font-size: 16px;" style-hover="background: #55714F;">Laura laten meekijken</button>
+                  <div style="text-align: center; font-size: 13px; color: #9A9C91;">Hulp vragen hoort erbij. Het is geen falen.</div>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ flagSent }}" hint-placeholder-val="{{ false }}">
+              <div style="flex: 1; overflow: auto; padding: 24px 26px 28px; display: flex; flex-direction: column; gap: 20px; animation: lauFade .45s ease both;">
+                <div style="width: 72px; height: 72px; border-radius: 999px; background: #E7EEE3; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #63805F;">✓</div>
+                <div style="font-family: 'Newsreader', serif; font-size: 29px; line-height: 1.22; color: #262A24; letter-spacing: -.015em; text-wrap: pretty;">Laura heeft je bericht.</div>
+                <div style="font-size: 15.5px; line-height: 1.65; color: #5E6259; text-wrap: pretty;">Ze leest je gesprekken van deze week terug en reageert meestal dezelfde dag, uiterlijk de volgende ochtend.</div>
+                <div style="padding: 18px; background: #FFFFFF; border: 1px solid #E5E0D6; border-radius: 20px; font-size: 14.5px; line-height: 1.6; color: #6E7168;">Lau blijft gewoon beschikbaar. Je hoeft niet te wachten met vragen.</div>
+                <button onClick="{{ closeSheet }}" style="padding: 17px; border-radius: 999px; border: 1px solid #DCD6CA; background: #FFFFFF; color: #5E6259; font-size: 15.5px;" style-hover="border-color: #C7BEAE;">Terug naar Lau</button>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isCoach }}" hint-placeholder-val="{{ false }}">
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 18px; width: 100%;">
+      <div style="display: flex; gap: 6px; background: #FFFFFF; border: 1px solid #E5E0D6; border-radius: 999px; padding: 4px;">
+        <sc-for list="{{ coachJumps }}" as="j" hint-placeholder-count="3">
+          <button onClick="{{ j.onClick }}" style="{{ j.style }}">{{ j.label }}</button>
+        </sc-for>
+      </div>
+
+      <div style="width: 100%; max-width: 1320px; height: 880px; background: #F6F3ED; border: 1px solid #DCD6CA; border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 24px 60px -34px rgba(38, 42, 36, .3);">
+
+        <div style="padding: 18px 28px; border-bottom: 1px solid #E5E0D6; background: #FFFFFF; display: flex; align-items: center; gap: 18px;">
+          <div style="font-family: 'Newsreader', serif; font-size: 18px; color: #262A24;">Lau in Balans <span style="color: #A3A59A; font-family: 'DM Sans', sans-serif; font-size: 13px;">· coach</span></div>
+          <div style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
+            <div style="font-size: 13px; color: #8C8F84;">Donderdag 13 augustus</div>
+            <div style="width: 34px; height: 34px; border-radius: 999px; background: #EFEBE2; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #8C6A56;">La</div>
+          </div>
+        </div>
+
+        <div style="flex: 1; overflow: hidden; display: flex;">
+
+          <sc-if value="{{ cIsLijst }}" hint-placeholder-val="{{ true }}">
+            <div style="flex: 1; overflow: auto; padding: 32px 40px 40px;">
+              <div style="max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px;">
+                <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 20px;">
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <div style="font-family: 'Newsreader', serif; font-size: 28px; color: #262A24; letter-spacing: -.01em;">Jouw klanten</div>
+                    <div style="font-size: 14px; color: #6E7168;">9 actief · 2 wachten op jou</div>
+                  </div>
+                  <div style="display: flex; gap: 8px;">
+                    <sc-for list="{{ cFilters }}" as="f" hint-placeholder-count="3">
+                      <button onClick="{{ f.onClick }}" style="{{ f.style }}">{{ f.label }}</button>
+                    </sc-for>
+                  </div>
+                </div>
+
+                <div style="background: #FFFFFF; border: 1px solid #E5E0D6; border-radius: 18px; overflow: hidden;">
+                  <div style="display: grid; grid-template-columns: 2fr 1.1fr 2.2fr 1fr 1fr; gap: 18px; padding: 14px 24px; border-bottom: 1px solid #EDE8DE; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #A3A59A;">
+                    <div>Klant</div><div>Status</div><div>Laatste in de chat</div><div>Eten gelogd</div><div>Gesprek</div>
+                  </div>
+                  <sc-for list="{{ klanten }}" as="k" hint-placeholder-count="6">
+                    <div onClick="{{ k.onClick }}" style="{{ k.rowStyle }}" style-hover="background: #FBF9F5;">
+                      <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+                        <div style="{{ k.avatarStyle }}">{{ k.initials }}</div>
+                        <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+                          <div style="font-size: 15px; color: #262A24;">{{ k.naam }}</div>
+                          <div style="font-size: 12px; color: #A3A59A;">{{ k.weken }}</div>
+                        </div>
+                      </div>
+                      <div style="display: flex; align-items: center;">
+                        <div style="{{ k.statusStyle }}">{{ k.status }}</div>
+                      </div>
+                      <div style="display: flex; align-items: center; font-size: 14px; line-height: 1.5; color: #6E7168; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ k.laatste }}</div>
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="flex: 1; height: 6px; border-radius: 999px; background: #EFEBE2; overflow: hidden;">
+                          <div style="{{ k.logFillStyle }}"></div>
+                        </div>
+                        <div style="font-size: 12px; color: #A3A59A;">{{ k.logLabel }}</div>
+                      </div>
+                      <div style="display: flex; align-items: center; font-size: 13px; color: #8C8F84;">{{ k.gesprek }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <div style="font-size: 13px; color: #A3A59A;">Klik een klant om mee te lezen, te reageren en het AI-profiel bij te stellen.</div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ cIsDetail }}" hint-placeholder-val="{{ false }}">
+            <div style="flex: 1; overflow: hidden; display: flex; flex-direction: column;">
+              <div style="padding: 20px 32px; border-bottom: 1px solid #E5E0D6; background: #FFFFFF; display: flex; align-items: center; gap: 16px;">
+                <button onClick="{{ cGoLijst }}" style="width: 36px; height: 36px; border-radius: 999px; border: 1px solid #DCD6CA; background: #FFFFFF; color: #5E6259; font-size: 15px;">←</button>
+                <div style="width: 42px; height: 42px; border-radius: 999px; background: #E7EEE3; display: flex; align-items: center; justify-content: center; font-size: 15px; color: #4C6749;">SV</div>
+                <div style="display: flex; flex-direction: column; gap: 3px;">
+                  <div style="font-family: 'Newsreader', serif; font-size: 21px; color: #262A24;">Sanne Vermeer</div>
+                  <div style="font-size: 12px; color: #8C8F84;">38 · week 3 · duurzaam afvallen · 5 van 7 dagen gelogd</div>
+                </div>
+                <div style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
+                  <button onClick="{{ cGoWeekly }}" style="padding: 11px 18px; border-radius: 999px; border: none; background: #63805F; color: #FFFFFF; font-size: 13px;" style-hover="background: #55714F;">Wekelijks gesprek</button>
+                </div>
+              </div>
+
+              <div style="padding: 13px 32px; background: #F6E7E0; border-bottom: 1px solid #EDD5C9; display: flex; align-items: center; gap: 12px;">
+                <div style="width: 8px; height: 8px; flex: none; border-radius: 999px; background: #B0603F;"></div>
+                <div style="font-size: 13.5px; color: #93472B;">Sanne vroeg 2 uur geleden om jou: “Ik wil even met een mens praten over het weekend.”</div>
+                <div style="margin-left: auto; font-size: 12.5px; color: #B0603F;">Open sinds 11:20</div>
+              </div>
+
+              <div style="flex: 1; overflow: hidden; display: grid; grid-template-columns: 1.2fr 1fr .8fr;">
+
+                <div style="border-right: 1px solid #E5E0D6; display: flex; flex-direction: column; overflow: hidden;">
+                  <div style="padding: 16px 24px 12px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #A3A59A;">Meelezen · deze week</div>
+                    <div style="font-size: 12px; color: #A3A59A;">Lau coacht dagelijks</div>
+                  </div>
+                  <div ref="{{ cChatRef }}" style="flex: 1; overflow: auto; padding: 4px 24px 16px; display: flex; flex-direction: column; gap: 11px;">
+                    <sc-for list="{{ transcript }}" as="t" hint-placeholder-count="6">
+                      <div style="{{ t.rowStyle }}">
+                        <sc-if value="{{ t.isLog }}" hint-placeholder-val="{{ false }}">
+                          <div style="max-width: 88%; padding: 12px 14px; background: #E7EEE3; border-radius: 14px 14px 4px 14px; display: flex; flex-direction: column; gap: 7px;">
+                            <div style="font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: #6D8A68;">{{ t.moment }}</div>
+                            <div style="font-size: 12.5px; line-height: 1.5; color: #37452F;">{{ t.text }}</div>
+                          </div>
+                        </sc-if>
+                        <sc-if value="{{ t.isText }}" hint-placeholder-val="{{ true }}">
+                          <div style="{{ t.bubbleStyle }}">{{ t.text }}</div>
+                        </sc-if>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="padding: 12px 24px 20px; border-top: 1px solid #EDE8DE; background: #FBF9F5; display: flex; flex-direction: column; gap: 9px;">
+                    <div style="display: flex; align-items: center; gap: 9px;">
+                      <div style="width: 26px; height: 26px; flex: none; border-radius: 999px; background: #EFEBE2; display: flex; align-items: center; justify-content: center; font-family: 'Newsreader', serif; font-size: 12px; color: #8C6A56;">La</div>
+                      <input value="{{ cReply }}" onChange="{{ onCReply }}" onKeyDown="{{ onCReplyKey }}" placeholder="Reageer als Laura — Sanne ziet dat dit van jou komt…" style="flex: 1; padding: 12px 15px; border: 1px solid #DCD6CA; border-radius: 999px; background: #FFFFFF; font-size: 13.5px; color: #262A24; outline: none;" />
+                      <button onClick="{{ sendCReply }}" style="width: 38px; height: 38px; flex: none; border-radius: 999px; border: none; background: #8C6A56; color: #FFFFFF; font-size: 15px;" style-hover="background: #765645;">↑</button>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                      <div style="font-size: 11.5px; color: #A3A59A;">{{ cReplyHint }}</div>
+                      <sc-if value="{{ cFlagOpen }}" hint-placeholder-val="{{ true }}">
+                        <button onClick="{{ resolveFlag }}" style="margin-left: auto; padding: 7px 13px; border-radius: 999px; border: 1px solid #EDD5C9; background: #FFFFFF; font-size: 11.5px; color: #93472B;" style-hover="border-color: #B0603F;">Flag afronden</button>
+                      </sc-if>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="border-right: 1px solid #E5E0D6; display: flex; flex-direction: column; overflow: hidden;">
+                  <div style="padding: 16px 24px 12px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #A3A59A;">AI-profiel</div>
+                    <div style="font-size: 12px; color: #63805F;">{{ profileSaved }}</div>
+                  </div>
+                  <div style="flex: 1; overflow: auto; padding: 4px 24px 24px; display: flex; flex-direction: column; gap: 16px;">
+                    <sc-for list="{{ profiel }}" as="p" hint-placeholder-count="6">
+                      <div style="display: flex; flex-direction: column; gap: 7px;">
+                        <div style="font-size: 12px; color: #8C8F84;">{{ p.label }}</div>
+                        <sc-if value="{{ p.isChips }}" hint-placeholder-val="{{ false }}">
+                          <div style="display: flex; flex-wrap: wrap; gap: 7px;">
+                            <sc-for list="{{ p.chips }}" as="c" hint-placeholder-count="3">
+                              <div style="{{ c.style }}">{{ c.label }}</div>
+                            </sc-for>
+                          </div>
+                        </sc-if>
+                        <sc-if value="{{ p.isText }}" hint-placeholder-val="{{ true }}">
+                          <textarea value="{{ p.value }}" onChange="{{ p.onChange }}" style="width: 100%; min-height: 62px; padding: 12px 14px; border: 1px solid #E5E0D6; border-radius: 12px; background: #FFFFFF; font-size: 13.5px; line-height: 1.55; color: #262A24; outline: none; resize: vertical;"></textarea>
+                        </sc-if>
+                      </div>
+                    </sc-for>
+                    <div style="padding: 14px 16px; background: #FBF9F5; border: 1px solid #EDE8DE; border-radius: 14px; font-size: 12px; line-height: 1.55; color: #8C8F84;">Gestructureerde data, geen vrije tekst. Lau krijgt dit bij elk bericht mee — inclusief de portiedoelen.</div>
+                  </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; overflow: hidden;">
+                  <div style="padding: 16px 24px 12px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #A3A59A;">Eten & notities</div>
+                  <div style="flex: 1; overflow: auto; padding: 4px 24px 16px; display: flex; flex-direction: column; gap: 14px;">
+                    <div style="padding: 15px 17px; background: #FFFFFF; border: 1px solid #E5E0D6; border-radius: 14px; display: flex; flex-direction: column; gap: 12px;">
+                      <div style="font-size: 12px; color: #8C8F84;">Handmaten · gemiddeld per dag</div>
+                      <sc-for list="{{ coachPorties }}" as="p" hint-placeholder-count="4">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                          <div style="{{ p.markStyle }}"></div>
+                          <div style="flex: 1; font-size: 13px; color: #5E6259;">{{ p.naam }}</div>
+                          <div style="{{ p.valueStyle }}">{{ p.waarde }}</div>
+                        </div>
+                      </sc-for>
+                      <div style="font-size: 11.5px; line-height: 1.5; color: #A3A59A;">Eiwit blijft achter op het doel. Groente zit ruim goed.</div>
+                    </div>
+                    <sc-for list="{{ notities }}" as="n" hint-placeholder-count="2">
+                      <div style="padding: 14px 16px; background: #FFFFFF; border: 1px solid #E5E0D6; border-radius: 14px; display: flex; flex-direction: column; gap: 7px;">
+                        <div style="font-size: 11px; color: #A3A59A;">{{ n.datum }}</div>
+                        <div style="font-size: 13.5px; line-height: 1.6; color: #5E6259;">{{ n.tekst }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="padding: 0 24px 24px; display: flex; flex-direction: column; gap: 10px;">
+                    <textarea value="{{ newNote }}" onChange="{{ onNewNote }}" placeholder="Notitie toevoegen…" style="width: 100%; min-height: 70px; padding: 12px 14px; border: 1px solid #E5E0D6; border-radius: 14px; background: #FFFFFF; font-size: 13.5px; line-height: 1.55; color: #262A24; outline: none; resize: none;"></textarea>
+                    <button onClick="{{ addNote }}" style="padding: 12px; border-radius: 999px; border: 1px solid #DCD6CA; background: #FFFFFF; font-size: 13px; color: #5E6259;" style-hover="border-color: #63805F; color: #4C6749;">Bewaren</button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ cIsWeekly }}" hint-placeholder-val="{{ false }}">
+            <div style="flex: 1; overflow: auto; padding: 30px 40px 48px;">
+              <div style="max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px;">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                  <button onClick="{{ cGoDetail }}" style="width: 36px; height: 36px; border-radius: 999px; border: 1px solid #DCD6CA; background: #FFFFFF; color: #5E6259; font-size: 15px;">←</button>
+                  <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <div style="font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: #A3A59A;">Wekelijks gesprek · Sanne Vermeer</div>
+                    <div style="font-family: 'Newsreader', serif; font-size: 26px; color: #262A24; letter-spacing: -.01em;">Week 3 · videocall van 30 minuten, net afgerond</div>
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start;">
+
+                  <div style="display: flex; flex-direction: column; gap: 18px;">
+                    <div style="background: #FFFFFF; border: 1px solid #E5E0D6; border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 18px;">
+                      <div style="font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #A3A59A;">1 · Vastleggen</div>
+                      <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="font-size: 13px; color: #6E7168;">Wat kwam er uit het gesprek?</div>
+                        <textarea value="{{ sessionNotes }}" onChange="{{ onSessionNotes }}" style="width: 100%; min-height: 200px; padding: 15px 17px; border: 1px solid #E5E0D6; border-radius: 14px; background: #FBF9F5; font-size: 14px; line-height: 1.65; color: #262A24; outline: none; resize: vertical;"></textarea>
+                      </div>
+                      <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="font-size: 13px; color: #6E7168;">Wat viel op</div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                          <sc-for list="{{ signalen }}" as="s" hint-placeholder-count="5">
+                            <button onClick="{{ s.onClick }}" style="{{ s.style }}">{{ s.label }}</button>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style="background: #FFFFFF; border: 1px solid #E5E0D6; border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+                      <div style="font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #A3A59A;">Wat de logs zeggen</div>
+                      <sc-for list="{{ coachPorties }}" as="p" hint-placeholder-count="4">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                          <div style="{{ p.markStyle }}"></div>
+                          <div style="flex: 1; font-size: 13.5px; color: #5E6259;">{{ p.naam }}</div>
+                          <div style="{{ p.valueStyle }}">{{ p.waarde }}</div>
+                        </div>
+                      </sc-for>
+                      <div style="font-size: 12.5px; line-height: 1.55; color: #A3A59A;">Vijf dagen gelogd. Eiwit blijft achter — vooral op de dagen dat ze met de kinderen mee-eet.</div>
+                    </div>
+                  </div>
+
+                  <div style="display: flex; flex-direction: column; gap: 18px;">
+                    <div style="background: #FFFFFF; border: 1px solid #E5E0D6; border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+                      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                        <div style="font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #A3A59A;">2 · Lau bijstellen</div>
+                        <div style="font-size: 12px; color: #A3A59A;">{{ appliedCount }}</div>
+                      </div>
+                      <div style="font-size: 13.5px; line-height: 1.6; color: #6E7168;">Op basis van je notities en de logs. Jij beslist wat er in het profiel van Sanne verandert.</div>
+                      <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <sc-for list="{{ voorstellen }}" as="v" hint-placeholder-count="3">
+                          <div style="{{ v.cardStyle }}">
+                            <div style="display: flex; flex-direction: column; gap: 7px;">
+                              <div style="font-size: 12px; color: #8C8F84;">{{ v.veld }}</div>
+                              <div style="font-size: 14px; line-height: 1.55; color: #262A24;">{{ v.nieuw }}</div>
+                              <div style="font-size: 12.5px; line-height: 1.5; color: #A3A59A; text-decoration: line-through;">{{ v.oud }}</div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                              <sc-if value="{{ v.open }}" hint-placeholder-val="{{ true }}">
+                                <button onClick="{{ v.onApply }}" style="padding: 9px 15px; border-radius: 999px; border: none; background: #63805F; color: #FFFFFF; font-size: 12.5px;" style-hover="background: #55714F;">Toepassen</button>
+                              </sc-if>
+                              <sc-if value="{{ v.open }}" hint-placeholder-val="{{ true }}">
+                                <button onClick="{{ v.onSkip }}" style="padding: 9px 15px; border-radius: 999px; border: 1px solid #DCD6CA; background: #FFFFFF; color: #8C8F84; font-size: 12.5px;">Overslaan</button>
+                              </sc-if>
+                              <sc-if value="{{ v.done }}" hint-placeholder-val="{{ false }}">
+                                <div style="{{ v.doneStyle }}">{{ v.doneLabel }}</div>
+                              </sc-if>
+                            </div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+
+                    <div style="background: #E7EEE3; border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 12px;">
+                      <div style="font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #6D8A68;">3 · Zo klinkt Lau maandagochtend</div>
+                      <div style="padding: 16px 18px; background: #FFFFFF; border-radius: 18px 18px 18px 5px; font-family: 'Newsreader', serif; font-size: 18px; line-height: 1.5; color: #37452F; text-wrap: pretty;">{{ preview }}</div>
+                      <div style="font-size: 12.5px; line-height: 1.6; color: #4C6749;">{{ previewNote }}</div>
+                      <button onClick="{{ confirmSession }}" style="align-self: flex-start; margin-top: 6px; padding: 12px 20px; border-radius: 999px; border: none; background: #4C6749; color: #FFFFFF; font-size: 13.5px;" style-hover="background: #3D5539;">{{ confirmLabel }}</button>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1400, &quot;height&quot;: 1000}}">
+const SAGE = '#63805F', SAGE_SOFT = '#E7EEE3', INK = '#262A24', HAIR = '#DCD6CA', CLAY = '#B0603F', CLAY_SOFT = '#F6E7E0';
+
+const HAND = [
+  { key: 'eiwit', naam: 'Eiwit', hand: 'Handpalm', uitleg: 'vlees, vis, kwark, tofu', doel: 3, kleur: '#63805F' },
+  { key: 'groente', naam: 'Groente', hand: 'Vuist', uitleg: 'alle groente en salade', doel: 4, kleur: '#7E9C6E' },
+  { key: 'koolhydraten', naam: 'Koolhydraten', hand: 'Holle hand', uitleg: 'rijst, pasta, brood, aardappel', doel: 2, kleur: '#C1A277' },
+  { key: 'vet', naam: 'Vetten', hand: 'Duim', uitleg: 'olie, kaas, avocado, pindakaas', doel: 2, kleur: '#B0603F' }
+];
+
+class Component extends DCLogic {
+  state = {
+    app: 'klant',
+    kScreen: 'onboarding',
+    ob: 0,
+    doelen: ['Duurzaam afvallen'],
+    weekvorm: [],
+    voorkeuren: [],
+    beperkingen: [],
+    veiligheid: null,
+    afkeer: '',
+    extra: '',
+    input: '',
+    typing: false,
+    messages: [
+      { role: 'ai', text: 'Goedemorgen Sanne. Gisteren zei je dat de avonden het moeilijkst zijn — hoe ging het na het eten?' },
+      { role: 'me', text: 'Verrassend rustig eigenlijk. Ik heb thee gezet in plaats van de koekjestrommel gepakt.' },
+      { role: 'ai', text: 'Dat is precies de ruil waar we het over hadden. Niet minder willen, maar iets anders klaar hebben staan. Wat maakte dat het gisteren lukte?' },
+      { role: 'log', moment: 'Lunch', items: [['eiwit', 1], ['groente', 2], ['koolhydraten', 1]] },
+      { role: 'ai', text: 'Mooie lunch — handpalm eiwit en twee vuisten groente. Als je vanmiddag nog trek krijgt, is dat meestal het eiwit. Kwark of een handje kip erbij doet meer dan je denkt.' }
+    ],
+    porties: { eiwit: 2, groente: 3, koolhydraten: 1, vet: 1 },
+    draft: { eiwit: 1, groente: 1, koolhydraten: 1, vet: 0 },
+    moment: 'Avondeten',
+    sheet: null,
+    flag: 'idle',
+    flagText: '',
+    flagReasons: [],
+    cScreen: 'lijst',
+    cFilter: 'Wacht op jou',
+    cReply: '',
+    cExtra: [],
+    cFlagOpen: true,
+    aanpak: 'Geen calorieën tellen, geen weegmomenten in de chat. Focus op maaltijdstructuur, avondroutine en handmaten.',
+    toon: 'Warm en direct. Korte berichten. Geen wollige complimenten — Sanne prikt daar doorheen.',
+    donts: 'Niet openen met gewicht of getallen. Geen strakke weekschema\'s. Voorzichtig met lichaamsbeeld.',
+    newNote: '',
+    notities: [
+      { datum: '6 aug · na gesprek', tekst: 'Wil rust rond eten, niet nóg een schema. Werkt drie dagen, kinderen van 4 en 7. Avonden zijn het knelpunt.' },
+      { datum: '30 jul · intake', tekst: 'Twee keer eerder een dieet met jojo-effect. Noten-allergie. Geen rode vlaggen, lichaamsbeeld ligt gevoelig.' }
+    ],
+    sessionNotes: 'Sanne is trots op haar avonden: 4 van 7 keer eerst zelf eten. Donderdag blijft lastig — dan werkt Jeroen laat en eet ze met de kinderen mee.\n\nUit de logs: eiwit blijft achter, groente zit ruim goed.\n\nZe schrok van mijn vraag naar haar gewicht. Wil daar niet mee openen. Vraagt om iets concreets voor donderdag.',
+    signalen: ['Donderdag knelpunt'],
+    voorstellen: { 0: 'open', 1: 'open', 2: 'open' },
+    sessionSaved: false,
+    profileSaved: 'opgeslagen'
+  };
+
+  chatRef = React.createRef();
+  cChatRef = React.createRef();
+
+  componentDidUpdate(pp, ps) {
+    const el = this.chatRef.current;
+    if (el && (ps.messages !== this.state.messages || ps.typing !== this.state.typing)) el.scrollTop = el.scrollHeight;
+    const ce = this.cChatRef.current;
+    if (ce && ps.cExtra !== this.state.cExtra) ce.scrollTop = ce.scrollHeight;
+  }
+
+  pill(active, extra) {
+    return 'padding: 10px 17px; border-radius: 999px; font-size: 13px; border: 1px solid ' + (active ? SAGE : HAIR) + '; background: ' + (active ? SAGE : '#FFFFFF') + '; color: ' + (active ? '#FFFFFF' : '#5E6259') + '; white-space: nowrap; transition: all .16s ease;' + (extra || '');
+  }
+
+  chip(key, label) {
+    const active = this.state[key].indexOf(label) > -1;
+    return {
+      label,
+      style: 'padding: 12px 18px; border-radius: 999px; font-size: 14.5px; border: 1px solid ' + (active ? SAGE : '#E5E0D6') + '; background: ' + (active ? SAGE_SOFT : '#FFFFFF') + '; color: ' + (active ? '#3D5539' : '#5E6259') + '; transition: all .16s ease;',
+      onClick: () => this.setState(s => {
+        const cur = s[key].slice();
+        const i = cur.indexOf(label);
+        if (i > -1) cur.splice(i, 1); else cur.push(label);
+        return { [key]: cur };
+      })
+    };
+  }
+
+  mark(kleur, size) {
+    const d = size || 12;
+    return 'width: ' + d + 'px; height: ' + d + 'px; flex: none; border-radius: 4px; background: ' + kleur + ';';
+  }
+
+  reply(text) {
+    const t = text.toLowerCase();
+    if (t.indexOf('vanavond') > -1 || (t.indexOf('wat') > -1 && t.indexOf('eet') > -1)) return 'Je hebt kip in huis en de kinderen eten mee, zei je maandag. Kip met zoete aardappel uit de oven en een grote bak sla: één handpalm kip voor jou, twee vuisten groente, een holle hand aardappel. Twintig minuten, één plaat.';
+    if (t.indexOf('trek') > -1 || t.indexOf('honger') > -1) return 'Even kijken naar vandaag: je zit op twee handpalmen eiwit. Dat is meestal waar de trek vandaan komt. Kwark met kaneel of een handje kip werkt beter dan je ertegen verzetten.';
+    if (t.indexOf('etentje') > -1 || t.indexOf('restaurant') > -1 || t.indexOf('weekend') > -1) return 'Een etentje hoef je niet goed te maken. Eet ervoor normaal, kies wat je echt lekker vindt, stop als je genoeg hebt. Loggen mag je overslaan — morgen pak je de gewone dag weer op.';
+    if (t.indexOf('laura') > -1) return 'Dat kan altijd. Tik op Laura bovenaan — ze krijgt een bericht en leest onze gesprekken van deze week terug.';
+    if (t.indexOf('gewicht') > -1 || t.indexOf('kilo') > -1) return 'Laura heeft me gevraagd niet met getallen te beginnen, en ik ben het daarmee eens. Wat ik wel zie: je avonden zijn rustiger dan drie weken terug. Dat gaat vooruit, ook als de weegschaal stilstaat.';
+    if (t.indexOf('moe') > -1 || t.indexOf('druk') > -1 || t.indexOf('geen tijd') > -1) return 'Dan doen we vandaag niets nieuws. Eén ding: zet je eigen bord klaar voordat de bedtijdronde begint. Loggen mag je vandaag overslaan.';
+    if (t.indexOf('gelogd') > -1 || t.indexOf('gegeten') > -1) return 'Dank je. Ik zie het staan — dit hoef je niet perfect te doen, alleen vaak genoeg zodat we een patroon zien.';
+    return 'Dank dat je het deelt. Vertel me iets meer — waar begon het vandaag?';
+  }
+
+  push(text) {
+    if (!text.trim()) return;
+    this.setState(s => ({ messages: s.messages.concat([{ role: 'me', text }]), input: '', typing: true }));
+    const a = this.reply(text);
+    setTimeout(() => this.setState(s => ({ typing: false, messages: s.messages.concat([{ role: 'ai', text: a }]) })), 1100);
+  }
+
+  saveLog() {
+    const d = this.state.draft;
+    const items = HAND.filter(h => d[h.key] > 0).map(h => [h.key, d[h.key]]);
+    if (!items.length) { this.setState({ sheet: null }); return; }
+    const moment = this.state.moment;
+    this.setState(s => {
+      const p = Object.assign({}, s.porties);
+      items.forEach(i => { p[i[0]] = p[i[0]] + i[1]; });
+      return {
+        porties: p,
+        sheet: null,
+        kScreen: 'chat',
+        typing: true,
+        messages: s.messages.concat([{ role: 'log', moment, items }]),
+        draft: { eiwit: 1, groente: 1, koolhydraten: 1, vet: 0 }
+      };
+    });
+    const eiwit = items.filter(i => i[0] === 'eiwit').reduce((a, i) => a + i[1], 0);
+    const answer = eiwit >= 1
+      ? 'Genoteerd. Handpalm eiwit erbij — dat is precies waar we deze week op letten. Hoe voelde het bord?'
+      : 'Genoteerd. Ik zie geen eiwit bij deze maaltijd; als je straks trek krijgt, weet je waar het aan ligt. Geen ramp, gewoon iets om te weten.';
+    setTimeout(() => this.setState(s => ({ typing: false, messages: s.messages.concat([{ role: 'ai', text: answer }]) })), 1000);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const ctas = ['Laten we beginnen', 'Verder', 'Verder', 'Verder', 'Verder', 'Duidelijk', 'Verder', 'Naar Lau'];
+
+    const jump = (label, screen, sheet) => ({
+      label,
+      style: this.pill(s.kScreen === screen && s.sheet === (sheet || null)),
+      onClick: () => this.setState({ kScreen: screen, sheet: sheet || null })
+    });
+    const cJump = (label, screen) => ({ label, style: this.pill(s.cScreen === screen), onClick: () => this.setState({ cScreen: screen }) });
+
+    const row = role => 'display: flex; justify-content: ' + (role === 'me' || role === 'log' || role === 'laura' ? 'flex-end' : 'flex-start') + ';';
+    const bubble = role => {
+      if (role === 'me') return 'max-width: 78%; padding: 14px 18px; border-radius: 20px 20px 6px 20px; background: ' + SAGE_SOFT + '; color: #37452F; font-size: 15px; line-height: 1.55; text-wrap: pretty;';
+      if (role === 'laura') return 'max-width: 82%; padding: 14px 18px; border-radius: 20px 20px 20px 6px; background: #FBEFE8; border: 1px solid #EDD5C9; color: #6E4331; font-size: 15px; line-height: 1.6; text-wrap: pretty;';
+      return 'max-width: 82%; padding: 14px 18px; border-radius: 20px 20px 20px 6px; background: #FFFFFF; border: 1px solid #E9E4DA; color: #3D4139; font-size: 15px; line-height: 1.6; text-wrap: pretty;';
+    };
+    const handOf = k => HAND.filter(h => h.key === k)[0];
+    const logText = items => items.map(i => i[1] + ' × ' + handOf(i[0]).hand.toLowerCase() + ' ' + handOf(i[0]).naam.toLowerCase()).join(' · ');
+
+    const klantenData = [
+      { naam: 'Sanne Vermeer', initials: 'SV', weken: 'week 3', status: 'Wacht op jou', laatste: '“Ik wil even met een mens praten over het weekend.”', gesprek: 'do 20 aug', logs: 5 },
+      { naam: 'Iris de Wit', initials: 'IW', weken: 'week 7', status: 'Wacht op jou', laatste: '“Lau snapt niet dat ik nachtdiensten heb.”', gesprek: 'vr 21 aug', logs: 3 },
+      { naam: 'Fleur Bakker', initials: 'FB', weken: 'week 2', status: 'Actief', laatste: 'Lau: “Mooi dat je de lunch hebt voorbereid.”', gesprek: 'di 18 aug', logs: 7 },
+      { naam: 'Marieke Jansen', initials: 'MJ', weken: 'week 11', status: 'Actief', laatste: 'Vraagt om recepten voor het weekend.', gesprek: 'wo 19 aug', logs: 6 },
+      { naam: 'Noor El Amrani', initials: 'NA', weken: 'week 1', status: 'Nieuw', laatste: 'Intake afgerond, profiel nog niet bijgesteld.', gesprek: 'ma 17 aug', logs: 1 },
+      { naam: 'Esther Kok', initials: 'EK', weken: 'week 9', status: 'Stil', laatste: 'Vier dagen geen reactie op Lau.', gesprek: 'do 20 aug', logs: 0 }
+    ];
+    const statusStyle = st => {
+      const map = { 'Wacht op jou': [CLAY_SOFT, '#93472B'], 'Actief': [SAGE_SOFT, '#4C6749'], 'Nieuw': ['#EFEBE2', '#6E7168'], 'Stil': ['#F1EEE7', '#8C8F84'] };
+      const c = map[st] || map['Actief'];
+      return 'padding: 6px 13px; border-radius: 999px; font-size: 12px; background: ' + c[0] + '; color: ' + c[1] + ';';
+    };
+    const visible = s.cFilter === 'Alle' ? klantenData : (s.cFilter === 'Wacht op jou' ? klantenData.filter(k => k.status === 'Wacht op jou' || k.status === 'Stil') : klantenData.filter(k => k.status !== 'Wacht op jou'));
+    const goDetail = () => this.setState({ cScreen: 'detail' });
+
+    const baseTranscript = [
+      { role: 'ai', text: 'Goedemorgen Sanne. Hoe ging het na het eten gisteren?' },
+      { role: 'me', text: 'Verrassend rustig. Thee in plaats van de koekjestrommel.' },
+      { role: 'log', moment: 'Lunch', text: '1 × handpalm eiwit · 2 × vuist groente · 1 × holle hand koolhydraten' },
+      { role: 'ai', text: 'Mooie lunch. Als je vanmiddag trek krijgt is dat meestal het eiwit — kwark of een handje kip erbij.' },
+      { role: 'me', text: 'Ja. Maar donderdag werkt Jeroen laat, dan eet ik met de kinderen mee.' },
+      { role: 'ai', text: 'Dan bedenken we voor donderdag iets aparts. Wil je dat ik woensdag een voorstel doe?' },
+      { role: 'me', text: 'Graag. Ik wil trouwens even met een mens praten over het weekend.' }
+    ].concat(s.cExtra);
+
+    const voorstellenData = [
+      { veld: 'Vermijden in coaching', oud: 'Voorzichtig met lichaamsbeeld.', nieuw: 'Nooit openen met gewicht of getallen. Voorzichtig met lichaamsbeeld.' },
+      { veld: 'Portiedoelen', oud: '3 handpalm eiwit · 4 vuist groente · 2 holle hand · 2 duim', nieuw: 'Eiwit expliciet benoemen bij avondeten met de kinderen — doel blijft 3 handpalm.' },
+      { veld: 'Focus komende week', oud: 'Eerst eigen bord, dan bedtijdronde.', nieuw: 'Donderdagavond: uiterlijk woensdag één maaltijd voorstellen die de kinderen ook eten.' }
+    ];
+    const applied = Object.keys(s.voorstellen).filter(k => s.voorstellen[k] === 'applied');
+    let preview = 'Goedemorgen Sanne. Hoe ver ben je met je streefgewicht?';
+    if (applied.length) {
+      preview = 'Goedemorgen Sanne.';
+      if (s.voorstellen[2] === 'applied') preview += ' Donderdag komt er weer aan — ik heb een ovenschotel bedacht die de kinderen ook eten. Wil je die woensdag zien?';
+      else preview += ' Hoe was je weekend?';
+      if (s.voorstellen[1] === 'applied') preview += ' En denk aan één handpalm voor jezelf als je met de kinderen mee-eet.';
+    }
+    const previewNote = (s.voorstellen[0] === 'applied' ? 'Geen gewicht of getallen in de opening. ' : 'Let op: zonder de eerste wijziging kan Lau nog over gewicht openen. ') + (s.voorstellen[1] === 'applied' ? 'Eiwit wordt actief benoemd. ' : '') + (s.voorstellen[2] === 'applied' ? 'Donderdag staat als focus.' : '');
+
+    const gemiddeld = { eiwit: '2,1 van 3', groente: '4,3 van 4', koolhydraten: '1,8 van 2', vet: '1,6 van 2' };
+    const onDoel = { eiwit: false, groente: true, koolhydraten: true, vet: true };
+
+    return {
+      isKlant: s.app === 'klant',
+      isCoach: s.app === 'coach',
+      showKlant: () => this.setState({ app: 'klant' }),
+      showCoach: () => this.setState({ app: 'coach' }),
+      tabKlantStyle: this.pill(s.app === 'klant'),
+      tabCoachStyle: this.pill(s.app === 'coach'),
+
+      klantJumps: [jump('Onboarding', 'onboarding'), jump('Chat met Lau', 'chat'), jump('Eten', 'eten'), jump('Voortgang', 'voortgang'), jump('Praat met Laura', 'chat', 'laura')],
+      coachJumps: [cJump('Klantenlijst', 'lijst'), cJump('Klantdetail', 'detail'), cJump('Wekelijks gesprek', 'weekly')],
+
+      isOnboarding: s.kScreen === 'onboarding',
+      isChat: s.kScreen === 'chat',
+      isEten: s.kScreen === 'eten',
+      isVoortgang: s.kScreen === 'voortgang',
+      goEten: () => this.setState({ kScreen: 'eten' }),
+
+      obLabel: s.ob === 7 ? 'Klaar' : 'Stap ' + (s.ob + 1) + ' van 7',
+      obBarStyle: 'height: 100%; width: ' + Math.round(((s.ob + 1) / 8) * 100) + '%; background: ' + SAGE + '; border-radius: 999px; transition: width .35s ease;',
+      obCta: ctas[s.ob],
+      obCanBack: s.ob > 0,
+      ob0: s.ob === 0, ob1: s.ob === 1, ob2: s.ob === 2, ob3: s.ob === 3, ob4: s.ob === 4, ob5: s.ob === 5, ob6: s.ob === 6, ob7: s.ob === 7,
+      obNext: () => s.ob === 7 ? this.setState({ kScreen: 'chat' }) : this.setState({ ob: s.ob + 1 }),
+      obBack: () => this.setState({ ob: Math.max(0, s.ob - 1) }),
+      obSkip: () => this.setState({ ob: 7 }),
+
+      doelen: ['Duurzaam afvallen', 'Meer energie', 'Minder snacken \'s avonds', 'Rust rond eten', 'Betere routine met het gezin'].map(l => this.chip('doelen', l)),
+      weekvorm: ['Druk gezin', 'Werk 3 dagen', 'Wisselende diensten', 'Vaak buitenshuis eten', 'Sport 2x per week'].map(l => this.chip('weekvorm', l)),
+      voorkeuren: ['Alles', 'Weinig vlees', 'Vegetarisch', 'Geen vis', 'Snel klaar (< 25 min)'].map(l => this.chip('voorkeuren', l)),
+      beperkingen: ['Noten-allergie', 'Lactose-intolerant', 'Glutenvrij', 'Medicatie', 'Geen van deze'].map(l => this.chip('beperkingen', l)),
+      veiligheid: ['Nee, dat speelt niet bij mij', 'Soms wel — houd er rekening mee', 'Ja, daar wil ik voorzichtig mee zijn'].map(l => ({
+        label: l,
+        style: 'text-align: left; padding: 16px 18px; border-radius: 18px; font-size: 15px; line-height: 1.5; border: 1px solid ' + (s.veiligheid === l ? SAGE : '#E5E0D6') + '; background: ' + (s.veiligheid === l ? SAGE_SOFT : '#FFFFFF') + '; color: ' + (s.veiligheid === l ? '#3D5539' : '#5E6259') + ';',
+        onClick: () => this.setState({ veiligheid: l })
+      })),
+      afkeer: s.afkeer,
+      onAfkeer: e => this.setState({ afkeer: e.target.value }),
+      extra: s.extra,
+      onExtra: e => this.setState({ extra: e.target.value }),
+      handmaten: HAND.map(h => ({ hand: h.hand, uitleg: h.naam + ' — ' + h.uitleg, markStyle: this.mark(h.kleur, 14) })),
+
+      messages: s.messages.map(m => ({
+        text: m.text,
+        moment: m.moment,
+        isLog: m.role === 'log',
+        isText: m.role !== 'log',
+        items: (m.items || []).map(i => ({ label: i[1] + ' × ' + handOf(i[0]).hand.toLowerCase() + ' ' + handOf(i[0]).naam.toLowerCase(), markStyle: this.mark(handOf(i[0]).kleur, 11) })),
+        rowStyle: row(m.role),
+        bubbleStyle: bubble(m.role)
+      })),
+      typing: s.typing,
+      chatRef: this.chatRef,
+      input: s.input,
+      onInput: e => this.setState({ input: e.target.value }),
+      onKey: e => { if (e.key === 'Enter') { e.preventDefault(); this.push(s.input); } },
+      send: () => this.push(s.input),
+      quickReplies: ['Wat eet ik vanavond?', 'Ik heb trek', 'Hoe ga ik om met een etentje?', 'Ik ben moe vandaag'].map(l => ({ label: l, onClick: () => this.push(l) })),
+
+      tabbarStyle: 'position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 22px 22px; background: linear-gradient(to top, #F6F3ED 65%, rgba(246,243,237,0)); display: flex; gap: 8px;',
+      tabs: [['Vandaag', 'voortgang'], ['Lau.ai', 'chat'], ['Eten', 'eten']].map(t => ({
+        label: t[0],
+        style: 'flex: 1; padding: 13px 0; border-radius: 999px; border: none; font-size: 13px; background: ' + (s.kScreen === t[1] ? '#FFFFFF' : 'transparent') + '; color: ' + (s.kScreen === t[1] ? INK : '#8C8F84') + '; box-shadow: ' + (s.kScreen === t[1] ? '0 2px 10px -4px rgba(38,42,36,.25)' : 'none') + ';',
+        onClick: () => this.setState({ kScreen: t[1] })
+      })),
+
+      openLaura: () => this.setState({ sheet: 'laura' }),
+      openLog: () => this.setState({ sheet: 'log' }),
+      closeSheet: () => this.setState({ sheet: null }),
+      sheetOpen: s.sheet !== null,
+      lauraOpen: s.sheet === 'laura',
+      logOpen: s.sheet === 'log',
+      lauraBtnStyle: 'flex: none; display: flex; align-items: center; gap: 8px; margin-left: auto; padding: 9px 15px; border-radius: 999px; border: 1px solid ' + (s.flag === 'sent' ? SAGE : '#DCD6CA') + '; background: ' + (s.flag === 'sent' ? SAGE_SOFT : '#FFFFFF') + '; font-size: 13px; color: ' + (s.flag === 'sent' ? '#4C6749' : '#5E6259') + ';',
+      lauraDotStyle: 'width: 7px; height: 7px; border-radius: 999px; background: ' + (s.flag === 'sent' ? SAGE : '#C7BEAE') + ';',
+      flagIdle: s.flag === 'idle',
+      flagSent: s.flag === 'sent',
+      flagText: s.flagText,
+      onFlagText: e => this.setState({ flagText: e.target.value }),
+      sendFlag: () => this.setState({ flag: 'sent' }),
+      flagReasons: ['Het weekend', 'Ik twijfel aan het advies', 'Ik zit even vast', 'Iets persoonlijks'].map(l => {
+        const on = s.flagReasons.indexOf(l) > -1;
+        return {
+          label: l,
+          style: 'padding: 10px 15px; border-radius: 999px; font-size: 13px; border: 1px solid ' + (on ? SAGE : '#E5E0D6') + '; background: ' + (on ? SAGE_SOFT : '#FFFFFF') + '; color: ' + (on ? '#4C6749' : '#8C8F84') + ';',
+          onClick: () => this.setState(st => {
+            const cur = st.flagReasons.slice();
+            const i = cur.indexOf(l);
+            if (i > -1) cur.splice(i, 1); else cur.push(l);
+            return { flagReasons: cur };
+          })
+        };
+      }),
+
+      momenten: ['Ontbijt', 'Lunch', 'Avondeten', 'Tussendoor'].map(m => ({
+        label: m,
+        style: 'flex: 1; padding: 11px 0; border-radius: 12px; font-size: 12.5px; border: 1px solid ' + (s.moment === m ? SAGE : '#E5E0D6') + '; background: ' + (s.moment === m ? SAGE_SOFT : '#FFFFFF') + '; color: ' + (s.moment === m ? '#3D5539' : '#5E6259') + ';',
+        onClick: () => this.setState({ moment: m })
+      })),
+      draft: HAND.map(h => ({
+        naam: h.naam, hand: h.hand + ' · ' + h.uitleg, aantal: s.draft[h.key],
+        markStyle: this.mark(h.kleur, 14),
+        onPlus: () => this.setState(st => ({ draft: Object.assign({}, st.draft, { [h.key]: st.draft[h.key] + 1 }) })),
+        onMin: () => this.setState(st => ({ draft: Object.assign({}, st.draft, { [h.key]: Math.max(0, st.draft[h.key] - 1) }) }))
+      })),
+      saveLog: () => this.saveLog(),
+
+      porties: HAND.map(h => {
+        const n = s.porties[h.key];
+        const slots = [];
+        const total = Math.max(h.doel, n);
+        for (let i = 0; i < total; i++) {
+          slots.push({ style: 'flex: 1; height: 10px; border-radius: 999px; background: ' + (i < n ? h.kleur : '#EFEBE2') + '; opacity: ' + (i >= h.doel && i < n ? '.55' : '1') + ';' });
+        }
+        return {
+          naam: h.naam, hand: h.hand + ' · ' + h.uitleg, telling: n + ' / ' + h.doel,
+          markStyle: this.mark(h.kleur, 16),
+          slots,
+          onPlus: () => this.setState(st => ({ porties: Object.assign({}, st.porties, { [h.key]: st.porties[h.key] + 1 }) })),
+          onMin: () => this.setState(st => ({ porties: Object.assign({}, st.porties, { [h.key]: Math.max(0, st.porties[h.key] - 1) }) }))
+        };
+      }),
+      etenFeedback: s.porties.eiwit >= 3
+        ? 'Drie handpalmen eiwit — dat is je doel. Dit zijn de dagen dat je \'s avonds minder trek hebt.'
+        : 'Je zit op ' + s.porties.eiwit + ' van 3 handpalmen eiwit. Bij het avondeten is dat het makkelijkst bij te sturen: kip, vis of kwark als toetje.',
+      weekEten: ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'].map((d, i) => {
+        const v = [3, 4, 3, 0, 4, 2, 0][i];
+        return { label: d, barStyle: 'width: 100%; height: ' + (v ? 14 + v * 8 : 10) + 'px; border-radius: 8px; background: ' + (v ? SAGE_SOFT : '#EFEBE2') + '; border: 1px solid ' + (v ? '#CFE0C8' : '#E9E4DA') + ';' };
+      }),
+      portieSamenvatting: HAND.map(h => ({ naam: h.naam + ' · ' + h.hand.toLowerCase(), gemiddeld: gemiddeld[h.key], markStyle: this.mark(h.kleur, 12) })),
+
+      dagen: ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'].map((d, i) => ({
+        label: d,
+        dotStyle: 'width: 100%; height: 34px; border-radius: 12px; background: ' + ([true, true, true, false, true, true, false][i] ? SAGE_SOFT : '#EFEBE2') + '; border: 1px solid ' + ([true, true, true, false, true, true, false][i] ? '#CFE0C8' : '#E9E4DA') + ';'
+      })),
+      focus: [
+        { label: 'Eerst je eigen bord, dan de bedtijdronde', note: '4 van 7' },
+        { label: 'Elke maaltijd een handpalm eiwit', note: '2,1 gem.' },
+        { label: 'Donderdagavond een plan', note: 'nieuw' }
+      ].map((f, i) => ({ label: f.label, note: f.note, markStyle: 'width: 10px; height: 10px; flex: none; border-radius: 999px; background: ' + (i === 2 ? '#C7BEAE' : SAGE) + ';' })),
+
+      cIsLijst: s.cScreen === 'lijst',
+      cIsDetail: s.cScreen === 'detail',
+      cIsWeekly: s.cScreen === 'weekly',
+      cGoLijst: () => this.setState({ cScreen: 'lijst' }),
+      cGoDetail: goDetail,
+      cGoWeekly: () => this.setState({ cScreen: 'weekly' }),
+      cFilters: ['Wacht op jou', 'Alle', 'Loopt goed'].map(l => ({ label: l, style: this.pill(s.cFilter === l) + 'font-size: 12.5px; padding: 9px 15px;', onClick: () => this.setState({ cFilter: l }) })),
+      klanten: visible.map(k => ({
+        naam: k.naam, initials: k.initials, weken: k.weken, status: k.status, laatste: k.laatste, gesprek: k.gesprek,
+        logLabel: k.logs + '/7',
+        logFillStyle: 'height: 100%; width: ' + Math.round((k.logs / 7) * 100) + '%; border-radius: 999px; background: ' + (k.logs >= 4 ? SAGE : '#C7BEAE') + ';',
+        rowStyle: 'display: grid; grid-template-columns: 2fr 1.1fr 2.2fr 1fr 1fr; gap: 18px; padding: 16px 24px; border-bottom: 1px solid #F1EEE7; cursor: pointer; transition: background .15s ease;' + (k.status === 'Wacht op jou' ? ' box-shadow: inset 3px 0 0 ' + CLAY + ';' : ''),
+        avatarStyle: 'width: 36px; height: 36px; flex: none; border-radius: 999px; background: ' + (k.status === 'Wacht op jou' ? CLAY_SOFT : '#EFEBE2') + '; color: ' + (k.status === 'Wacht op jou' ? '#93472B' : '#6E7168') + '; display: flex; align-items: center; justify-content: center; font-size: 13px;',
+        statusStyle: statusStyle(k.status),
+        onClick: goDetail
+      })),
+
+      cChatRef: this.cChatRef,
+      transcript: baseTranscript.map(t => ({
+        text: t.text,
+        moment: t.moment,
+        isLog: t.role === 'log',
+        isText: t.role !== 'log',
+        rowStyle: row(t.role),
+        bubbleStyle: t.role === 'me'
+          ? 'max-width: 84%; padding: 11px 14px; border-radius: 14px 14px 4px 14px; background: ' + SAGE_SOFT + '; color: #37452F; font-size: 13px; line-height: 1.55;'
+          : (t.role === 'laura'
+            ? 'max-width: 88%; padding: 11px 14px; border-radius: 14px 14px 4px 14px; background: #FBEFE8; border: 1px solid #EDD5C9; color: #6E4331; font-size: 13px; line-height: 1.55;'
+            : 'max-width: 88%; padding: 11px 14px; border-radius: 14px 14px 14px 4px; background: #FFFFFF; border: 1px solid #EDE8DE; color: #5E6259; font-size: 13px; line-height: 1.55;')
+      })),
+      cReply: s.cReply,
+      onCReply: e => this.setState({ cReply: e.target.value }),
+      onCReplyKey: e => { if (e.key === 'Enter') { e.preventDefault(); if (s.cReply.trim()) this.setState(st => ({ cExtra: st.cExtra.concat([{ role: 'laura', text: st.cReply }]), cReply: '' })); } },
+      sendCReply: () => { if (s.cReply.trim()) this.setState(st => ({ cExtra: st.cExtra.concat([{ role: 'laura', text: st.cReply }]), cReply: '' })); },
+      cReplyHint: s.cExtra.length ? 'Verstuurd als Laura · Sanne krijgt een melding' : 'Sanne ziet duidelijk dat dit bericht van jou komt, niet van Lau.',
+      cFlagOpen: s.cFlagOpen,
+      resolveFlag: () => this.setState({ cFlagOpen: false }),
+
+      profileSaved: s.profileSaved,
+      profiel: [
+        { label: 'Doel', isChips: true, isText: false, chips: [['Duurzaam afvallen', 1], ['± 6 kg in 6 maanden', 0], ['Energie voor het gezin', 0]] },
+        { label: 'Portiedoelen (handmaten, per dag)', isChips: true, isText: false, chips: [['3 × handpalm eiwit', 2], ['4 × vuist groente', 1], ['2 × holle hand', 0], ['2 × duim vet', 0]] },
+        { label: 'Knelpunt', isChips: true, isText: false, chips: [['Avond na het eten', 0], ['Donderdag: partner werkt laat', 2]] },
+        { label: 'Voorkeuren', isChips: true, isText: false, chips: [['3 maaltijden', 0], ['Weinig vlees', 0], ['Geen vis', 0], ['Max 25 min', 0]] },
+        { label: 'Beperkingen', isChips: true, isText: false, chips: [['Noten-allergie', 2], ['Geen medicatie', 0]] },
+        { label: 'Aanpak', isText: true, isChips: false, value: s.aanpak, onChange: e => this.setState({ aanpak: e.target.value, profileSaved: 'wijziging niet bewaard' }) },
+        { label: 'Toon van coaching', isText: true, isChips: false, value: s.toon, onChange: e => this.setState({ toon: e.target.value, profileSaved: 'wijziging niet bewaard' }) },
+        { label: 'Vermijden in coaching', isText: true, isChips: false, value: s.donts, onChange: e => this.setState({ donts: e.target.value, profileSaved: 'wijziging niet bewaard' }) },
+        { label: 'Check-in ritme', isChips: true, isText: false, chips: [['\'s ochtends kort', 0], ['\'s avonds op eigen initiatief', 0], ['Duwtje na 3 stille dagen', 0]] }
+      ].map(p => Object.assign({}, p, {
+        chips: (p.chips || []).map(c => ({
+          label: c[0],
+          style: 'padding: 7px 13px; border-radius: 999px; font-size: 12.5px; background: ' + (c[1] === 2 ? CLAY_SOFT : c[1] === 1 ? SAGE_SOFT : '#F1EEE7') + '; color: ' + (c[1] === 2 ? '#93472B' : c[1] === 1 ? '#4C6749' : '#5E6259') + ';'
+        }))
+      })),
+      coachPorties: HAND.map(h => ({
+        naam: h.naam + ' · ' + h.hand.toLowerCase(),
+        waarde: gemiddeld[h.key],
+        markStyle: this.mark(h.kleur, 12),
+        valueStyle: 'padding: 5px 11px; border-radius: 999px; font-size: 11.5px; background: ' + (onDoel[h.key] ? SAGE_SOFT : CLAY_SOFT) + '; color: ' + (onDoel[h.key] ? '#4C6749' : '#93472B') + ';'
+      })),
+
+      notities: s.notities,
+      newNote: s.newNote,
+      onNewNote: e => this.setState({ newNote: e.target.value }),
+      addNote: () => {
+        if (!s.newNote.trim()) return;
+        this.setState(st => ({ notities: [{ datum: '13 aug · vandaag', tekst: st.newNote }].concat(st.notities), newNote: '' }));
+      },
+
+      sessionNotes: s.sessionNotes,
+      onSessionNotes: e => this.setState({ sessionNotes: e.target.value }),
+      signalen: ['Trots op avondroutine', 'Donderdag knelpunt', 'Eiwit blijft achter', 'Gewicht is gevoelig', 'Wil concrete maaltijd', 'Rode vlag'].map(l => {
+        const on = s.signalen.indexOf(l) > -1;
+        const red = l === 'Rode vlag';
+        return {
+          label: l,
+          style: 'padding: 9px 15px; border-radius: 999px; font-size: 12.5px; border: 1px solid ' + (on ? (red ? CLAY : SAGE) : '#E5E0D6') + '; background: ' + (on ? (red ? CLAY_SOFT : SAGE_SOFT) : '#FFFFFF') + '; color: ' + (on ? (red ? '#93472B' : '#4C6749') : '#6E7168') + ';',
+          onClick: () => this.setState(st => {
+            const cur = st.signalen.slice();
+            const i = cur.indexOf(l);
+            if (i > -1) cur.splice(i, 1); else cur.push(l);
+            return { signalen: cur };
+          })
+        };
+      }),
+      appliedCount: applied.length + ' van 3 toegepast',
+      voorstellen: voorstellenData.map((v, i) => {
+        const st = s.voorstellen[i];
+        return {
+          veld: v.veld, oud: v.oud, nieuw: v.nieuw,
+          open: st === 'open',
+          done: st !== 'open',
+          doneLabel: st === 'applied' ? 'Toegepast in profiel' : 'Overgeslagen',
+          doneStyle: 'padding: 8px 14px; border-radius: 999px; font-size: 12.5px; background: ' + (st === 'applied' ? SAGE_SOFT : '#F1EEE7') + '; color: ' + (st === 'applied' ? '#4C6749' : '#8C8F84') + ';',
+          cardStyle: 'padding: 16px 18px; border-radius: 16px; border: 1px solid ' + (st === 'applied' ? '#CFE0C8' : '#EDE8DE') + '; background: ' + (st === 'applied' ? '#FBFDFA' : '#FBF9F5') + '; display: flex; flex-direction: column; gap: 12px;',
+          onApply: () => this.setState(prev => ({ voorstellen: Object.assign({}, prev.voorstellen, { [i]: 'applied' }), sessionSaved: false })),
+          onSkip: () => this.setState(prev => ({ voorstellen: Object.assign({}, prev.voorstellen, { [i]: 'skipped' }) }))
+        };
+      }),
+      preview,
+      previewNote,
+      confirmLabel: s.sessionSaved ? 'Opgeslagen — Lau is bijgesteld' : 'Vastleggen en terug naar Sanne',
+      confirmSession: () => this.setState({ sessionSaved: true, cScreen: s.sessionSaved ? 'detail' : 'weekly' })
+    };
+  }
+}
+
+</script>
+</body>
+</html>

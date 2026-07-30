@@ -4,13 +4,29 @@
 
 **Goal:** Monorepo-fundament voor Lau in Balans: workspaces, gedeeld domeinpakket, Supabase-schema met RLS en seed-data, en werkende scaffolds voor de Expo klant-app en het Next.js coach-dashboard.
 
-**Architecture:** npm-workspaces-monorepo. `packages/shared` is dependency-vrije TypeScript-source (geen build-stap) die door Metro (Expo), Next (transpilePackages) én later Deno geïmporteerd wordt. Supabase draait lokaal via Docker (`supabase start`); RLS is de beveiligingslaag en wordt met echte ingelogde testgebruikers getest.
+**Architecture:** npm-workspaces-monorepo. `packages/shared` is dependency-vrije TypeScript-source (geen build-stap) die door Metro (Expo), Next (transpilePackages) én later Deno geïmporteerd wordt. RLS is de beveiligingslaag en wordt met echte ingelogde testgebruikers getest.
 
-**Tech Stack:** npm workspaces · TypeScript (strict) · Vitest · Supabase CLI (lokaal, Postgres + Auth + RLS) · Expo (React Native, Expo Router) · Next.js (App Router, Tailwind) · @supabase/supabase-js
+**Tech Stack:** npm workspaces · TypeScript (strict) · Vitest · Supabase (gehost, EU) · Expo (React Native, Expo Router) · Next.js (App Router, Tailwind) · @supabase/supabase-js
 
 **Spec:** `docs/superpowers/specs/2026-07-30-lau-in-balans-mvp-design.md`
 
 ---
+
+> ## ⚠️ Werkwijze: gehoste Supabase — GEEN lokaal Docker
+>
+> Deze laptop loopt vast op de lokale Supabase-stack (Docker Desktop is te zwaar). **Draai
+> nooit `supabase start`, `supabase db reset` of `supabase status`.** We werken tegen een
+> gehost Supabase-project (cloud, EU):
+> - Migraties toepassen: `supabase link --project-ref <ref>` (eenmalig) + `supabase db push`.
+> - Env voor seed + RLS-tests komt uit de **Supabase-dashboard → Project Settings → API**
+>   (project-URL, anon key, service-role key), niet uit `supabase status`. Zet die in een
+>   gitignored `.env` in de repo-root; `scripts/supabase-env.mjs` leest uit `process.env`.
+> - `.env.example`-bestanden gebruiken de cloud-URL `https://<ref>.supabase.co`, niet localhost.
+> - Verificatie van schema/policies gebeurt **gedragsmatig** via de RLS-tests (Taak 10) tegen
+>   de cloud-DB, plus de `supabase db push`-output — niet via lokale `docker exec ... psql`.
+>
+> De stappen hieronder noemen soms nog lokale commando's; volg in plaats daarvan altijd deze
+> cloud-werkwijze. Het 563xx-poortblok in `config.toml` is enkel voor (ongebruikte) lokale runs.
 
 ## File Structure (eindresultaat van deze fase)
 
@@ -18,6 +34,7 @@
 lau-in-balans/
 ├── package.json                 # workspaces + root-scripts (test, seed, typecheck, verify)
 ├── tsconfig.base.json           # gedeelde strict-instellingen
+├── tsconfig.json                # root-typecheck van tests/ (Task 10)
 ├── .gitignore
 ├── README.md
 ├── packages/shared/
@@ -27,18 +44,21 @@ lau-in-balans/
 │       ├── index.ts             # barrel
 │       ├── types.ts             # domeintypes + DB-rijtypes (spiegel van het schema)
 │       ├── handmaten.ts         # de vier handmaten + default portiedoelen
-│       ├── helpers.ts           # weekNummer, telPortiesOp, dagTotaal (TDD)
+│       ├── helpers.ts           # weekNummer, telPortiesOp, dagTotaal, naarISODatum (TDD)
 │       ├── helpers.test.ts
+│       ├── handmaten.test.ts    # drift-invarianten handmaten ↔ portiedoelen ↔ tokens
 │       └── tokens.ts            # design-tokens uit de handoff (kleuren, radii, fonts)
 ├── supabase/
 │   ├── config.toml              # via `supabase init`
 │   └── migrations/
 │       ├── <ts>_schema.sql      # 9 tabellen
-│       └── <ts>_rls.sql         # RLS + is_coach_of() + realtime-publicatie
+│       ├── <ts>_rls.sql         # RLS + is_coach_of() + realtime-publicatie
+│       └── <ts>_hardening.sql   # security-review-fixes (C1, I4–I8, I11 + policy-gaten)
 ├── scripts/
-│   ├── local-env.mjs            # leest `supabase status -o env`
-│   └── seed.mjs                 # demo-data uit de handoff (via service role)
-├── tests/rls/rls.test.ts        # isolatie-tests met echte auth-gebruikers
+│   ├── supabase-env.mjs         # leest `.env` (gehoste Supabase; robuust tegen inline-comments)
+│   └── seed.mjs                 # demo-data uit de handoff (via service role); FK-veilig idempotent
+├── vitest.config.ts             # testTimeout (cloud-latency) + TZ=Europe/Amsterdam
+├── tests/rls/rls.test.ts        # isolatie- + hardening-tests met echte auth-gebruikers (cloud)
 ├── apps/mobile/                 # create-expo-app (default template) + supabase-client
 │   ├── lib/supabase.ts
 │   ├── lib/domain.ts            # bewijs dat @lau/shared resolvet
@@ -63,7 +83,7 @@ Expected: installatie slaagt; `watchman --version` print een versienummer.
 - [ ] **Step 2: Verifieer de rest van de toolchain**
 
 Run: `node --version && supabase --version && docker info --format '{{.ServerVersion}}'`
-Expected: Node ≥ 20, een Supabase CLI-versie, en een Docker-serverversie (draait al). EAS CLI is pas in fase 6 nodig — niet installeren.
+Expected: Node ≥ 22.12, een Supabase CLI-versie, en een Docker-serverversie (draait al). EAS CLI is pas in fase 6 nodig — niet installeren.
 
 ### Task 2: Monorepo-root
 
@@ -77,9 +97,11 @@ Expected: Node ≥ 20, een Supabase CLI-versie, en een Docker-serverversie (draa
 {
   "name": "lau-in-balans",
   "private": true,
+  "engines": { "node": ">=22.12.0" },
+  "packageManager": "npm@11.16.0",
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "test": "vitest run packages/shared",
+    "test": "TZ=Europe/Amsterdam vitest run packages/shared",
     "test:rls": "vitest run tests/rls",
     "seed": "node scripts/seed.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
@@ -98,6 +120,7 @@ Expected: Node ≥ 20, een Supabase CLI-versie, en een Docker-serverversie (draa
     "module": "ESNext",
     "moduleResolution": "bundler",
     "esModuleInterop": true,
+    "isolatedModules": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "noUncheckedIndexedAccess": true
@@ -142,7 +165,7 @@ AI-assisted voedingscoaching: Expo klant-app (iOS/Android) + Next.js coach-dashb
 
 - [ ] **Step 5: Installeer root-devDependencies**
 
-Run: `npm install -D typescript vitest @supabase/supabase-js`
+Run: `npm install -D typescript@^5.9 vitest @supabase/supabase-js`
 Expected: `package-lock.json` ontstaat, geen errors.
 
 - [ ] **Step 6: Commit**
@@ -177,18 +200,25 @@ git commit -m "chore: monorepo-root met workspaces en tooling"
 ```json
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "noEmit": true },
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "lib": ["ES2022"],
+    "types": []
+  },
   "include": ["src"]
 }
 ```
 
+(`allowImportingTsExtensions` hoort bij de expliciete `.ts`-extensies in de relatieve imports: die maken het pakket importeerbaar zonder bundler — Node's type-stripping en `deno check` eisen de extensie, Metro/Next accepteren hem.)
+
 - [ ] **Step 3: Schrijf `packages/shared/src/index.ts`**
 
 ```ts
-export * from './types';
-export * from './handmaten';
-export * from './helpers';
-export * from './tokens';
+export * from './types.ts';
+export * from './handmaten.ts';
+export * from './helpers.ts';
+export * from './tokens.ts';
 ```
 
 (Dit compileert pas na Task 4–6; dat is oké — commit volgt daar.)
@@ -212,6 +242,7 @@ export type FlagStatus = 'open' | 'resolved';
 export type LogBron = 'chat' | 'eten';
 export type NoteType = 'intake' | 'sessie' | 'los';
 export type Veiligheidsvlag = 'geen' | 'soms' | 'voorzichtig' | 'overgeslagen';
+export type Platform = 'ios' | 'android';
 
 /** Het gestructureerde per-klant AI-profiel — de personalisatiemotor. */
 export interface AIProfile {
@@ -228,6 +259,12 @@ export interface AIProfile {
 }
 
 // ── DB-rijtypes (spiegel van supabase/migrations — snake_case zoals Postgres) ──
+
+export interface CoachRow {
+  id: string;
+  naam: string;
+  created_at: string;
+}
 
 export interface ClientRow {
   id: string;
@@ -302,7 +339,7 @@ export interface WeeklySessionRow {
 export interface PushTokenRow {
   client_id: string;
   expo_push_token: string;
-  platform: 'ios' | 'android';
+  platform: Platform;
   updated_at: string;
 }
 ```
@@ -310,7 +347,7 @@ export interface PushTokenRow {
 - [ ] **Step 2: Schrijf `handmaten.ts`** (waarden exact uit de handoff)
 
 ```ts
-import type { HandKey, Porties } from './types';
+import type { HandKey, Porties } from './types.ts';
 
 export interface Handmaat {
   key: HandKey;
@@ -321,21 +358,21 @@ export interface Handmaat {
   kleur: string;
 }
 
-export const HANDMATEN: readonly Handmaat[] = [
+export const HANDMATEN = [
   { key: 'eiwit', naam: 'Eiwit', hand: 'Handpalm', uitleg: 'vlees, vis, kwark, tofu', dagdoel: 3, kleur: '#63805F' },
   { key: 'groente', naam: 'Groente', hand: 'Vuist', uitleg: 'alle groente en salade', dagdoel: 4, kleur: '#7E9C6E' },
   { key: 'koolhydraten', naam: 'Koolhydraten', hand: 'Holle hand', uitleg: 'rijst, pasta, brood, aardappel', dagdoel: 2, kleur: '#C1A277' },
   { key: 'vet', naam: 'Vetten', hand: 'Duim', uitleg: 'olie, kaas, avocado, pindakaas', dagdoel: 2, kleur: '#B0603F' },
-] as const;
+] as const satisfies readonly Handmaat[];
 
-export const PORTIE_DOEL_DEFAULT: Porties = { eiwit: 3, groente: 4, koolhydraten: 2, vet: 2 };
-export const LEGE_PORTIES: Porties = { eiwit: 0, groente: 0, koolhydraten: 0, vet: 0 };
+export const PORTIE_DOEL_DEFAULT: Readonly<Porties> = Object.freeze({ eiwit: 3, groente: 4, koolhydraten: 2, vet: 2 });
+export const LEGE_PORTIES: Readonly<Porties> = Object.freeze({ eiwit: 0, groente: 0, koolhydraten: 0, vet: 0 });
 ```
 
 - [ ] **Step 3: Typecheck (verwacht: faalt alleen nog op ontbrekende helpers/tokens)**
 
 Run: `npm run typecheck -w @lau/shared`
-Expected: errors over `./helpers` en `./tokens` (bestaan nog niet) — géén errors in types/handmaten zelf.
+Expected: errors over `./helpers.ts` en `./tokens.ts` (bestaan nog niet) — géén errors in types/handmaten zelf.
 
 ### Task 5: shared — helpers (TDD)
 
@@ -347,8 +384,8 @@ Expected: errors over `./helpers` en `./tokens` (bestaan nog niet) — géén er
 
 ```ts
 import { describe, expect, it } from 'vitest';
-import { dagTotaal, telPortiesOp, weekNummer } from './helpers';
-import { LEGE_PORTIES } from './handmaten';
+import { dagTotaal, naarISODatum, telPortiesOp, vandaagISO, weekNummer } from './helpers.ts';
+import { LEGE_PORTIES } from './handmaten.ts';
 
 describe('weekNummer', () => {
   it('is 1 op de startdag en de eerste zes dagen', () => {
@@ -364,6 +401,36 @@ describe('weekNummer', () => {
   it('klemt op 1 als vandaag vóór de startdatum ligt', () => {
     expect(weekNummer('2026-08-01', '2026-07-30')).toBe(1);
   });
+  it('rekent over een DST-overgang heen in hele dagen', () => {
+    expect(weekNummer('2026-03-25', '2026-04-01')).toBe(2);
+  });
+  it('rekent over een jaargrens heen', () => {
+    expect(weekNummer('2025-12-29', '2026-01-05')).toBe(2);
+  });
+  it('gooit op ongeldig datumformaat', () => {
+    expect(() => weekNummer('2026-07-30T10:00:00.000Z', '2026-07-30')).toThrow();
+    expect(() => weekNummer('kaas', '2026-07-30')).toThrow();
+  });
+});
+
+describe('naarISODatum', () => {
+  it('formatteert de lokale kalenderdag', () => {
+    expect(naarISODatum(new Date(2026, 6, 30))).toBe('2026-07-30');
+  });
+  it('padt maand en dag naar twee cijfers', () => {
+    expect(naarISODatum(new Date(2026, 0, 5))).toBe('2026-01-05');
+  });
+  it('gebruikt de lokale dag, niet de UTC-dag (middernacht-grens)', () => {
+    // 1 jan 2026 00:30 lokaal is in Europe/Amsterdam 31 dec 2025 23:30 UTC.
+    expect(naarISODatum(new Date(2026, 0, 1, 0, 30))).toBe('2026-01-01');
+  });
+});
+
+describe('vandaagISO', () => {
+  it('geeft vandaag in YYYY-MM-DD', () => {
+    expect(vandaagISO()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(vandaagISO()).toBe(naarISODatum(new Date()));
+  });
 });
 
 describe('telPortiesOp', () => {
@@ -371,6 +438,13 @@ describe('telPortiesOp', () => {
     expect(
       telPortiesOp({ eiwit: 1, groente: 2, koolhydraten: 1, vet: 0 }, { eiwit: 1, groente: 0, koolhydraten: 0, vet: 1 }),
     ).toEqual({ eiwit: 2, groente: 2, koolhydraten: 1, vet: 1 });
+  });
+  it('muteert geen van beide inputs', () => {
+    const a = { eiwit: 1, groente: 2, koolhydraten: 1, vet: 0 };
+    const b = { eiwit: 1, groente: 0, koolhydraten: 0, vet: 1 };
+    telPortiesOp(a, b);
+    expect(a).toEqual({ eiwit: 1, groente: 2, koolhydraten: 1, vet: 0 });
+    expect(b).toEqual({ eiwit: 1, groente: 0, koolhydraten: 0, vet: 1 });
   });
 });
 
@@ -386,19 +460,25 @@ describe('dagTotaal', () => {
   it('geeft lege porties bij geen logs', () => {
     expect(dagTotaal([])).toEqual(LEGE_PORTIES);
   });
+  it('geeft een vers object terug, niet de gedeelde constante', () => {
+    const resultaat = dagTotaal([]);
+    expect(resultaat).not.toBe(LEGE_PORTIES);
+    resultaat.eiwit += 1;
+    expect(LEGE_PORTIES.eiwit).toBe(0);
+  });
 });
 ```
 
 - [ ] **Step 2: Run tests, verwacht FAIL**
 
-Run: `npx vitest run packages/shared`
+Run: `npm test`
 Expected: FAIL — `helpers.ts` bestaat niet.
 
 - [ ] **Step 3: Implementeer `helpers.ts`**
 
 ```ts
-import type { Porties } from './types';
-import { LEGE_PORTIES } from './handmaten';
+import type { Porties } from './types.ts';
+import { LEGE_PORTIES } from './handmaten.ts';
 
 const MS_PER_DAG = 86_400_000;
 
@@ -407,8 +487,18 @@ export function weekNummer(startdatum: string, vandaag: string): number {
   const start = Date.parse(`${startdatum}T00:00:00Z`);
   const nu = Date.parse(`${vandaag}T00:00:00Z`);
   const dagen = Math.floor((nu - start) / MS_PER_DAG);
+  if (!Number.isFinite(dagen)) {
+    throw new Error(`weekNummer: verwacht YYYY-MM-DD, kreeg "${startdatum}" / "${vandaag}"`);
+  }
   return Math.max(1, Math.floor(dagen / 7) + 1);
 }
+
+/** Lokale kalenderdag als YYYY-MM-DD — géén toISOString().slice: die geeft de UTC-dag. */
+export function naarISODatum(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export const vandaagISO = (): string => naarISODatum(new Date());
 
 export function telPortiesOp(a: Porties, b: Porties): Porties {
   return {
@@ -420,20 +510,22 @@ export function telPortiesOp(a: Porties, b: Porties): Porties {
 }
 
 export function dagTotaal(logs: ReadonlyArray<{ porties: Porties }>): Porties {
-  return logs.reduce<Porties>((som, log) => telPortiesOp(som, log.porties), LEGE_PORTIES);
+  // Spread: met een lege logs-array geeft reduce de seed zélf terug — zonder copy
+  // zou de caller de gedeelde LEGE_PORTIES-constante kunnen muteren.
+  return logs.reduce<Porties>((som, log) => telPortiesOp(som, log.porties), { ...LEGE_PORTIES });
 }
 ```
 
 - [ ] **Step 4: Run tests, verwacht PASS**
 
-Run: `npx vitest run packages/shared`
+Run: `npm test`
 Expected: alle tests PASS.
 
 ### Task 6: shared — design-tokens
 
 **Files:**
 
-- Create: `packages/shared/src/tokens.ts`
+- Create: `packages/shared/src/tokens.ts`, `packages/shared/src/handmaten.test.ts`
 
 - [ ] **Step 1: Schrijf `tokens.ts`** (hexwaarden exact uit de handoff-README; namen camelCase)
 
@@ -513,12 +605,57 @@ export const fonts = {
 } as const;
 ```
 
-- [ ] **Step 2: Typecheck + tests**
+- [ ] **Step 2: Schrijf `handmaten.test.ts`** (drift-invarianten — kan pas hier, want vergelijkt met `tokens.ts`)
 
-Run: `npm run typecheck -w @lau/shared && npx vitest run packages/shared`
+```ts
+import { describe, expect, it } from 'vitest';
+import { HANDMATEN, LEGE_PORTIES, PORTIE_DOEL_DEFAULT } from './handmaten.ts';
+import { colors } from './tokens.ts';
+import type { HandKey } from './types.ts';
+
+describe('HANDMATEN', () => {
+  it('dekt elke HandKey precies één keer', () => {
+    // map() en Object.keys() geven verse arrays, dus sort() muteert niets gedeelds.
+    const keys = HANDMATEN.map((h) => h.key).sort();
+    expect(keys).toEqual(Object.keys(LEGE_PORTIES).sort());
+    expect(new Set(keys).size).toBe(HANDMATEN.length);
+  });
+});
+
+describe('drift-invarianten', () => {
+  it('PORTIE_DOEL_DEFAULT klopt met het dagdoel per handmaat', () => {
+    for (const h of HANDMATEN) {
+      expect(PORTIE_DOEL_DEFAULT[h.key]).toBe(h.dagdoel);
+    }
+  });
+
+  it('de kleur per handmaat is het bijbehorende food-token', () => {
+    const kleurToken: Record<HandKey, string> = {
+      eiwit: colors.foodEiwit,
+      groente: colors.foodGroente,
+      koolhydraten: colors.foodKoolhydraten,
+      vet: colors.foodVet,
+    };
+    for (const h of HANDMATEN) {
+      expect(h.kleur).toBe(kleurToken[h.key]);
+    }
+  });
+});
+
+describe('gedeelde constanten', () => {
+  it('zijn bevroren, zodat consumers ze niet kunnen muteren', () => {
+    expect(Object.isFrozen(LEGE_PORTIES)).toBe(true);
+    expect(Object.isFrozen(PORTIE_DOEL_DEFAULT)).toBe(true);
+  });
+});
+```
+
+- [ ] **Step 3: Typecheck + tests**
+
+Run: `npm run typecheck -w @lau/shared && npm test`
 Expected: beide PASS (barrel uit Task 3 compileert nu volledig).
 
-- [ ] **Step 3: Commit (Task 3–6 samen: het complete shared-pakket)**
+- [ ] **Step 4: Commit (Task 3–6 samen: het complete shared-pakket)**
 
 ```bash
 git add packages/shared
@@ -535,6 +672,8 @@ git commit -m "feat: @lau/shared — domeintypes, handmaten, helpers (TDD) en de
 
 Run: `supabase init`
 Expected: `supabase/config.toml` aangemaakt. (Vragen over VS Code/Deno-settings: nee is prima.)
+
+Poorten verplaatst naar het 563xx-blok — sweav-base bezet de defaults (543xx); zelfde conventie als muzo-proposal-tool op 553xx. API draait dus op 56321, db op 56322.
 
 - [ ] **Step 2: Maak de migratie aan**
 
@@ -775,11 +914,162 @@ git add supabase/migrations/
 git commit -m "feat: RLS-policies — klant/coach-isolatie + realtime-publicatie"
 ```
 
-### Task 9: Seed-script met handoff-demodata
+### Task 8b: Supabase — hardening-migratie (security-review)
+
+Een security-review van het schema + RLS uit Task 7–8 vond één latente Critical en een reeks hardening-punten. De belangrijkste is C1: `is_coach_of` draaide als `security definer` met een niet-lege `search_path`, waardoor een `authenticated` klant met een eigen `pg_temp.clients`-tabel de coach-check kon kapen (`search_path`-hijack). Deze migratie zet de `search_path` leeg, ontzegt `execute`/`temporary` waar niet nodig, en dicht verder: ontbrekende `WITH CHECK` op update-policies (I4/I5), FK-`on delete set null` voor AVG-verwijdering (I6), extra indexes op hot paths (I7), tijdzone-correcte datumdefaults in Europe/Amsterdam (I8), uniciteit van push-tokens (I11), plus enkele policy-gaten (klant leest de naam van de eigen coach; klant corrigeert eigen voedingslogs).
 
 **Files:**
 
-- Create: `scripts/local-env.mjs`, `scripts/seed.mjs`
+- Create: `supabase/migrations/<ts>_hardening.sql` (via `supabase migration new hardening`)
+
+- [ ] **Step 1: Maak de migratie aan**
+
+Run: `supabase migration new hardening`
+
+- [ ] **Step 2: Schrijf de hardening-SQL**
+
+```sql
+-- Hardening na security-review fase 1.
+-- Fixt: search_path-hijack op is_coach_of (C1), ontbrekende WITH CHECK op
+-- update-policies (I4/I5), FK-acties voor AVG-verwijdering (I6), ontbrekende
+-- indexes (I7), tijdzone-correcte datumdefaults (I8), push-token-uniciteit (I11),
+-- plus enkele policy-gaten (klant leest eigen coach, klant beheert eigen logs).
+
+-- ── C1: is_coach_of — lege search_path sluit de pg_temp-hijack ──
+create or replace function public.is_coach_of(p_client uuid)
+returns boolean
+language sql stable security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1 from public.clients c
+    where c.id = p_client and c.coach_id = auth.uid()
+  );
+$$;
+revoke execute on function public.is_coach_of(uuid) from public, anon;
+grant execute on function public.is_coach_of(uuid) to authenticated;
+revoke temporary on database postgres from public;
+
+-- ── I4: flag alleen open→resolved, met correcte auteur ──
+drop policy klant_maakt_flag on public.flags;
+create policy klant_maakt_flag on public.flags
+  for insert with check (
+    client_id = auth.uid() and status = 'open'
+    and resolved_by is null and resolved_at is null
+  );
+
+drop policy coach_rondt_flag_af on public.flags;
+create policy coach_rondt_flag_af on public.flags
+  for update using (public.is_coach_of(client_id) and status = 'open')
+  with check (
+    public.is_coach_of(client_id)
+    and status = 'resolved'
+    and resolved_by = auth.uid()
+    and resolved_at is not null
+  );
+
+-- ── I5: clients — coach mag alleen status/naam/leeftijd wijzigen ──
+drop policy coach_wijzigt_klanten on public.clients;
+create policy coach_wijzigt_klanten on public.clients
+  for update using (coach_id = auth.uid())
+  with check (coach_id = auth.uid());
+
+create or replace function public.clients_guard_update()
+returns trigger language plpgsql as $$
+begin
+  if new.id <> old.id
+     or new.coach_id <> old.coach_id
+     or new.startdatum <> old.startdatum
+     or new.created_at <> old.created_at then
+    raise exception 'clients: id, coach_id, startdatum en created_at zijn niet wijzigbaar';
+  end if;
+  return new;
+end;
+$$;
+create trigger clients_guard_update before update on public.clients
+  for each row execute function public.clients_guard_update();
+
+-- ── klant leest de naam van de eigen coach (voor "je coach: Laura") ──
+create policy klant_leest_eigen_coach on public.coaches
+  for select using (
+    exists (select 1 from public.clients c
+            where c.coach_id = coaches.id and c.id = auth.uid())
+  );
+
+-- ── klant corrigeert eigen voedingslogs (eten-tab) ──
+create policy klant_wijzigt_eigen_logs on public.food_logs
+  for update using (client_id = auth.uid()) with check (client_id = auth.uid());
+create policy klant_wist_eigen_logs on public.food_logs
+  for delete using (client_id = auth.uid());
+
+-- ── I6: historische auteur/afhandelaar loskoppelen bij coach-verwijdering ──
+alter table public.ai_profile_versions
+  drop constraint ai_profile_versions_author_fkey,
+  add constraint ai_profile_versions_author_fkey
+    foreign key (author) references public.coaches (id) on delete set null;
+alter table public.flags
+  drop constraint flags_resolved_by_fkey,
+  add constraint flags_resolved_by_fkey
+    foreign key (resolved_by) references public.coaches (id) on delete set null;
+
+-- ── I7: indexes voor bewezen hot paths ──
+create index coach_notes_client_datum_idx on public.coach_notes (client_id, datum desc);
+create index weekly_sessions_client_datum_idx on public.weekly_sessions (client_id, datum desc);
+create index messages_unread_idx on public.messages (client_id) where read_at is null;
+create index flags_open_idx on public.flags (created_at desc) where status = 'open';
+create index messages_food_log_idx on public.messages (food_log_id);
+
+-- ── I8: datumdefaults in Europe/Amsterdam ──
+alter table public.clients         alter column startdatum set default ((now() at time zone 'Europe/Amsterdam')::date);
+alter table public.food_logs       alter column datum      set default ((now() at time zone 'Europe/Amsterdam')::date);
+alter table public.coach_notes     alter column datum      set default ((now() at time zone 'Europe/Amsterdam')::date);
+alter table public.weekly_sessions alter column datum      set default ((now() at time zone 'Europe/Amsterdam')::date);
+
+-- ── I11: één device-token hoort bij één klant ──
+alter table public.push_tokens add constraint push_tokens_token_unique unique (expo_push_token);
+```
+
+- [ ] **Step 3: Pas toe en verifieer tegen de live db**
+
+Run: `supabase db reset` (past alle drie de migraties vers toe; verwacht exit 0).
+
+Verifieer C1 gesloten — als échte `authenticated`-rol met de JWT-claims van een niet-coach-klant:
+
+```sql
+set role authenticated;
+set request.jwt.claims to '{"sub":"<een clients.id>","role":"authenticated"}';
+select public.is_coach_of('<andere client id>');           -- f
+create temp table clients(id uuid, coach_id uuid);
+insert into clients values ('<andere client id>', '<een clients.id>');
+select public.is_coach_of('<andere client id>');           -- moet nog steeds f zijn (was voorheen t)
+reset role;
+```
+
+Verder verifiëren:
+
+- `select proconfig from pg_proc where proname='is_coach_of';` → `{search_path=""}`
+- policy-count per tabel opnieuw: flags nog steeds 4 (herdefinieerd), clients nog steeds 3, coaches nu 2, food_logs nu 5.
+- 5 nieuwe indexes aanwezig; `confdeltype='n'` (SET NULL) op de twee gewijzigde FK's; `push_tokens_token_unique` bestaat; trigger `clients_guard_update` bestaat; realtime-publicatie nog steeds exact messages + flags.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add supabase/migrations/
+git commit -m "feat: hardening-migratie — search_path-fix, WITH CHECK-policies, indexes, FK-acties, tz-datums, push-uniek (security-review)"
+```
+
+### Task 9: Seed-script met handoff-demodata
+
+> **Cloud-uitvoering (bindend):** dit is aangepast naar de gehoste Supabase. In plaats van
+> `scripts/local-env.mjs` (dat `supabase status` las) is er `scripts/supabase-env.mjs` dat de
+> `.env` in de repo-root parseert (robuust tegen inline-comments). `scripts/seed.mjs` importeert
+> die module; `wisDemoData()` ruimt FK-veilig op (eerst `clients`, dan `coaches`, dan de
+> auth-users) zodat de seed idempotent is. Draai met `npm run seed` (geen `supabase status`).
+> De onderstaande code is het oorspronkelijke lokale ontwerp; de gecommitte bestanden zijn leidend.
+
+**Files:**
+
+- Create: `scripts/supabase-env.mjs`, `scripts/seed.mjs`
 
 - [ ] **Step 1: Schrijf `scripts/local-env.mjs`**
 
@@ -818,7 +1108,9 @@ const db = createClient(url, serviceKey, { auth: { persistSession: false } });
 const WACHTWOORD = 'demo-demo-2026';
 const DOMEIN = 'demo.lauinbalans.nl';
 
-const isoDatum = (d) => d.toISOString().slice(0, 10);
+/** Lokale kalenderdag als YYYY-MM-DD — géén toISOString().slice: die geeft de UTC-dag. */
+const isoDatum = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const dagenGeleden = (n) => {
   const d = new Date();
   d.setDate(d.getDate() - n);
@@ -995,9 +1287,20 @@ git commit -m "feat: seed-script met demo-data uit de design handoff"
 
 ### Task 10: RLS-isolatie-tests
 
+> **Cloud-uitvoering (bindend):** de tests draaien tegen de gehoste Supabase via
+> `scripts/supabase-env.mjs` (niet `local-env.mjs`). Toegevoegd t.o.v. het ontwerp hieronder:
+> een `vitest.config.ts` (testTimeout 30s voor cloud-latency + `TZ=Europe/Amsterdam`), en
+> extra hardening-cases uit de security-review — klant kan eigen profiel niet lezen, klant
+> leest wél de coach-naam, klant corrigeert eigen voedingslog, coach kan een klant niet
+> hertoewijzen, flag-resolve vereist een afhandelaar (WITH CHECK), push-token uniek. De
+> anon-checks tolereren zowel een lege 200 als een 401 (anon mag `is_coach_of()` niet
+> uitvoeren). De C1 search_path-hijack zelf is niet via supabase-js testbaar (geen DDL).
+> De gecommitte `tests/rls/rls.test.ts` is leidend.
+
 **Files:**
 
-- Create: `tests/rls/rls.test.ts`
+- Create: `tests/rls/rls.test.ts`, `vitest.config.ts`, `tsconfig.json` (root)
+- Modify: `package.json` (root — typecheck- en test-script)
 
 - [ ] **Step 1: Schrijf de tests**
 
@@ -1108,10 +1411,33 @@ describe('anoniem', () => {
 Run: `npm run test:rls`
 Expected: alle tests PASS (vereist draaiende `supabase start` + verse `npm run seed`).
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Root-tsconfig zodat tests/scripts meegecheckt worden**
+
+Schrijf root `tsconfig.json`:
+
+```json
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": { "noEmit": true, "types": [] },
+  "include": ["tests"]
+}
+```
+
+En wijzig het typecheck-script in root `package.json` naar:
+
+```json
+"typecheck": "tsc --noEmit && npm run typecheck --workspaces --if-present"
+```
+
+Dit gebeurt in Task 10 en niet eerder omdat er tot nu toe geen `tests/`-map bestaat en `tsc` faalt op een lege `include`.
+
+Run: `npm run typecheck`
+Expected: geen errors (root-tests + alle workspaces).
+
+- [ ] **Step 4: Commit**
 
 ```bash
-git add tests/
+git add tests/ tsconfig.json package.json
 git commit -m "test: RLS-isolatie — klant/coach/anoniem tegen lokale Supabase"
 ```
 
@@ -1130,6 +1456,7 @@ Expected: `apps/mobile/` met expo-router-template (TypeScript).
 - [ ] **Step 2: Koppel workspaces en installeer**
 
 Voeg in `apps/mobile/package.json` toe aan `"dependencies"`: `"@lau/shared": "*"` en aan `"scripts"`: `"typecheck": "tsc --noEmit"`.
+Voeg `"allowImportingTsExtensions": true` toe aan de tsconfig van de app (nodig omdat @lau/shared .ts-extensies in imports gebruikt en als source geïmporteerd wordt).
 Run (root): `npm install`
 Expected: workspace-symlink `node_modules/@lau/shared` bestaat.
 
@@ -1165,7 +1492,7 @@ export const supabase = createClient(url, anonKey, {
 `.env.example` (lokale waarden komen uit `supabase status`; iOS-simulator kan bij `127.0.0.1`, een fysiek toestel niet — dat is pas relevant bij het cloud-project):
 
 ```bash
-EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:56321
 EXPO_PUBLIC_SUPABASE_ANON_KEY=<anon key uit `supabase status`>
 ```
 
@@ -1203,6 +1530,7 @@ Expected: `apps/coach/` met App Router + Tailwind.
 - [ ] **Step 2: Workspace-dep + scripts + transpile**
 
 In `apps/coach/package.json`: voeg `"@lau/shared": "*"` toe aan dependencies, `"@supabase/supabase-js"` eveneens, en `"typecheck": "tsc --noEmit"` aan scripts.
+Voeg `"allowImportingTsExtensions": true` toe aan de tsconfig van de app (nodig omdat @lau/shared .ts-extensies in imports gebruikt en als source geïmporteerd wordt).
 In `apps/coach/next.config.ts`:
 
 ```ts
@@ -1215,13 +1543,16 @@ const nextConfig: NextConfig = {
 export default nextConfig;
 ```
 
+create-next-app genereert `apps/coach/.gitignore` met een `.env*`-regel die de root-negatie verslaat (nested .gitignore wint). Voeg daarom aan `apps/coach/.gitignore` een regel `!.env.local.example` toe. (Zonder deze regel wordt `apps/coach/.env.local.example` — een Task 12-deliverable — stil overgeslagen door `git add`.)
+
 Run (root): `npm install`
 
 - [ ] **Step 3: Schrijf `apps/coach/src/lib/supabase.ts` en `.env.local.example`**
 
+`src/lib/supabase.ts` (importeert géén `colors` — de env-check zou anders bij `next build` afgaan zodra iets dit bestand in de graph trekt; de transpilePackages-proof zit in `page.tsx`, zie Step 4):
+
 ```ts
 import { createClient } from '@supabase/supabase-js';
-import { colors } from '@lau/shared'; // bewijst transpilePackages; echte UI volgt in fase 4
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -1231,26 +1562,35 @@ if (!url || !anonKey) {
 }
 
 export const supabase = createClient(url, anonKey);
-export const brandSage = colors.sage;
 ```
 
-`.env.local.example`:
+`.env.local.example` (cloud-project — waarden uit Supabase-dashboard → Project Settings → API):
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key uit `supabase status`>
+NEXT_PUBLIC_SUPABASE_URL=https://<jouw-project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon public key uit de Supabase-dashboard>
 ```
 
-- [ ] **Step 4: Build-smoketest**
+- [ ] **Step 4: Bewijs transpilePackages via een page-import**
 
-Run: `cp apps/coach/.env.local.example apps/coach/.env.local` → vul de echte anon key in (uit `supabase status`) → `npm run build -w apps/coach`
-Expected: build PASS. (`supabase.ts` wordt nog nergens geïmporteerd, dus de env-check kan de build niet breken — de build bewijst vooral dat het scaffold en transpilePackages kloppen.)
+Importeer een gedeelde token in de gegenereerde homepage zodat `next build` `@lau/shared` daadwerkelijk transpileert. In `apps/coach/src/app/page.tsx`: voeg bovenaan de import toe en pas de token toe op het buitenste element. Importeer `supabase.ts` nergens (env-check zou de build breken).
 
-- [ ] **Step 5: Commit**
+```tsx
+import { colors } from '@lau/shared';
+// ...
+<div style={{ borderTop: `3px solid ${colors.sage}` }}>
+```
+
+- [ ] **Step 5: Typecheck + build-smoketest**
+
+Run: `npm run typecheck -w apps/coach` → PASS.
+Run: `npm run build -w apps/coach` → PASS. De build compileert `page.tsx` die `@lau/shared` importeert (bewijst transpilePackages); `supabase.ts` zit niet in de graph, dus de env-check kan de build niet breken. Er is dus géén `.env.local` nodig voor de smoketest.
+
+- [ ] **Step 6: Commit**
 
 ```bash
-git add apps/coach package-lock.json
-git commit -m "feat: Next.js-scaffold coach-dashboard met supabase-client en @lau/shared"
+git add apps/coach package-lock.json docs/superpowers/plans/2026-07-30-fase-1-fundament.md
+git commit -m "feat: Next.js-scaffold coach-dashboard met supabase-client en @lau/shared (cloud env)"
 ```
 
 ### Task 13: Eindverificatie fase 1
@@ -1271,3 +1611,11 @@ git add README.md && git commit -m "docs: verificatiecommando's fase 1" || true
 ```
 
 Definition of done fase 1: `npm run verify` en `npm run test:rls` slagen op een schone checkout met draaiende Docker; beide app-scaffolds bouwen; de seed toont de handoff-demodata in Supabase Studio (`supabase status` → Studio-URL).
+
+## Bewust uitgesteld na security-review
+
+De hardening-migratie (Task 8b) dicht de gevonden Critical + hardening-punten. Drie zaken zijn bewust naar een latere fase geschoven — geen van alle een cross-tenant-disclosure vandaag:
+
+- **`read_at` heeft nog geen schrijf-pad.** Berichten markeren als gelezen komt in fase 4 via service-role of een dedicated RPC; er is nu geen klant/coach-policy die `messages.read_at` mag zetten.
+- **Realtime DELETE-events omzeilen RLS cross-tenant.** De DELETE-payload is enkel een UUID (de primaire sleutel), niet RLS-gefilterd. Zet in fase 4 daarom **NOOIT** `REPLICA IDENTITY FULL` op `messages` (dat zou de volledige oude rij cross-tenant lekken); gebruik soft-delete als je in de UI een `old_record` nodig hebt.
+- **Cross-tenant FK-refs zijn niet afgedwongen.** `messages.food_log_id` en `weekly_sessions.resulting_profile_version` kunnen in theorie naar een rij van een andere klant wijzen. Dit is een integriteits-, geen disclosure-kwestie: reads blijven RLS-gefilterd, dus er lekt niets. Een composite-FK of trigger die tenant-gelijkheid afdwingt volgt in een latere fase.
