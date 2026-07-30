@@ -28,8 +28,9 @@ lau-in-balans/
 │       ├── index.ts             # barrel
 │       ├── types.ts             # domeintypes + DB-rijtypes (spiegel van het schema)
 │       ├── handmaten.ts         # de vier handmaten + default portiedoelen
-│       ├── helpers.ts           # weekNummer, telPortiesOp, dagTotaal (TDD)
+│       ├── helpers.ts           # weekNummer, telPortiesOp, dagTotaal, naarISODatum (TDD)
 │       ├── helpers.test.ts
+│       ├── handmaten.test.ts    # drift-invarianten handmaten ↔ portiedoelen ↔ tokens
 │       └── tokens.ts            # design-tokens uit de handoff (kleuren, radii, fonts)
 ├── supabase/
 │   ├── config.toml              # via `supabase init`
@@ -82,7 +83,7 @@ Expected: Node ≥ 22.12, een Supabase CLI-versie, en een Docker-serverversie (d
   "packageManager": "npm@11.16.0",
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "test": "vitest run packages/shared",
+    "test": "TZ=Europe/Amsterdam vitest run packages/shared",
     "test:rls": "vitest run tests/rls",
     "seed": "node scripts/seed.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
@@ -183,6 +184,7 @@ git commit -m "chore: monorepo-root met workspaces en tooling"
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "lib": ["ES2022"],
     "types": []
   },
@@ -190,13 +192,15 @@ git commit -m "chore: monorepo-root met workspaces en tooling"
 }
 ```
 
+(`allowImportingTsExtensions` hoort bij de expliciete `.ts`-extensies in de relatieve imports: die maken het pakket importeerbaar zonder bundler — Node's type-stripping en `deno check` eisen de extensie, Metro/Next accepteren hem.)
+
 - [ ] **Step 3: Schrijf `packages/shared/src/index.ts`**
 
 ```ts
-export * from './types';
-export * from './handmaten';
-export * from './helpers';
-export * from './tokens';
+export * from './types.ts';
+export * from './handmaten.ts';
+export * from './helpers.ts';
+export * from './tokens.ts';
 ```
 
 (Dit compileert pas na Task 4–6; dat is oké — commit volgt daar.)
@@ -220,6 +224,7 @@ export type FlagStatus = 'open' | 'resolved';
 export type LogBron = 'chat' | 'eten';
 export type NoteType = 'intake' | 'sessie' | 'los';
 export type Veiligheidsvlag = 'geen' | 'soms' | 'voorzichtig' | 'overgeslagen';
+export type Platform = 'ios' | 'android';
 
 /** Het gestructureerde per-klant AI-profiel — de personalisatiemotor. */
 export interface AIProfile {
@@ -236,6 +241,12 @@ export interface AIProfile {
 }
 
 // ── DB-rijtypes (spiegel van supabase/migrations — snake_case zoals Postgres) ──
+
+export interface CoachRow {
+  id: string;
+  naam: string;
+  created_at: string;
+}
 
 export interface ClientRow {
   id: string;
@@ -310,7 +321,7 @@ export interface WeeklySessionRow {
 export interface PushTokenRow {
   client_id: string;
   expo_push_token: string;
-  platform: 'ios' | 'android';
+  platform: Platform;
   updated_at: string;
 }
 ```
@@ -318,7 +329,7 @@ export interface PushTokenRow {
 - [ ] **Step 2: Schrijf `handmaten.ts`** (waarden exact uit de handoff)
 
 ```ts
-import type { HandKey, Porties } from './types';
+import type { HandKey, Porties } from './types.ts';
 
 export interface Handmaat {
   key: HandKey;
@@ -329,21 +340,21 @@ export interface Handmaat {
   kleur: string;
 }
 
-export const HANDMATEN: readonly Handmaat[] = [
+export const HANDMATEN = [
   { key: 'eiwit', naam: 'Eiwit', hand: 'Handpalm', uitleg: 'vlees, vis, kwark, tofu', dagdoel: 3, kleur: '#63805F' },
   { key: 'groente', naam: 'Groente', hand: 'Vuist', uitleg: 'alle groente en salade', dagdoel: 4, kleur: '#7E9C6E' },
   { key: 'koolhydraten', naam: 'Koolhydraten', hand: 'Holle hand', uitleg: 'rijst, pasta, brood, aardappel', dagdoel: 2, kleur: '#C1A277' },
   { key: 'vet', naam: 'Vetten', hand: 'Duim', uitleg: 'olie, kaas, avocado, pindakaas', dagdoel: 2, kleur: '#B0603F' },
-] as const;
+] as const satisfies readonly Handmaat[];
 
-export const PORTIE_DOEL_DEFAULT: Porties = { eiwit: 3, groente: 4, koolhydraten: 2, vet: 2 };
-export const LEGE_PORTIES: Porties = { eiwit: 0, groente: 0, koolhydraten: 0, vet: 0 };
+export const PORTIE_DOEL_DEFAULT: Readonly<Porties> = Object.freeze({ eiwit: 3, groente: 4, koolhydraten: 2, vet: 2 });
+export const LEGE_PORTIES: Readonly<Porties> = Object.freeze({ eiwit: 0, groente: 0, koolhydraten: 0, vet: 0 });
 ```
 
 - [ ] **Step 3: Typecheck (verwacht: faalt alleen nog op ontbrekende helpers/tokens)**
 
 Run: `npm run typecheck -w @lau/shared`
-Expected: errors over `./helpers` en `./tokens` (bestaan nog niet) — géén errors in types/handmaten zelf.
+Expected: errors over `./helpers.ts` en `./tokens.ts` (bestaan nog niet) — géén errors in types/handmaten zelf.
 
 ### Task 5: shared — helpers (TDD)
 
@@ -355,8 +366,8 @@ Expected: errors over `./helpers` en `./tokens` (bestaan nog niet) — géén er
 
 ```ts
 import { describe, expect, it } from 'vitest';
-import { dagTotaal, telPortiesOp, weekNummer } from './helpers';
-import { LEGE_PORTIES } from './handmaten';
+import { dagTotaal, naarISODatum, telPortiesOp, vandaagISO, weekNummer } from './helpers.ts';
+import { LEGE_PORTIES } from './handmaten.ts';
 
 describe('weekNummer', () => {
   it('is 1 op de startdag en de eerste zes dagen', () => {
@@ -372,6 +383,36 @@ describe('weekNummer', () => {
   it('klemt op 1 als vandaag vóór de startdatum ligt', () => {
     expect(weekNummer('2026-08-01', '2026-07-30')).toBe(1);
   });
+  it('rekent over een DST-overgang heen in hele dagen', () => {
+    expect(weekNummer('2026-03-25', '2026-04-01')).toBe(2);
+  });
+  it('rekent over een jaargrens heen', () => {
+    expect(weekNummer('2025-12-29', '2026-01-05')).toBe(2);
+  });
+  it('gooit op ongeldig datumformaat', () => {
+    expect(() => weekNummer('2026-07-30T10:00:00.000Z', '2026-07-30')).toThrow();
+    expect(() => weekNummer('kaas', '2026-07-30')).toThrow();
+  });
+});
+
+describe('naarISODatum', () => {
+  it('formatteert de lokale kalenderdag', () => {
+    expect(naarISODatum(new Date(2026, 6, 30))).toBe('2026-07-30');
+  });
+  it('padt maand en dag naar twee cijfers', () => {
+    expect(naarISODatum(new Date(2026, 0, 5))).toBe('2026-01-05');
+  });
+  it('gebruikt de lokale dag, niet de UTC-dag (middernacht-grens)', () => {
+    // 1 jan 2026 00:30 lokaal is in Europe/Amsterdam 31 dec 2025 23:30 UTC.
+    expect(naarISODatum(new Date(2026, 0, 1, 0, 30))).toBe('2026-01-01');
+  });
+});
+
+describe('vandaagISO', () => {
+  it('geeft vandaag in YYYY-MM-DD', () => {
+    expect(vandaagISO()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(vandaagISO()).toBe(naarISODatum(new Date()));
+  });
 });
 
 describe('telPortiesOp', () => {
@@ -379,6 +420,13 @@ describe('telPortiesOp', () => {
     expect(
       telPortiesOp({ eiwit: 1, groente: 2, koolhydraten: 1, vet: 0 }, { eiwit: 1, groente: 0, koolhydraten: 0, vet: 1 }),
     ).toEqual({ eiwit: 2, groente: 2, koolhydraten: 1, vet: 1 });
+  });
+  it('muteert geen van beide inputs', () => {
+    const a = { eiwit: 1, groente: 2, koolhydraten: 1, vet: 0 };
+    const b = { eiwit: 1, groente: 0, koolhydraten: 0, vet: 1 };
+    telPortiesOp(a, b);
+    expect(a).toEqual({ eiwit: 1, groente: 2, koolhydraten: 1, vet: 0 });
+    expect(b).toEqual({ eiwit: 1, groente: 0, koolhydraten: 0, vet: 1 });
   });
 });
 
@@ -405,14 +453,14 @@ describe('dagTotaal', () => {
 
 - [ ] **Step 2: Run tests, verwacht FAIL**
 
-Run: `npx vitest run packages/shared`
+Run: `npm test`
 Expected: FAIL — `helpers.ts` bestaat niet.
 
 - [ ] **Step 3: Implementeer `helpers.ts`**
 
 ```ts
-import type { Porties } from './types';
-import { LEGE_PORTIES } from './handmaten';
+import type { Porties } from './types.ts';
+import { LEGE_PORTIES } from './handmaten.ts';
 
 const MS_PER_DAG = 86_400_000;
 
@@ -421,8 +469,18 @@ export function weekNummer(startdatum: string, vandaag: string): number {
   const start = Date.parse(`${startdatum}T00:00:00Z`);
   const nu = Date.parse(`${vandaag}T00:00:00Z`);
   const dagen = Math.floor((nu - start) / MS_PER_DAG);
+  if (!Number.isFinite(dagen)) {
+    throw new Error(`weekNummer: verwacht YYYY-MM-DD, kreeg "${startdatum}" / "${vandaag}"`);
+  }
   return Math.max(1, Math.floor(dagen / 7) + 1);
 }
+
+/** Lokale kalenderdag als YYYY-MM-DD — géén toISOString().slice: die geeft de UTC-dag. */
+export function naarISODatum(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export const vandaagISO = (): string => naarISODatum(new Date());
 
 export function telPortiesOp(a: Porties, b: Porties): Porties {
   return {
@@ -442,14 +500,14 @@ export function dagTotaal(logs: ReadonlyArray<{ porties: Porties }>): Porties {
 
 - [ ] **Step 4: Run tests, verwacht PASS**
 
-Run: `npx vitest run packages/shared`
+Run: `npm test`
 Expected: alle tests PASS.
 
 ### Task 6: shared — design-tokens
 
 **Files:**
 
-- Create: `packages/shared/src/tokens.ts`
+- Create: `packages/shared/src/tokens.ts`, `packages/shared/src/handmaten.test.ts`
 
 - [ ] **Step 1: Schrijf `tokens.ts`** (hexwaarden exact uit de handoff-README; namen camelCase)
 
@@ -529,12 +587,57 @@ export const fonts = {
 } as const;
 ```
 
-- [ ] **Step 2: Typecheck + tests**
+- [ ] **Step 2: Schrijf `handmaten.test.ts`** (drift-invarianten — kan pas hier, want vergelijkt met `tokens.ts`)
 
-Run: `npm run typecheck -w @lau/shared && npx vitest run packages/shared`
+```ts
+import { describe, expect, it } from 'vitest';
+import { HANDMATEN, LEGE_PORTIES, PORTIE_DOEL_DEFAULT } from './handmaten.ts';
+import { colors } from './tokens.ts';
+import type { HandKey } from './types.ts';
+
+describe('HANDMATEN', () => {
+  it('dekt elke HandKey precies één keer', () => {
+    // map() en Object.keys() geven verse arrays, dus sort() muteert niets gedeelds.
+    const keys = HANDMATEN.map((h) => h.key).sort();
+    expect(keys).toEqual(Object.keys(LEGE_PORTIES).sort());
+    expect(new Set(keys).size).toBe(HANDMATEN.length);
+  });
+});
+
+describe('drift-invarianten', () => {
+  it('PORTIE_DOEL_DEFAULT klopt met het dagdoel per handmaat', () => {
+    for (const h of HANDMATEN) {
+      expect(PORTIE_DOEL_DEFAULT[h.key]).toBe(h.dagdoel);
+    }
+  });
+
+  it('de kleur per handmaat is het bijbehorende food-token', () => {
+    const kleurToken: Record<HandKey, string> = {
+      eiwit: colors.foodEiwit,
+      groente: colors.foodGroente,
+      koolhydraten: colors.foodKoolhydraten,
+      vet: colors.foodVet,
+    };
+    for (const h of HANDMATEN) {
+      expect(h.kleur).toBe(kleurToken[h.key]);
+    }
+  });
+});
+
+describe('gedeelde constanten', () => {
+  it('zijn bevroren, zodat consumers ze niet kunnen muteren', () => {
+    expect(Object.isFrozen(LEGE_PORTIES)).toBe(true);
+    expect(Object.isFrozen(PORTIE_DOEL_DEFAULT)).toBe(true);
+  });
+});
+```
+
+- [ ] **Step 3: Typecheck + tests**
+
+Run: `npm run typecheck -w @lau/shared && npm test`
 Expected: beide PASS (barrel uit Task 3 compileert nu volledig).
 
-- [ ] **Step 3: Commit (Task 3–6 samen: het complete shared-pakket)**
+- [ ] **Step 4: Commit (Task 3–6 samen: het complete shared-pakket)**
 
 ```bash
 git add packages/shared
@@ -834,7 +937,9 @@ const db = createClient(url, serviceKey, { auth: { persistSession: false } });
 const WACHTWOORD = 'demo-demo-2026';
 const DOMEIN = 'demo.lauinbalans.nl';
 
-const isoDatum = (d) => d.toISOString().slice(0, 10);
+/** Lokale kalenderdag als YYYY-MM-DD — géén toISOString().slice: die geeft de UTC-dag. */
+const isoDatum = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const dagenGeleden = (n) => {
   const d = new Date();
   d.setDate(d.getDate() - n);
@@ -1170,6 +1275,7 @@ Expected: `apps/mobile/` met expo-router-template (TypeScript).
 - [ ] **Step 2: Koppel workspaces en installeer**
 
 Voeg in `apps/mobile/package.json` toe aan `"dependencies"`: `"@lau/shared": "*"` en aan `"scripts"`: `"typecheck": "tsc --noEmit"`.
+Voeg `"allowImportingTsExtensions": true` toe aan de tsconfig van de app (nodig omdat @lau/shared .ts-extensies in imports gebruikt en als source geïmporteerd wordt).
 Run (root): `npm install`
 Expected: workspace-symlink `node_modules/@lau/shared` bestaat.
 
@@ -1243,6 +1349,7 @@ Expected: `apps/coach/` met App Router + Tailwind.
 - [ ] **Step 2: Workspace-dep + scripts + transpile**
 
 In `apps/coach/package.json`: voeg `"@lau/shared": "*"` toe aan dependencies, `"@supabase/supabase-js"` eveneens, en `"typecheck": "tsc --noEmit"` aan scripts.
+Voeg `"allowImportingTsExtensions": true` toe aan de tsconfig van de app (nodig omdat @lau/shared .ts-extensies in imports gebruikt en als source geïmporteerd wordt).
 In `apps/coach/next.config.ts`:
 
 ```ts

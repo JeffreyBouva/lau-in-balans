@@ -107,9 +107,10 @@ Laura in v1 de enige.
 
 **AIProfile (JSONB, gestructureerd — nadrukkelijk géén vrije tekst-blob):**
 doelen[], portiedoelen `{handmaat: aantal/dag}`, knelpunten[], voorkeuren[],
-beperkingen[] (allergieën/medisch), checkin_ritme[], aanpak (tekst), toon (tekst),
-vermijden_in_coaching (tekst, **bindend** voor de prompt), veiligheidsvlag
+beperkingen[] (allergieën/medisch), checkinRitme[], aanpak (tekst), toon (tekst),
+vermijdenInCoaching (tekst, **bindend** voor de prompt), veiligheidsvlag
 (uit onboarding-stap 6: `geen` / `soms` / `voorzichtig` / `overgeslagen`).
+(JSONB-keys camelCase — bewuste keuze, kolommen blijven snake_case.)
 
 Onboarding-antwoorden landen als **profielversie 1** (author `system`). Elke wijziging
 door Laura = nieuwe versie; de reden staat in de sessienotitie of coach_note.
@@ -157,7 +158,7 @@ In de systeemprompt én in de UI:
    Disclaimer in onboarding stap 0 en permanent onderaan de chat.
 2. **Nooit calorieën, grammen of macro's** — handmaten zijn de enige eenheid, ook in
    AI-antwoorden.
-3. **`vermijden_in_coaching` is bindend** (bijv. "nooit openen met gewicht of getallen").
+3. **`vermijdenInCoaching` is bindend** (bijv. "nooit openen met gewicht of getallen").
 4. **Rode vlaggen** (eetstoornis-signalen, ondervoeding, psychische nood, zwangerschap,
    medicatie): Lau coacht niet door maar brengt Laura in beeld; Laura heeft de
    "Rode vlag"-chip in het wekelijks gesprek.
