@@ -38,41 +38,46 @@
 ```text
 apps/mobile/
 ├── .env                          # EXPO_PUBLIC_SUPABASE_* (gitignored)
-├── app/
-│   ├── _layout.tsx               # fonts laden + SessieProvider + routing-gate
-│   ├── (auth)/login.tsx
-│   ├── (onboarding)/_layout.tsx  # OnboardingProvider (stap-state)
-│   ├── (onboarding)/index.tsx    # de 8-staps flow (één scherm, stap-gestuurd)
-│   └── (tabs)/
-│       ├── _layout.tsx           # tabbar
-│       ├── vandaag.tsx
-│       ├── chat.tsx
-│       └── eten.tsx
-├── lib/
-│   ├── supabase.ts               # bestaat (fase 1)
-│   ├── sessie.tsx                # SessieProvider, useSessie
-│   ├── datum.ts                  # week-/dag-helpers (dun, hergebruikt @lau/shared)
-│   └── hooks/
-│       ├── useProfiel.ts
-│       ├── useVoedingslogs.ts    # + dagstand-aggregatie + quick-row-mutatie
-│       ├── useVoedingslogs.reducer.ts   # pure aggregatie (TDD)
-│       ├── useBerichten.ts       # messages + realtime + send
-│       └── useFlag.ts
-├── components/
-│   ├── Sheet.tsx                 # scrim + lauSheet-animatie
-│   ├── PrimaireKnop.tsx
-│   ├── Chip.tsx                  # multi/single-select chip
-│   ├── HandmaatStepper.tsx
-│   ├── SlotBalk.tsx
-│   ├── Bericht.tsx               # ai/me/log/laura bubbel
-│   ├── LauraKnop.tsx
-│   └── VoortgangsBalk.tsx
-├── theme/
-│   └── tokens.ts                 # re-export @lau/shared + RN font-map + text-stijlen + shadows
-└── state/
-    ├── onboarding.ts             # onboarding-reducer + profiel-mapping (TDD)
-    └── logSheet.ts               # log-sheet-draft-reducer (TDD)
+└── src/                          # expo-router-root = src/app; alias @/* → src/*
+    ├── app/
+    │   ├── _layout.tsx           # fonts laden + SessieProvider + routing-gate
+    │   ├── (auth)/login.tsx
+    │   ├── (onboarding)/_layout.tsx  # OnboardingProvider (stap-state)
+    │   ├── (onboarding)/index.tsx    # de 8-staps flow (één scherm, stap-gestuurd)
+    │   └── (tabs)/
+    │       ├── _layout.tsx       # tabbar
+    │       ├── vandaag.tsx
+    │       ├── chat.tsx
+    │       └── eten.tsx
+    ├── lib/
+    │   ├── supabase.ts           # bestaat (fase 1)
+    │   ├── sessie.tsx            # SessieProvider, useSessie
+    │   ├── datum.ts             # week-/dag-helpers (dun, hergebruikt @lau/shared)
+    │   └── hooks/
+    │       ├── useProfiel.ts
+    │       ├── useVoedingslogs.ts        # + dagstand-aggregatie + quick-row-mutatie
+    │       ├── useVoedingslogs.reducer.ts # pure aggregatie (TDD)
+    │       ├── useBerichten.ts   # messages + realtime + send
+    │       └── useFlag.ts
+    ├── components/               # naast de scaffold-componenten
+    │   ├── Sheet.tsx             # scrim + lauSheet-animatie
+    │   ├── PrimaireKnop.tsx · Chip.tsx · HandmaatStepper.tsx · SlotBalk.tsx
+    │   ├── Bericht.tsx           # ai/me/log/laura bubbel
+    │   └── LauraKnop.tsx · VoortgangsBalk.tsx
+    ├── theme/
+    │   └── tokens.ts             # re-export @lau/shared + RN font-map + text-stijlen + shadows
+    └── state/
+        ├── onboarding.ts         # onboarding-reducer + profiel-mapping (TDD)
+        └── logSheet.ts           # log-sheet-draft-reducer (TDD)
 ```
+
+> **Pad-conventie (belangrijk — de scaffold wijkt af van een kaal Expo-project):** de
+> expo-router-root is **`apps/mobile/src/app/`**, en er is een alias **`@/*` → `src/*`**. Alle
+> app-code staat onder `src/` (fase 1's `lib/` en fase-2's `theme/` zijn hierheen verplaatst).
+> **Importeer app-intern altijd via de alias**, bv. `@/theme/tokens`, `@/lib/supabase`,
+> `@/lib/sessie`, `@/lib/hooks/useBerichten`, `@/state/onboarding`, `@/components/PrimaireKnop` —
+> niet met relatieve `../../`-paden. De codeblokken hieronder tonen soms nog relatieve imports;
+> gebruik in plaats daarvan de `@/`-alias.
 
 Nieuwe app-dependencies (via `npx expo install` waar mogelijk): `@expo-google-fonts/newsreader`,
 `@expo-google-fonts/dm-sans`, `expo-font`, `@react-native-async-storage/async-storage` (staat al).
