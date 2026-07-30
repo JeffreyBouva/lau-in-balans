@@ -1,5 +1,5 @@
-import type { Porties } from './types';
-import { LEGE_PORTIES } from './handmaten';
+import type { Porties } from './types.ts';
+import { LEGE_PORTIES } from './handmaten.ts';
 
 const MS_PER_DAG = 86_400_000;
 
@@ -8,8 +8,18 @@ export function weekNummer(startdatum: string, vandaag: string): number {
   const start = Date.parse(`${startdatum}T00:00:00Z`);
   const nu = Date.parse(`${vandaag}T00:00:00Z`);
   const dagen = Math.floor((nu - start) / MS_PER_DAG);
+  if (!Number.isFinite(dagen)) {
+    throw new Error(`weekNummer: verwacht YYYY-MM-DD, kreeg "${startdatum}" / "${vandaag}"`);
+  }
   return Math.max(1, Math.floor(dagen / 7) + 1);
 }
+
+/** Lokale kalenderdag als YYYY-MM-DD — géén toISOString().slice: die geeft de UTC-dag. */
+export function naarISODatum(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export const vandaagISO = (): string => naarISODatum(new Date());
 
 export function telPortiesOp(a: Porties, b: Porties): Porties {
   return {

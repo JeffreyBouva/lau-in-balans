@@ -8,6 +8,7 @@ export type FlagStatus = 'open' | 'resolved';
 export type LogBron = 'chat' | 'eten';
 export type NoteType = 'intake' | 'sessie' | 'los';
 export type Veiligheidsvlag = 'geen' | 'soms' | 'voorzichtig' | 'overgeslagen';
+export type Platform = 'ios' | 'android';
 
 /** Het gestructureerde per-klant AI-profiel — de personalisatiemotor. */
 export interface AIProfile {
@@ -24,6 +25,12 @@ export interface AIProfile {
 }
 
 // ── DB-rijtypes (spiegel van supabase/migrations — snake_case zoals Postgres) ──
+
+export interface CoachRow {
+  id: string;
+  naam: string;
+  created_at: string;
+}
 
 export interface ClientRow {
   id: string;
@@ -98,6 +105,6 @@ export interface WeeklySessionRow {
 export interface PushTokenRow {
   client_id: string;
   expo_push_token: string;
-  platform: 'ios' | 'android';
+  platform: Platform;
   updated_at: string;
 }
