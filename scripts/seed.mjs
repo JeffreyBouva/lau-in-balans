@@ -130,6 +130,7 @@ const [lunchLog] = await invoeg('food_logs', [{
 const transcript = [
   ['ai', 'Goedemorgen Sanne. Gisteren zei je dat de avonden het moeilijkst zijn — hoe ging het na het eten?', 8],
   ['client', 'Verrassend rustig eigenlijk. Ik heb thee gezet in plaats van de koekjestrommel gepakt.', 7],
+  ['ai', 'Dat is precies de ruil waar we het over hadden. Niet minder willen, maar iets anders klaar hebben staan. Wat maakte dat het gisteren lukte?', 6.5],
   ['log', null, 6],
   ['ai', 'Mooie lunch — handpalm eiwit en twee vuisten groente. Als je vanmiddag nog trek krijgt, is dat meestal het eiwit. Kwark of een handje kip erbij doet meer dan je denkt.', 6],
   ['client', 'Dank je. Donderdag wordt lastig, dan werkt Jeroen laat en eet ik met de kinderen mee.', 5],

@@ -102,14 +102,24 @@ describe('klant corrigeert eigen voedingslog', () => {
       .single();
     expect(insErr).toBeNull();
 
-    const { error: updErr } = await sanne
+    // .select() geeft de geraakte rijen terug — een door RLS geblokkeerde
+    // UPDATE/DELETE is een stille 0-rijen-no-op (error: null), dus we bewijzen
+    // dat er echt een rij is gewijzigd/verwijderd, niet enkel "geen error".
+    const { data: updData, error: updErr } = await sanne
       .from('food_logs')
       .update({ porties: { eiwit: 2, groente: 1, koolhydraten: 0, vet: 0 } })
-      .eq('id', nieuw!.id);
+      .eq('id', nieuw!.id)
+      .select();
     expect(updErr).toBeNull();
+    expect(updData).toHaveLength(1);
 
-    const { error: delErr } = await sanne.from('food_logs').delete().eq('id', nieuw!.id);
+    const { data: delData, error: delErr } = await sanne
+      .from('food_logs')
+      .delete()
+      .eq('id', nieuw!.id)
+      .select();
     expect(delErr).toBeNull();
+    expect(delData).toHaveLength(1);
   });
 });
 
