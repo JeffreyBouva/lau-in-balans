@@ -55,9 +55,10 @@ lau-in-balans/
 │       ├── <ts>_rls.sql         # RLS + is_coach_of() + realtime-publicatie
 │       └── <ts>_hardening.sql   # security-review-fixes (C1, I4–I8, I11 + policy-gaten)
 ├── scripts/
-│   ├── local-env.mjs            # leest `supabase status -o env`
-│   └── seed.mjs                 # demo-data uit de handoff (via service role)
-├── tests/rls/rls.test.ts        # isolatie-tests met echte auth-gebruikers
+│   ├── supabase-env.mjs         # leest `.env` (gehoste Supabase; robuust tegen inline-comments)
+│   └── seed.mjs                 # demo-data uit de handoff (via service role); FK-veilig idempotent
+├── vitest.config.ts             # testTimeout (cloud-latency) + TZ=Europe/Amsterdam
+├── tests/rls/rls.test.ts        # isolatie- + hardening-tests met echte auth-gebruikers (cloud)
 ├── apps/mobile/                 # create-expo-app (default template) + supabase-client
 │   ├── lib/supabase.ts
 │   ├── lib/domain.ts            # bewijs dat @lau/shared resolvet
@@ -1059,9 +1060,16 @@ git commit -m "feat: hardening-migratie — search_path-fix, WITH CHECK-policies
 
 ### Task 9: Seed-script met handoff-demodata
 
+> **Cloud-uitvoering (bindend):** dit is aangepast naar de gehoste Supabase. In plaats van
+> `scripts/local-env.mjs` (dat `supabase status` las) is er `scripts/supabase-env.mjs` dat de
+> `.env` in de repo-root parseert (robuust tegen inline-comments). `scripts/seed.mjs` importeert
+> die module; `wisDemoData()` ruimt FK-veilig op (eerst `clients`, dan `coaches`, dan de
+> auth-users) zodat de seed idempotent is. Draai met `npm run seed` (geen `supabase status`).
+> De onderstaande code is het oorspronkelijke lokale ontwerp; de gecommitte bestanden zijn leidend.
+
 **Files:**
 
-- Create: `scripts/local-env.mjs`, `scripts/seed.mjs`
+- Create: `scripts/supabase-env.mjs`, `scripts/seed.mjs`
 
 - [ ] **Step 1: Schrijf `scripts/local-env.mjs`**
 
@@ -1279,10 +1287,20 @@ git commit -m "feat: seed-script met demo-data uit de design handoff"
 
 ### Task 10: RLS-isolatie-tests
 
+> **Cloud-uitvoering (bindend):** de tests draaien tegen de gehoste Supabase via
+> `scripts/supabase-env.mjs` (niet `local-env.mjs`). Toegevoegd t.o.v. het ontwerp hieronder:
+> een `vitest.config.ts` (testTimeout 30s voor cloud-latency + `TZ=Europe/Amsterdam`), en
+> extra hardening-cases uit de security-review — klant kan eigen profiel niet lezen, klant
+> leest wél de coach-naam, klant corrigeert eigen voedingslog, coach kan een klant niet
+> hertoewijzen, flag-resolve vereist een afhandelaar (WITH CHECK), push-token uniek. De
+> anon-checks tolereren zowel een lege 200 als een 401 (anon mag `is_coach_of()` niet
+> uitvoeren). De C1 search_path-hijack zelf is niet via supabase-js testbaar (geen DDL).
+> De gecommitte `tests/rls/rls.test.ts` is leidend.
+
 **Files:**
 
-- Create: `tests/rls/rls.test.ts`, `tsconfig.json` (root)
-- Modify: `package.json` (root — typecheck-script)
+- Create: `tests/rls/rls.test.ts`, `vitest.config.ts`, `tsconfig.json` (root)
+- Modify: `package.json` (root — typecheck- en test-script)
 
 - [ ] **Step 1: Schrijf de tests**
 

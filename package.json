@@ -10,10 +10,10 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "TZ=Europe/Amsterdam vitest run packages/shared",
+    "test": "vitest run packages/shared",
     "test:rls": "vitest run tests/rls",
     "seed": "node scripts/seed.mjs",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "tsc --noEmit && npm run typecheck --workspaces --if-present",
     "verify": "npm run typecheck && npm run test"
   },
   "devDependencies": {
