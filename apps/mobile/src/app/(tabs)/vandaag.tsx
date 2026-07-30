@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import {
   HANDMATEN, weekNummer, vandaagISO, naarISODatum, type Porties,
 } from '@lau/shared';
@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { useVoedingslogs } from '@/lib/hooks/useVoedingslogs';
 import { useBerichten } from '@/lib/hooks/useBerichten';
 import { useFlag } from '@/lib/hooks/useFlag';
+import { useSheets } from '@/lib/sheets';
 import { LauraKnop } from '@/components/LauraKnop';
 
 const WEEKDAG = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
@@ -38,9 +39,13 @@ export default function Vandaag() {
     supabase.from('clients').select('startdatum, naam').single().then(({ data }) => setKlant(data as any));
   }, []);
 
-  const { week } = useVoedingslogs(clientId!);
+  const { week, herlaad } = useVoedingslogs(clientId!);
   const { berichten } = useBerichten(clientId!);
   const { openFlag } = useFlag(clientId!);
+  const { openLaura } = useSheets();
+
+  // Week-gemiddelden verversen na terugkeer (bijv. na een log-save in de sheet).
+  useFocusEffect(useCallback(() => { herlaad(); }, [herlaad]));
 
   // Header
   const voornaam = klant?.naam?.split(' ')[0] ?? '';
@@ -93,8 +98,7 @@ export default function Vandaag() {
           {weekNr != null && <Text style={text.eyebrow}>Week {weekNr}</Text>}
           <Text style={s.hero}>{hero}</Text>
         </View>
-        {/* Task 8: open Laura-sheet */}
-        <LauraKnop openFlag={openFlag} onPress={() => {}} />
+        <LauraKnop openFlag={openFlag} onPress={openLaura} />
       </View>
 
       {/* Contactkaart */}

@@ -1,11 +1,14 @@
+import { useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import { HANDMATEN, type Handmaat } from '@lau/shared';
 import { colors, radii, fontFamily, text } from '@/theme/tokens';
 import { useSessie } from '@/lib/sessie';
 import { useVoedingslogs } from '@/lib/hooks/useVoedingslogs';
 import { usePortiedoelen } from '@/lib/hooks/useProfiel';
 import { useFlag } from '@/lib/hooks/useFlag';
+import { useSheets } from '@/lib/sheets';
 import { LauraKnop } from '@/components/LauraKnop';
 import { HandmaatStepper } from '@/components/HandmaatStepper';
 import { SlotBalk } from '@/components/SlotBalk';
@@ -19,9 +22,13 @@ const weekdagLetter = (iso: string) => WEEKDAG[new Date(`${iso}T00:00:00`).getDa
 export default function Eten() {
   const insets = useSafeAreaInsets();
   const { clientId } = useSessie();
-  const { dag, week, pasQuickAan } = useVoedingslogs(clientId!);
+  const { dag, week, pasQuickAan, herlaad } = useVoedingslogs(clientId!);
   const doelen = usePortiedoelen();
   const { openFlag } = useFlag(clientId!);
+  const { openLaura } = useSheets();
+
+  // Dagstand + weekstaafjes verversen na terugkeer (bijv. na een log-save in de sheet).
+  useFocusEffect(useCallback(() => { herlaad(); }, [herlaad]));
 
   // Header-eyebrow: de echte datum van vandaag (NL, kort).
   const vandaagLabel = new Date().toLocaleDateString('nl-NL', {
@@ -59,8 +66,7 @@ export default function Eten() {
           <Text style={text.eyebrow}>{vandaagLabel}</Text>
           <Text style={s.titel}>Vandaag gegeten</Text>
         </View>
-        {/* Task 8: open Laura-sheet */}
-        <LauraKnop openFlag={openFlag} onPress={() => {}} />
+        <LauraKnop openFlag={openFlag} onPress={openLaura} />
       </View>
 
       {/* Introregel */}

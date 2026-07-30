@@ -4,6 +4,7 @@ import { Pressable, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radii, fontFamily, shadow } from '@/theme/tokens';
+import { SheetsProvider } from '@/lib/sheets';
 
 // Volgorde en labels van de tabbar (handoff § Tabbar). Routes: vandaag, chat, eten.
 const TABS = [
@@ -48,11 +49,13 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
 
 export default function TabsLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>
-      <Tabs.Screen name="vandaag" />
-      <Tabs.Screen name="chat" />
-      <Tabs.Screen name="eten" />
-    </Tabs>
+    <SheetsProvider>
+      <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>
+        <Tabs.Screen name="vandaag" />
+        <Tabs.Screen name="chat" />
+        <Tabs.Screen name="eten" />
+      </Tabs>
+    </SheetsProvider>
   );
 }
 

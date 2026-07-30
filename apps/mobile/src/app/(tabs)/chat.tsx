@@ -7,11 +7,12 @@ import { useSessie } from '@/lib/sessie';
 import { supabase } from '@/lib/supabase';
 import { useBerichten } from '@/lib/hooks/useBerichten';
 import { useFlag } from '@/lib/hooks/useFlag';
+import { useSheets } from '@/lib/sheets';
 import { LauraKnop } from '@/components/LauraKnop';
 import { Bericht } from '@/components/Bericht';
 
 // Quick-replies die de klanttekst rechtstreeks versturen (handoff § 2). De speciale
-// eerste chip "Ik heb gegeten" opent straks (Task 8) de log-sheet en staat apart.
+// eerste chip "Ik heb gegeten" opent de log-sheet (openLog) en staat daarom apart.
 const QUICK_REPLIES = ['Wat eet ik vanavond?', 'Ik heb trek', 'Hoe ga ik om met een etentje?', 'Ik ben moe vandaag'];
 
 const cap = (w: string) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w);
@@ -21,6 +22,7 @@ export default function Chat() {
   const { clientId } = useSessie();
   const { berichten, verstuur } = useBerichten(clientId!);
   const { openFlag } = useFlag(clientId!);
+  const { openLaura, openLog } = useSheets();
 
   // Klant (voor het weeknummer in de header).
   const [klant, setKlant] = useState<{ startdatum: string } | null>(null);
@@ -67,8 +69,7 @@ export default function Chat() {
           <Text style={text.chatNaam}>Lau.ai</Text>
           <Text style={text.caption}>Ingesteld door Laura{weekNr != null ? ` · week ${weekNr}` : ''}</Text>
         </View>
-        {/* Task 8: open Laura-sheet */}
-        <LauraKnop openFlag={openFlag} onPress={() => {}} />
+        <LauraKnop openFlag={openFlag} onPress={openLaura} />
       </View>
 
       {/* Berichtenlijst */}
@@ -102,8 +103,7 @@ export default function Chat() {
         style={s.quickRij}
         contentContainerStyle={s.quickInhoud}
       >
-        {/* Task 8: open log-sheet */}
-        <Pressable style={[s.chip, s.chipEten]} onPress={() => {}}>
+        <Pressable style={[s.chip, s.chipEten]} onPress={openLog}>
           <View style={s.chipBol} />
           <Text style={s.chipEtenTekst}>Ik heb gegeten</Text>
         </Pressable>
