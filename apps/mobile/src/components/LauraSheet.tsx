@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Dimensions } from 'react-native';
 import { colors, radii, fontFamily } from '@/theme/tokens';
-import { useSessie } from '@/lib/sessie';
-import { useFlag } from '@/lib/hooks/useFlag';
+import { useKlantData } from '@/lib/klantdata';
 import { Sheet } from '@/components/Sheet';
 import { PrimaireKnop } from '@/components/PrimaireKnop';
 import { Chip } from '@/components/Chip';
@@ -20,8 +19,7 @@ const MAX_HOOGTE = Dimensions.get('window').height * 0.86;
  * overal omslaan naar de "flag verstuurd"-staat.
  */
 export function LauraSheet({ zichtbaar, onSluit }: { zichtbaar: boolean; onSluit: () => void }) {
-  const { clientId } = useSessie();
-  const { maakFlag } = useFlag(clientId!);
+  const { maakFlag } = useKlantData();
   const [tekst, setTekst] = useState('');
   const [redenen, setRedenen] = useState<string[]>([]);
   const [verzonden, setVerzonden] = useState(false);

@@ -34,10 +34,17 @@ const CTAS = ['Laten we beginnen', 'Verder', 'Verder', 'Verder', 'Verder', 'Duid
 export default function Onboarding() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { clientId } = useSessie();
+  const { clientId, markProfielAangemaakt } = useSessie();
   const [state, setState] = useState<OnboardingState>(legeOnboarding);
   const [stap, setStap] = useState(0);
   const [bezig, setBezig] = useState(false);
+
+  // Echte voornaam voor de afsluiting (klant mag z'n eigen clients-rij lezen via RLS).
+  const [voornaam, setVoornaam] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.from('clients').select('naam').single()
+      .then(({ data }) => setVoornaam((data as { naam: string } | null)?.naam?.split(' ')[0] ?? null));
+  }, []);
 
   // lauFade: opacity 0→1 + translateY 6→0 bij elke stap-wissel.
   const fade = useRef(new Animated.Value(1)).current;
@@ -61,7 +68,10 @@ export default function Onboarding() {
       // author:null + versie:1 is vereist door de policy klant_schrijft_versie_1.
       await supabase.from('ai_profile_versions').insert({ client_id: clientId, versie: 1, author: null, profiel });
     }
-    router.replace('/(tabs)/chat'); // ook bij een error doorsturen (bijv. bestaat al)
+    // Zet het profiel-vlaggetje meteen op true (C2-fix), ook bij een error (bijv.
+    // bestaat al), zodat de routing-gate niet terugkaatst naar onboarding.
+    markProfielAangemaakt();
+    router.replace('/(tabs)/chat');
   }
 
   function volgende() {
@@ -209,7 +219,9 @@ export default function Onboarding() {
       body: (
         <>
           <View style={s.cirkel}><Text style={s.cirkelL}>L</Text></View>
-          <Text style={s.titelGroot}>Dank je, Sanne. Ik weet genoeg om te beginnen.</Text>
+          <Text style={s.titelGroot}>
+            {voornaam ? `Dank je, ${voornaam}. Ik weet genoeg om te beginnen.` : 'Dank je. Ik weet genoeg om te beginnen.'}
+          </Text>
           <Text style={s.alinea}>Geen schema's, geen calorieën. We beginnen bij je avonden — daar zit volgens jou de meeste ruimte.</Text>
           <View style={s.eersteWeek}>
             <Text style={s.eyebrow}>Je eerste week</Text>

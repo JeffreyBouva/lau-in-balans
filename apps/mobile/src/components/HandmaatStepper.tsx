@@ -4,20 +4,24 @@ import { colors, radii, fontFamily } from '@/theme/tokens';
 /**
  * Handmaat-stepper (handoff § 3). De getoonde waarde is de dagsom (dag[key]);
  * onMin/onPlus muteren de quick-rij via de hook. `−` klemt op 0 (de hook klemt óók,
- * maar we disablen bij 0 voor UX), `+` heeft geen bovengrens.
+ * maar we disablen bij 0 voor UX), `+` heeft geen bovengrens. `minDisabled` disablet
+ * `−` ook als de dagsom > 0 is maar er niets quick-toegevoegd is dat we kunnen
+ * verwijderen (sheet-maaltijden zijn hier niet af te trekken).
  */
 export function HandmaatStepper({
   waarde,
   doel,
+  minDisabled = false,
   onMin,
   onPlus,
 }: {
   waarde: number;
   doel: number;
+  minDisabled?: boolean;
   onMin: () => void;
   onPlus: () => void;
 }) {
-  const minUit = waarde <= 0;
+  const minUit = waarde <= 0 || minDisabled;
   return (
     <View style={s.rij}>
       <Pressable

@@ -19,6 +19,12 @@ export function useVoedingslogs(clientId: string) {
   const dag = dagStand(rows, vandaag);
   const week = weekTotalen(rows, weekdagenTerug(7));
 
+  // De quick-rij (bron:'eten', moment:'Tussendoor' van vandaag) bevat precies de
+  // porties die via de Eten-stepper zijn toegevoegd — dus wat er weer af kán. Zonder
+  // rij: alles nul (er is niets quick-toegevoegd om te verwijderen).
+  const quickRij = rows.find((r) => r.datum === vandaag && r.bron === 'eten' && r.moment === 'Tussendoor');
+  const quick: Porties = quickRij?.porties ?? { eiwit: 0, groente: 0, koolhydraten: 0, vet: 0 };
+
   const pasQuickAan = useCallback(async (handmaat: HandKey, delta: number) => {
     const quick = rows.find((r) => r.datum === vandaag && r.bron === 'eten' && r.moment === 'Tussendoor');
     if (quick) {
@@ -36,5 +42,5 @@ export function useVoedingslogs(clientId: string) {
     await laad();
   }, [clientId, vandaag, laad]);
 
-  return { dag, week, pasQuickAan, voegLogToe, herlaad: laad };
+  return { dag, week, quick, pasQuickAan, voegLogToe, herlaad: laad };
 }

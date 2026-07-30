@@ -1,22 +1,15 @@
 import { useFonts, Newsreader_300Light, Newsreader_400Regular, Newsreader_500Medium } from '@expo-google-fonts/newsreader';
 import { DMSans_300Light, DMSans_400Regular, DMSans_500Medium } from '@expo-google-fonts/dm-sans';
 import { SplashScreen, Stack, useRouter, useSegments } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { SessieProvider, useSessie } from '@/lib/sessie';
-import { supabase } from '@/lib/supabase';
 
 SplashScreen.preventAutoHideAsync();
 
 function Gate() {
-  const { session, clientId, laden } = useSessie();
-  const [heeftProfiel, setHeeftProfiel] = useState<boolean | null>(null);
+  const { session, laden, heeftProfiel } = useSessie();
   const router = useRouter();
   const segments = useSegments();
-
-  useEffect(() => {
-    if (!clientId) { setHeeftProfiel(null); return; }
-    supabase.rpc('klant_heeft_profiel').then(({ data }) => setHeeftProfiel(data === true));
-  }, [clientId]);
 
   useEffect(() => {
     if (laden) return;

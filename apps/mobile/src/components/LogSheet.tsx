@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { HANDMATEN, vandaagISO, type Handmaat, type Moment } from '@lau/shared';
 import { colors, radii, fontFamily, text } from '@/theme/tokens';
 import { useSessie } from '@/lib/sessie';
+import { useKlantData } from '@/lib/klantdata';
 import { supabase } from '@/lib/supabase';
 import { Sheet } from '@/components/Sheet';
 import { PrimaireKnop } from '@/components/PrimaireKnop';
@@ -19,6 +20,7 @@ const MOMENTEN: Moment[] = ['Ontbijt', 'Lunch', 'Avondeten', 'Tussendoor'];
  */
 export function LogSheet({ zichtbaar, onSluit }: { zichtbaar: boolean; onSluit: () => void }) {
   const { clientId } = useSessie();
+  const { herlaad } = useKlantData();
   const router = useRouter();
   const [draft, setDraft] = useState(legeDraft());
   const [bezig, setBezig] = useState(false);
@@ -40,6 +42,7 @@ export function LogSheet({ zichtbaar, onSluit }: { zichtbaar: boolean; onSluit: 
       .select('id')
       .single();
     if (log) await supabase.from('messages').insert({ client_id: clientId, sender: 'client', food_log_id: log.id });
+    await herlaad(); // ververs de gedeelde logs zodat de Eten-dagtotaal meteen klopt
     setDraft(legeDraft());
     setBezig(false);
     onSluit();

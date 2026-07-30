@@ -6,11 +6,8 @@ import {
   HANDMATEN, weekNummer, vandaagISO, naarISODatum, type Porties,
 } from '@lau/shared';
 import { colors, radii, fontFamily, text } from '@/theme/tokens';
-import { useSessie } from '@/lib/sessie';
 import { supabase } from '@/lib/supabase';
-import { useVoedingslogs } from '@/lib/hooks/useVoedingslogs';
-import { useBerichten } from '@/lib/hooks/useBerichten';
-import { useFlag } from '@/lib/hooks/useFlag';
+import { useKlantData } from '@/lib/klantdata';
 import { useSheets } from '@/lib/sheets';
 import { LauraKnop } from '@/components/LauraKnop';
 
@@ -32,16 +29,13 @@ const WERKPUNTEN = [
 export default function Vandaag() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { clientId } = useSessie();
 
   const [klant, setKlant] = useState<{ startdatum: string; naam: string } | null>(null);
   useEffect(() => {
     supabase.from('clients').select('startdatum, naam').single().then(({ data }) => setKlant(data as any));
   }, []);
 
-  const { week, herlaad } = useVoedingslogs(clientId!);
-  const { berichten } = useBerichten(clientId!);
-  const { openFlag } = useFlag(clientId!);
+  const { berichten, openFlag, week, herlaad } = useKlantData();
   const { openLaura } = useSheets();
 
   // Week-gemiddelden verversen na terugkeer (bijv. na een log-save in de sheet).

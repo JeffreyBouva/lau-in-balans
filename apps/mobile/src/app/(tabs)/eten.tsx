@@ -4,10 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { HANDMATEN, type Handmaat } from '@lau/shared';
 import { colors, radii, fontFamily, text } from '@/theme/tokens';
-import { useSessie } from '@/lib/sessie';
-import { useVoedingslogs } from '@/lib/hooks/useVoedingslogs';
+import { useKlantData } from '@/lib/klantdata';
 import { usePortiedoelen } from '@/lib/hooks/useProfiel';
-import { useFlag } from '@/lib/hooks/useFlag';
 import { useSheets } from '@/lib/sheets';
 import { LauraKnop } from '@/components/LauraKnop';
 import { HandmaatStepper } from '@/components/HandmaatStepper';
@@ -21,10 +19,8 @@ const weekdagLetter = (iso: string) => WEEKDAG[new Date(`${iso}T00:00:00`).getDa
 
 export default function Eten() {
   const insets = useSafeAreaInsets();
-  const { clientId } = useSessie();
-  const { dag, week, pasQuickAan, herlaad } = useVoedingslogs(clientId!);
+  const { dag, week, quick, pasQuickAan, openFlag, herlaad } = useKlantData();
   const doelen = usePortiedoelen();
-  const { openFlag } = useFlag(clientId!);
   const { openLaura } = useSheets();
 
   // Dagstand + weekstaafjes verversen na terugkeer (bijv. na een log-save in de sheet).
@@ -75,12 +71,15 @@ export default function Eten() {
       </Text>
 
       {/* Vier portiekaarten */}
+      {/* NB: maaltijden die via de log-sheet zijn vastgelegd, kun je hier niet
+          verminderen — alleen wat quick is toegevoegd (open-design-questions). */}
       {HANDMATEN.map((h) => (
         <Portiekaart
           key={h.key}
           handmaat={h}
           waarde={dag[h.key]}
           doel={doelen[h.key]}
+          minDisabled={quick[h.key] <= 0}
           onMin={() => pasQuickAan(h.key, -1)}
           onPlus={() => pasQuickAan(h.key, +1)}
         />
@@ -132,12 +131,14 @@ function Portiekaart({
   handmaat,
   waarde,
   doel,
+  minDisabled,
   onMin,
   onPlus,
 }: {
   handmaat: Handmaat;
   waarde: number;
   doel: number;
+  minDisabled: boolean;
   onMin: () => void;
   onPlus: () => void;
 }) {
@@ -151,7 +152,7 @@ function Portiekaart({
             {handmaat.hand} · {handmaat.uitleg}
           </Text>
         </View>
-        <HandmaatStepper waarde={waarde} doel={doel} onMin={onMin} onPlus={onPlus} />
+        <HandmaatStepper waarde={waarde} doel={doel} minDisabled={minDisabled} onMin={onMin} onPlus={onPlus} />
       </View>
       <SlotBalk waarde={waarde} doel={doel} kleur={handmaat.kleur} />
     </View>

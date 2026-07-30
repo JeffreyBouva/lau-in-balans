@@ -3,10 +3,8 @@ import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { weekNummer, vandaagISO, type Moment, type Porties } from '@lau/shared';
 import { colors, radii, fontFamily, text } from '@/theme/tokens';
-import { useSessie } from '@/lib/sessie';
 import { supabase } from '@/lib/supabase';
-import { useBerichten } from '@/lib/hooks/useBerichten';
-import { useFlag } from '@/lib/hooks/useFlag';
+import { useKlantData } from '@/lib/klantdata';
 import { useSheets } from '@/lib/sheets';
 import { LauraKnop } from '@/components/LauraKnop';
 import { Bericht } from '@/components/Bericht';
@@ -19,9 +17,7 @@ const cap = (w: string) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w);
 
 export default function Chat() {
   const insets = useSafeAreaInsets();
-  const { clientId } = useSessie();
-  const { berichten, verstuur } = useBerichten(clientId!);
-  const { openFlag } = useFlag(clientId!);
+  const { berichten, verstuur, openFlag } = useKlantData();
   const { openLaura, openLog } = useSheets();
 
   // Klant (voor het weeknummer in de header).
