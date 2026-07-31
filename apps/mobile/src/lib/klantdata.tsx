@@ -10,19 +10,25 @@ import { useVoedingslogs } from '@/lib/hooks/useVoedingslogs';
  * eigen useBerichten/useFlag/useVoedingslogs mountten. Hier instantiëren we die hooks
  * exact één keer en delen we het resultaat via context — één subscriber per topic.
  * Bijkomend voordeel: één gedeelde flag-instance, dus alle LauraKnop's flippen samen.
+ *
+ * BELANGRIJK: roep de hooks DIRECT in deze component aan, niet via een losse lowercase
+ * helper. Een `function waarden(clientId){ useBerichten(...) }` die hier werd aangeroepen
+ * werd door React Compiler (reactCompiler: true) als pure functie op `clientId`
+ * gememoïseerd → de begin-state (lege lijst) bleef eeuwig hangen, ook al laadde de hook
+ * intern 47 berichten. Direct aanroepen laat de compiler ze correct als hooks tracken.
  */
-const Ctx = createContext<ReturnType<typeof waarden> | null>(null);
+type KlantData = ReturnType<typeof useBerichten> &
+  ReturnType<typeof useFlag> &
+  ReturnType<typeof useVoedingslogs>;
 
-function waarden(clientId: string) {
+const Ctx = createContext<KlantData | null>(null);
+
+export function KlantDataProvider({ clientId, children }: { clientId: string; children: ReactNode }) {
   const berichten = useBerichten(clientId);
   const flag = useFlag(clientId);
   const logs = useVoedingslogs(clientId);
   // Sleutels botsen niet: berichten/verstuur/wachtOpLau · openFlag/maakFlag · dag/week/quick/pasQuickAan/voegLogToe/herlaad.
-  return { ...berichten, ...flag, ...logs };
-}
-
-export function KlantDataProvider({ clientId, children }: { clientId: string; children: ReactNode }) {
-  const v = waarden(clientId);
+  const v: KlantData = { ...berichten, ...flag, ...logs };
   return <Ctx.Provider value={v}>{children}</Ctx.Provider>;
 }
 
