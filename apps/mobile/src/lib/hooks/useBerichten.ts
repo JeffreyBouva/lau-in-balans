@@ -15,7 +15,8 @@ export function useBerichten(clientId: string) {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `client_id=eq.${clientId}` },
         (payload) => {
           const nieuw = payload.new as Bericht;
-          setBerichten((b) => [...b, nieuw]);
+          // Dedup: een optimistisch getoond bericht komt ook via de realtime-echo terug.
+          setBerichten((b) => (b.some((m) => m.id === nieuw.id) ? b : [...b, nieuw]));
           if (nieuw.sender === 'ai') setWachtOpLau(false); // Lau heeft geantwoord → indicator uit
         })
       .subscribe();
@@ -24,8 +25,19 @@ export function useBerichten(clientId: string) {
 
   const verstuur = useCallback(async (tekst: string) => {
     setWachtOpLau(true);
-    await supabase.from('messages').insert({ client_id: clientId, sender: 'client', tekst });
-    supabase.functions.invoke('lau-reply').catch(() => setWachtOpLau(false)); // antwoord komt via realtime
+    // Insert mét .select(): we tonen het bericht direct (optimistisch) i.p.v. te wachten
+    // op de realtime-echo, en we zien meteen of de insert faalt.
+    const { data, error } = await supabase.from('messages')
+      .insert({ client_id: clientId, sender: 'client', tekst })
+      .select('id, sender, tekst, food_log_id, created_at')
+      .single();
+    if (error) {
+      console.error('[chat] bericht versturen mislukt:', error.message);
+      setWachtOpLau(false);
+      return;
+    }
+    setBerichten((b) => (b.some((m) => m.id === data.id) ? b : [...b, data as Bericht]));
+    supabase.functions.invoke('lau-reply').catch(() => setWachtOpLau(false)); // AI-antwoord komt via realtime
     // veiligheids-timeout: verberg de indicator na 30s als er niets komt
     setTimeout(() => setWachtOpLau(false), 30_000);
   }, [clientId]);
