@@ -23,7 +23,11 @@ export function useBerichten(clientId: string) {
 
   useEffect(() => {
     laad();
-    const kanaal = supabase.channel(`messages:${clientId}`)
+    const topic = `messages:${clientId}`;
+    // Ruim een achtergebleven kanaal met dezelfde topic op (Fast Refresh / dubbele mount),
+    // anders gooit supabase-js "cannot add postgres_changes callbacks after subscribe()".
+    supabase.getChannels().filter((c) => c.topic === `realtime:${topic}`).forEach((c) => supabase.removeChannel(c));
+    const kanaal = supabase.channel(topic)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `client_id=eq.${clientId}` },
         (payload) => {
           const nieuw = payload.new as Bericht;

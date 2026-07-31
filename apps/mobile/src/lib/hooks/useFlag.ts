@@ -11,8 +11,11 @@ export function useFlag(clientId: string) {
   }, []);
   useEffect(() => {
     laad();
+    const topic = `flags:${clientId}`;
+    // Ruim een achtergebleven kanaal met dezelfde topic op (Fast Refresh / dubbele mount).
+    supabase.getChannels().filter((c) => c.topic === `realtime:${topic}`).forEach((c) => supabase.removeChannel(c));
     const kanaal = supabase
-      .channel(`flags:${clientId}`)
+      .channel(topic)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'flags', filter: `client_id=eq.${clientId}` },
