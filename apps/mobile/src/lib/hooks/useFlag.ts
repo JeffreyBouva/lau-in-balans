@@ -4,6 +4,8 @@ import { supabase } from '../supabase';
 export function useFlag(clientId: string) {
   const [openFlag, setOpenFlag] = useState(false);
   const laad = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return; // zonder sessie niet als anon query'en
     const { data } = await supabase.from('flags').select('id').eq('status', 'open').limit(1);
     setOpenFlag((data?.length ?? 0) > 0);
   }, []);
@@ -17,9 +19,10 @@ export function useFlag(clientId: string) {
         () => laad(),
       )
       .subscribe();
-    // Verlopen token bij mount → 401. Herlaad zodra de sessie ververst of opnieuw inlogt.
-    const { data: sub } = supabase.auth.onAuthStateChange((e) => {
-      if (e === 'SIGNED_IN' || e === 'TOKEN_REFRESHED') laad();
+    // Eerste mount-load kan als anon draaien (sessie nog niet in geheugen). Herlaad zodra
+    // er een sessie is, bij elk auth-event (incl. INITIAL_SESSION na page-reload).
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (session) laad();
     });
     return () => {
       supabase.removeChannel(kanaal);

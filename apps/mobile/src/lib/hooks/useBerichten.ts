@@ -12,6 +12,10 @@ export function useBerichten(clientId: string) {
   const [wachtOpLau, setWachtOpLau] = useState(false);
 
   const laad = useCallback(async () => {
+    // getSession() wacht op het herstel uit storage; zonder sessie niet query'en, anders
+    // draait 'ie als anon → 0 rijen → zou de lijst wissen.
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
     const { data } = await supabase.from('messages').select(KOLOMMEN)
       .order('created_at', { ascending: true });
     if (data) setBerichten(data as Bericht[]);
@@ -28,10 +32,11 @@ export function useBerichten(clientId: string) {
           if (nieuw.sender === 'ai') setWachtOpLau(false); // Lau heeft geantwoord → indicator uit
         })
       .subscribe();
-    // Bij een verlopen token laadt de mount leeg; zodra supabase-js de sessie ververst
-    // (TOKEN_REFRESHED) of opnieuw inlogt (SIGNED_IN), halen we de historie alsnog op.
-    const { data: sub } = supabase.auth.onAuthStateChange((e) => {
-      if (e === 'SIGNED_IN' || e === 'TOKEN_REFRESHED') laad();
+    // De eerste mount-load kan als anon draaien (sessie nog niet uit storage in geheugen)
+    // → 0 rijen. Herlaad zodra er een sessie beschikbaar is, bij ELK auth-event — met
+    // name INITIAL_SESSION na een page-reload, en SIGNED_IN/TOKEN_REFRESHED daarna.
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (session) laad();
     });
     return () => { supabase.removeChannel(kanaal); sub.subscription.unsubscribe(); };
   }, [clientId, laad]);
