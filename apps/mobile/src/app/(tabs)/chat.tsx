@@ -8,6 +8,7 @@ import { useKlantData } from '@/lib/klantdata';
 import { useSheets } from '@/lib/sheets';
 import { LauraKnop } from '@/components/LauraKnop';
 import { Bericht } from '@/components/Bericht';
+import { TypIndicator } from '@/components/TypIndicator';
 
 // Quick-replies die de klanttekst rechtstreeks versturen (handoff § 2). De speciale
 // eerste chip "Ik heb gegeten" opent de log-sheet (openLog) en staat daarom apart.
@@ -17,7 +18,7 @@ const cap = (w: string) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w);
 
 export default function Chat() {
   const insets = useSafeAreaInsets();
-  const { berichten, verstuur, openFlag } = useKlantData();
+  const { berichten, verstuur, wachtOpLau, openFlag } = useKlantData();
   const { openLaura, openLog } = useSheets();
 
   // Klant (voor het weeknummer in de header).
@@ -40,13 +41,13 @@ export default function Chat() {
   // Autoscroll naar onder bij een nieuw bericht (handoff § Autoscroll: scrollToEnd op
   // de container, niet scrollIntoView).
   const lijstRef = useRef<ScrollView>(null);
-  useEffect(() => { lijstRef.current?.scrollToEnd({ animated: true }); }, [berichten.length]);
+  useEffect(() => { lijstRef.current?.scrollToEnd({ animated: true }); }, [berichten.length, wachtOpLau]);
 
   const [input, setInput] = useState('');
   function verstuurInput() {
     const tekst = input.trim();
     if (!tekst) return;
-    verstuur(tekst); // fase 3: lau-reply — Lau antwoordt hier nog niet
+    verstuur(tekst); // Lau's antwoord komt via de lau-reply Edge Function + realtime
     setInput('');
   }
 
@@ -82,6 +83,9 @@ export default function Chat() {
         {berichten.map((b) => (
           <Bericht key={b.id} bericht={b} log={b.food_log_id ? logMap[b.food_log_id] : undefined} />
         ))}
+
+        {/* Typing-indicator zolang Lau "typt" (lau-reply loopt, ai-antwoord nog niet binnen) */}
+        {wachtOpLau && <TypIndicator />}
 
         {/* Disclaimerregel (guardrail: geen medisch advies, Laura leest mee) */}
         <View style={s.disclaimer}>
