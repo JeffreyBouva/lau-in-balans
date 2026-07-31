@@ -40,9 +40,9 @@ Deno.serve(async (req) => {
     .from('messages')
     .select('sender, tekst')
     .eq('client_id', clientId)
-    .order('created_at', { ascending: true })
+    .order('created_at', { ascending: false }) // nieuwste eerst → pak de recentste 20...
     .limit(20);
-  const berichten = (rijen ?? []) as Bericht[];
+  const berichten = ((rijen ?? []) as Bericht[]).reverse(); // ...en zet chronologisch (oud → nieuw)
   const nieuwBericht = [...berichten].reverse().find((b) => b.sender === 'client')?.tekst;
   if (!nieuwBericht) return new Response('geen klantbericht', { status: 400, headers: cors });
   const historie = berichten.slice(0, -1); // alles behalve het laatste (= het nieuwe bericht)
