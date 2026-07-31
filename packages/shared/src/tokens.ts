@@ -13,6 +13,7 @@ export const colors = {
   bgNeutralSofter: '#F1EEE7',
   // lijnen
   hairline: '#DCD6CA',
+  hairlineHover: '#C7BEAE', // hover op secundaire rand; ook neutrale/nog-niet-begonnen markers
   hairlineSoft: '#E5E0D6',
   hairlineSofter: '#E9E4DA',
   tableRow: '#F1EEE7',
