@@ -371,6 +371,11 @@ authorization_url_path = "/oauth/consent"
 # Allow dynamic client registration
 allow_dynamic_registration = false
 
+[functions.lau-reply]
+# De functie verifieert de JWT zelf via getUser(); platform-verificatie blokkeert anders
+# de CORS-preflight (OPTIONS heeft geen auth-header).
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.

@@ -1,13 +1,17 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import Anthropic from 'npm:@anthropic-ai/sdk';
 import { bouwPrompt, type Bericht } from '../_shared/prompt-builder.ts';
+import { cors } from '../_shared/cors.ts';
 import type { AIProfile, Porties } from '../../../packages/shared/src/types.ts';
 
 const LEEG: Porties = { eiwit: 0, groente: 0, koolhydraten: 0, vet: 0 };
 
 Deno.serve(async (req) => {
+  // CORS-preflight: browsers sturen eerst een OPTIONS zonder auth-header.
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
+
   const auth = req.headers.get('Authorization');
-  if (!auth) return new Response('geen sessie', { status: 401 });
+  if (!auth) return new Response('geen sessie', { status: 401, headers: cors });
   const url = Deno.env.get('SUPABASE_URL')!;
 
   // 1. Klant identificeren uit de JWT — nooit een client_id uit de request-body vertrouwen.
@@ -16,7 +20,7 @@ Deno.serve(async (req) => {
   });
   const { data: gebruiker } = await alsKlant.auth.getUser();
   const clientId = gebruiker.user?.id;
-  if (!clientId) return new Response('ongeldige sessie', { status: 401 });
+  if (!clientId) return new Response('ongeldige sessie', { status: 401, headers: cors });
 
   // 2. Context laden met de service role.
   const db = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
@@ -29,7 +33,7 @@ Deno.serve(async (req) => {
     .order('versie', { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (!profielRij) return new Response('geen profiel', { status: 409 });
+  if (!profielRij) return new Response('geen profiel', { status: 409, headers: cors });
   const profiel = profielRij.profiel as AIProfile;
 
   const { data: rijen } = await db
@@ -40,7 +44,7 @@ Deno.serve(async (req) => {
     .limit(20);
   const berichten = (rijen ?? []) as Bericht[];
   const nieuwBericht = [...berichten].reverse().find((b) => b.sender === 'client')?.tekst;
-  if (!nieuwBericht) return new Response('geen klantbericht', { status: 400 });
+  if (!nieuwBericht) return new Response('geen klantbericht', { status: 400, headers: cors });
   const historie = berichten.slice(0, -1); // alles behalve het laatste (= het nieuwe bericht)
 
   // weekcontext (dag-aggregaten van deze week)
@@ -89,6 +93,6 @@ Deno.serve(async (req) => {
   // 5. AI-bericht wegschrijven → app krijgt het via de bestaande realtime-subscription.
   await db.from('messages').insert({ client_id: clientId, sender: 'ai', tekst });
   return new Response(JSON.stringify({ ok: true }), {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...cors, 'Content-Type': 'application/json' },
   });
 });
