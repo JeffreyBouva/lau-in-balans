@@ -1,9 +1,23 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, type StyleProp, type TextStyle } from 'react-native';
 import { HANDMATEN, type Moment, type Porties, type Sender } from '@lau/shared';
 import { colors, radii, fontFamily } from '@/theme/tokens';
 
 type BerichtData = { sender: Sender; tekst: string | null; food_log_id: string | null };
 type Log = { moment: Moment; porties: Porties };
+
+/**
+ * Rendert de lichte markdown die Lau/Laura kunnen sturen: **vet** wordt een zwaardere
+ * font-span (regelafbrekingen doet <Text> zelf via \n). Split op **…**: even stukjes zijn
+ * gewone tekst, oneven stukjes de vet-inhoud. Sluit een ** niet, dan blijft het letterlijk.
+ */
+function RijkeTekst({ tekst, style }: { tekst: string; style: StyleProp<TextStyle> }) {
+  const delen = tekst.split(/\*\*(.+?)\*\*/g);
+  return (
+    <Text style={style}>
+      {delen.map((deel, i) => (i % 2 === 1 ? <Text key={i} style={s.vet}>{deel}</Text> : deel))}
+    </Text>
+  );
+}
 
 /**
  * Eén chatbubbel (handoff § 2 "Drie berichttypes" + de laura-rij). Het type wordt
@@ -38,7 +52,7 @@ export function Bericht({ bericht, log }: { bericht: BerichtData; log?: Log }) {
   if (bericht.sender === 'ai') {
     return (
       <View style={s.lau}>
-        <Text style={s.lauTekst}>{bericht.tekst}</Text>
+        <RijkeTekst tekst={bericht.tekst ?? ''} style={s.lauTekst} />
       </View>
     );
   }
@@ -46,7 +60,7 @@ export function Bericht({ bericht, log }: { bericht: BerichtData; log?: Log }) {
   if (bericht.sender === 'coach') {
     return (
       <View style={s.laura}>
-        <Text style={s.lauraTekst}>{bericht.tekst}</Text>
+        <RijkeTekst tekst={bericht.tekst ?? ''} style={s.lauraTekst} />
       </View>
     );
   }
@@ -86,6 +100,7 @@ const s = StyleSheet.create({
     ...linksTip,
   },
   lauTekst: { fontFamily: fontFamily.sans, fontSize: 15, lineHeight: 24, color: colors.sageInk },
+  vet: { fontFamily: fontFamily.sansMedium },
 
   // Klant (client) — rechts, sage-soft
   klant: {
