@@ -17,8 +17,13 @@ export function useFlag(clientId: string) {
         () => laad(),
       )
       .subscribe();
+    // Verlopen token bij mount → 401. Herlaad zodra de sessie ververst of opnieuw inlogt.
+    const { data: sub } = supabase.auth.onAuthStateChange((e) => {
+      if (e === 'SIGNED_IN' || e === 'TOKEN_REFRESHED') laad();
+    });
     return () => {
       supabase.removeChannel(kanaal);
+      sub.subscription.unsubscribe();
     };
   }, [clientId, laad]);
   const maakFlag = useCallback(async (tekst: string, redenen: string[]) => {

@@ -13,7 +13,14 @@ export function useVoedingslogs(clientId: string) {
       .gte('datum', weekdagenTerug(7)[0]);
     setRows((data as Row[]) ?? []);
   }, []);
-  useEffect(() => { laad(); }, [laad]);
+  useEffect(() => {
+    laad();
+    // Verlopen token bij mount laadt leeg; herlaad zodra de sessie ververst of opnieuw inlogt.
+    const { data: sub } = supabase.auth.onAuthStateChange((e) => {
+      if (e === 'SIGNED_IN' || e === 'TOKEN_REFRESHED') laad();
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [laad]);
 
   const vandaag = vandaagISO();
   const dag = dagStand(rows, vandaag);

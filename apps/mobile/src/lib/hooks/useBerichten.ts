@@ -4,13 +4,21 @@ import { supabase } from '../supabase';
 
 export type Bericht = { id: string; sender: Sender; tekst: string | null; food_log_id: string | null; created_at: string };
 
+const KOLOMMEN = 'id, sender, tekst, food_log_id, created_at';
+
 export function useBerichten(clientId: string) {
   const [berichten, setBerichten] = useState<Bericht[]>([]);
   // Typing-indicator: aan vanaf het versturen tot Lau's ai-antwoord via realtime binnenkomt.
   const [wachtOpLau, setWachtOpLau] = useState(false);
+
+  const laad = useCallback(async () => {
+    const { data } = await supabase.from('messages').select(KOLOMMEN)
+      .order('created_at', { ascending: true });
+    if (data) setBerichten(data as Bericht[]);
+  }, []);
+
   useEffect(() => {
-    supabase.from('messages').select('id, sender, tekst, food_log_id, created_at')
-      .order('created_at', { ascending: true }).then(({ data }) => setBerichten((data as Bericht[]) ?? []));
+    laad();
     const kanaal = supabase.channel(`messages:${clientId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `client_id=eq.${clientId}` },
         (payload) => {
@@ -20,26 +28,34 @@ export function useBerichten(clientId: string) {
           if (nieuw.sender === 'ai') setWachtOpLau(false); // Lau heeft geantwoord → indicator uit
         })
       .subscribe();
-    return () => { supabase.removeChannel(kanaal); };
-  }, [clientId]);
+    // Bij een verlopen token laadt de mount leeg; zodra supabase-js de sessie ververst
+    // (TOKEN_REFRESHED) of opnieuw inlogt (SIGNED_IN), halen we de historie alsnog op.
+    const { data: sub } = supabase.auth.onAuthStateChange((e) => {
+      if (e === 'SIGNED_IN' || e === 'TOKEN_REFRESHED') laad();
+    });
+    return () => { supabase.removeChannel(kanaal); sub.subscription.unsubscribe(); };
+  }, [clientId, laad]);
 
   const verstuur = useCallback(async (tekst: string) => {
     setWachtOpLau(true);
-    // Insert mét .select(): we tonen het bericht direct (optimistisch) i.p.v. te wachten
-    // op de realtime-echo, en we zien meteen of de insert faalt.
-    const { data, error } = await supabase.from('messages')
-      .insert({ client_id: clientId, sender: 'client', tekst })
-      .select('id, sender, tekst, food_log_id, created_at')
-      .single();
+    const insert = () => supabase.from('messages')
+      .insert({ client_id: clientId, sender: 'client', tekst }).select(KOLOMMEN).single();
+    let { data, error } = await insert();
     if (error) {
-      console.error('[chat] bericht versturen mislukt:', error.message);
+      // Vrijwel altijd een verlopen token → sessie verversen en precies één keer opnieuw proberen.
+      await supabase.auth.refreshSession();
+      ({ data, error } = await insert());
+    }
+    if (error || !data) {
+      console.error('[chat] versturen mislukt:', error?.message);
       setWachtOpLau(false);
       return;
     }
-    setBerichten((b) => (b.some((m) => m.id === data.id) ? b : [...b, data as Bericht]));
+    const rij = data as Bericht;
+    // Optimistisch tonen (dedup tegen de realtime-echo).
+    setBerichten((b) => (b.some((m) => m.id === rij.id) ? b : [...b, rij]));
     supabase.functions.invoke('lau-reply').catch(() => setWachtOpLau(false)); // AI-antwoord komt via realtime
-    // veiligheids-timeout: verberg de indicator na 30s als er niets komt
-    setTimeout(() => setWachtOpLau(false), 30_000);
+    setTimeout(() => setWachtOpLau(false), 30_000); // veiligheids-timeout als er niets komt
   }, [clientId]);
 
   return { berichten, verstuur, wachtOpLau };
