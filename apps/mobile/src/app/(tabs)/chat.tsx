@@ -1,24 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { weekNummer, vandaagISO, type Moment, type Porties } from '@lau/shared';
 import { colors, radii, fontFamily, text } from '@/theme/tokens';
 import { supabase } from '@/lib/supabase';
 import { useKlantData } from '@/lib/klantdata';
 import { useSheets } from '@/lib/sheets';
+import { chatSuggesties } from '@/lib/suggesties';
 import { LauraKnop } from '@/components/LauraKnop';
 import { Bericht } from '@/components/Bericht';
 import { TypIndicator } from '@/components/TypIndicator';
 
-// Quick-replies die de klanttekst rechtstreeks versturen (handoff § 2). De speciale
-// eerste chip "Ik heb gegeten" opent de log-sheet (openLog) en staat daarom apart.
-const QUICK_REPLIES = ['Wat eet ik vanavond?', 'Ik heb trek', 'Hoe ga ik om met een etentje?', 'Ik ben moe vandaag'];
+// De log-actie ("Ik heb gegeten") opent de log-sheet en staat daarom apart, als knop.
+// De suggesties eronder sturen een bericht naar Lau en passen zich aan het dagdeel +
+// status aan (zie lib/suggesties.ts). De AI-laag komt daar later overheen.
 
 const cap = (w: string) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w);
 
 export default function Chat() {
   const insets = useSafeAreaInsets();
-  const { berichten, verstuur, wachtOpLau, openFlag } = useKlantData();
+  const { berichten, verstuur, wachtOpLau, openFlag, dag } = useKlantData();
   const { openLaura, openLog } = useSheets();
 
   // Klant (voor het weeknummer in de header).
@@ -50,6 +52,10 @@ export default function Chat() {
     verstuur(tekst); // Lau's antwoord komt via de lau-reply Edge Function + realtime
     setInput('');
   }
+
+  // Contextuele suggesties: dagdeel + of er vandaag al gelogd is (som van de porties > 0).
+  const gelogdVandaag = dag.eiwit + dag.groente + dag.koolhydraten + dag.vet > 0;
+  const suggesties = chatSuggesties(new Date(), { gelogdVandaag });
 
   const weekNr = klant ? weekNummer(klant.startdatum, vandaagISO()) : null;
   const datumBron = berichten[0]?.created_at ? new Date(berichten[0].created_at) : new Date();
@@ -103,13 +109,14 @@ export default function Chat() {
         style={s.quickRij}
         contentContainerStyle={s.quickInhoud}
       >
-        <Pressable style={[s.chip, s.chipEten]} onPress={openLog}>
-          <View style={s.chipBol} />
-          <Text style={s.chipEtenTekst}>Ik heb gegeten</Text>
+        <Pressable style={s.actieKnop} onPress={openLog}>
+          <Ionicons name="add" size={18} color={colors.bgSurface} />
+          <Text style={s.actieTekst}>Ik heb gegeten</Text>
         </Pressable>
-        {QUICK_REPLIES.map((q) => (
-          <Pressable key={q} style={[s.chip, s.chipNeutraal]} onPress={() => verstuur(q)}>
-            <Text style={s.chipTekst}>{q}</Text>
+        <View style={s.scheiding} />
+        {suggesties.map((q) => (
+          <Pressable key={q} style={s.suggestie} onPress={() => verstuur(q)}>
+            <Text style={s.suggestieTekst}>{q}</Text>
           </Pressable>
         ))}
       </ScrollView>
@@ -180,20 +187,30 @@ const s = StyleSheet.create({
   // quick-reply-rij
   quickRij: { flexGrow: 0 },
   quickInhoud: { paddingHorizontal: 22, paddingBottom: 8, gap: 8, alignItems: 'center' },
-  chip: {
+  // Log-actie: filled accent + plus → leest als een actie/knop (opent de log-sheet).
+  actieKnop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 5,
+    paddingVertical: 9,
+    paddingLeft: 11,
+    paddingRight: 15,
+    borderRadius: radii.pill,
+    backgroundColor: colors.sage,
+  },
+  actieTekst: { fontFamily: fontFamily.sansMedium, fontSize: 13, color: colors.bgSurface },
+  // Scheiding tussen de actie en de suggesties, zodat je ziet dat het twee soorten zijn.
+  scheiding: { width: 1, height: 22, backgroundColor: colors.hairline, marginHorizontal: 3 },
+  // Suggesties: outline-chips → leest als "tik om naar Lau te sturen".
+  suggestie: {
     paddingVertical: 9,
     paddingHorizontal: 15,
     borderRadius: radii.pill,
     borderWidth: 1,
+    borderColor: colors.hairline,
+    backgroundColor: colors.bgSurface,
   },
-  chipEten: { backgroundColor: colors.sageSoft, borderColor: colors.sage },
-  chipBol: { width: 7, height: 7, borderRadius: radii.pill, backgroundColor: colors.sage },
-  chipEtenTekst: { fontFamily: fontFamily.sans, fontSize: 13, color: colors.sageDeeper },
-  chipNeutraal: { backgroundColor: colors.bgSurface, borderColor: colors.hairline },
-  chipTekst: { fontFamily: fontFamily.sans, fontSize: 13, color: colors.body },
+  suggestieTekst: { fontFamily: fontFamily.sans, fontSize: 13, color: colors.body },
 
   // composer
   composer: {
