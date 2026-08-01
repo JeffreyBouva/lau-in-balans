@@ -4,18 +4,20 @@ import {
   Dimensions,
   Easing,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   View,
   type DimensionValue,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { colors, radii, shadow } from '@/theme/tokens';
 
 /**
- * Herbruikbare bottom-sheet (handoff § 5). Scrim-tik sluit; de sheet-body vangt
- * de tik zelf op (zit als broer bóven de scrim). Slide-up via `Animated.timing`
- * met een easing die `cubic-bezier(.22,.8,.3,1)` benadert over ~340ms. De Modal
- * blijft gemount tijdens de sluit-animatie en verdwijnt pas als die klaar is.
+ * Herbruikbare bottom-sheet (handoff § 5). Scrim-tik sluit; de sheet-body vangt de tik
+ * zelf op (zit als broer bóven de scrim). Openen: spring-up (subtiele iOS-settle) mét een
+ * lichte haptic; de scrim fade't mee via een interpolatie op dezelfde y-waarde. Sluiten:
+ * korte ease-in naar beneden. De Modal blijft gemount tot de sluit-animatie klaar is.
  */
 export function Sheet({
   zichtbaar,
@@ -35,17 +37,19 @@ export function Sheet({
   useEffect(() => {
     if (zichtbaar) {
       setGemount(true);
-      Animated.timing(y, {
+      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      Animated.spring(y, {
         toValue: 0,
-        duration: 340,
-        easing: Easing.bezier(0.22, 0.8, 0.3, 1),
+        stiffness: 220,
+        damping: 24,
+        mass: 1,
         useNativeDriver: true,
       }).start();
     } else {
       Animated.timing(y, {
         toValue: schermH,
-        duration: 340,
-        easing: Easing.bezier(0.22, 0.8, 0.3, 1),
+        duration: 240,
+        easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }).start(({ finished }) => {
         if (finished) setGemount(false);
@@ -53,12 +57,21 @@ export function Sheet({
     }
   }, [zichtbaar, y, schermH]);
 
+  // Scrim dimt mee met de sheet-positie: dicht (y = schermH) → transparant, open (y = 0) → vol.
+  const scrimOpacity = y.interpolate({
+    inputRange: [0, schermH],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
   const maxH: DimensionValue = maxHeight ?? '82%';
 
   return (
-    <Modal transparent visible={gemount} animationType="none" onRequestClose={onSluit}>
+    <Modal transparent visible={gemount} animationType="none" onRequestClose={onSluit} statusBarTranslucent>
       <View style={s.root}>
-        <Pressable style={s.scrim} onPress={onSluit} accessibilityLabel="Sluiten" />
+        <Animated.View style={[s.scrim, { opacity: scrimOpacity }]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={onSluit} accessibilityLabel="Sluiten" />
+        </Animated.View>
         <Animated.View style={[s.sheet, { maxHeight: maxH, transform: [{ translateY: y }] }]}>
           <View style={s.greep} />
           {children}
