@@ -6,6 +6,38 @@ import type { AIProfile, Porties } from '../../../packages/shared/src/types.ts';
 
 const LEEG: Porties = { eiwit: 0, groente: 0, koolhydraten: 0, vet: 0 };
 
+// Best-effort vervolgsuggesties (tier 2): korte berichten die de KLANT zou kunnen tikken na
+// Lau's antwoord. Losse, snelle Haiku-call — faalt 'ie, dan [] en valt de app terug op de
+// regel-gebaseerde set. Raakt de veiligheids-kritische antwoord-flow niet.
+async function genereerSuggesties(
+  anthropic: Anthropic,
+  gesprek: { role: 'user' | 'assistant'; content: string }[],
+  antwoord: string,
+): Promise<string[]> {
+  try {
+    const context = gesprek.slice(-6).map((m) => `${m.role === 'user' ? 'Klant' : 'Lau'}: ${m.content}`).join('\n');
+    const res = await anthropic.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 200,
+      system:
+        "Je bedenkt korte vervolgberichten die de KLANT zou kunnen tikken na Lau's antwoord. " +
+        'Nederlands, in de ik-vorm van de klant, elk max 6 woorden, natuurlijk en passend bij het gesprek. ' +
+        'Nooit getallen, calorieën of grammen. Antwoord met UITSLUITEND een JSON-array van 3 strings.',
+      messages: [
+        { role: 'user', content: `${context}\nLau: ${antwoord}\n\nGeef 3 korte vervolgberichten voor de klant als JSON-array.` },
+      ],
+    });
+    const blok = res.content.find((b) => b.type === 'text');
+    const txt = blok && blok.type === 'text' ? blok.text : '[]';
+    const start = txt.indexOf('['), eind = txt.lastIndexOf(']');
+    if (start === -1 || eind === -1) return [];
+    const arr = JSON.parse(txt.slice(start, eind + 1));
+    return Array.isArray(arr) ? arr.filter((x) => typeof x === 'string' && x.trim()).slice(0, 4) : [];
+  } catch {
+    return [];
+  }
+}
+
 Deno.serve(async (req) => {
   // CORS-preflight: browsers sturen eerst een OPTIONS zonder auth-header.
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
@@ -91,8 +123,10 @@ Deno.serve(async (req) => {
   }
 
   // 5. AI-bericht wegschrijven → app krijgt het via de bestaande realtime-subscription.
+  // AI-bericht eerst wegschrijven (realtime toont het meteen), dan de suggesties genereren.
   await db.from('messages').insert({ client_id: clientId, sender: 'ai', tekst });
-  return new Response(JSON.stringify({ ok: true }), {
+  const suggesties = antwoord.stop_reason === 'refusal' ? [] : await genereerSuggesties(anthropic, messages, tekst);
+  return new Response(JSON.stringify({ ok: true, suggesties }), {
     headers: { ...cors, 'Content-Type': 'application/json' },
   });
 });

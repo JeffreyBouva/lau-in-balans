@@ -10,6 +10,9 @@ export function useBerichten(clientId: string) {
   const [berichten, setBerichten] = useState<Bericht[]>([]);
   // Typing-indicator: aan vanaf het versturen tot Lau's ai-antwoord via realtime binnenkomt.
   const [wachtOpLau, setWachtOpLau] = useState(false);
+  // AI-gegenereerde vervolgsuggesties (tier 2) uit het lau-reply-antwoord. Leeg → de chat
+  // valt terug op de regel-gebaseerde suggesties.
+  const [aiSuggesties, setAiSuggesties] = useState<string[]>([]);
 
   const laad = useCallback(async () => {
     // getSession() wacht op het herstel uit storage; zonder sessie niet query'en, anders
@@ -47,6 +50,7 @@ export function useBerichten(clientId: string) {
 
   const verstuur = useCallback(async (tekst: string) => {
     setWachtOpLau(true);
+    setAiSuggesties([]); // oude suggesties weg zodra je een nieuw bericht stuurt
     const insert = () => supabase.from('messages')
       .insert({ client_id: clientId, sender: 'client', tekst }).select(KOLOMMEN).single();
     let { data, error } = await insert();
@@ -63,9 +67,15 @@ export function useBerichten(clientId: string) {
     const rij = data as Bericht;
     // Optimistisch tonen (dedup tegen de realtime-echo).
     setBerichten((b) => (b.some((m) => m.id === rij.id) ? b : [...b, rij]));
-    supabase.functions.invoke('lau-reply').catch(() => setWachtOpLau(false)); // AI-antwoord komt via realtime
+    // AI-antwoord komt via realtime; de vervolgsuggesties komen terug in het invoke-antwoord.
+    supabase.functions.invoke('lau-reply')
+      .then(({ data }) => {
+        const s = (data as { suggesties?: unknown } | null)?.suggesties;
+        if (Array.isArray(s) && s.length) setAiSuggesties(s.filter((x): x is string => typeof x === 'string'));
+      })
+      .catch(() => setWachtOpLau(false));
     setTimeout(() => setWachtOpLau(false), 30_000); // veiligheids-timeout als er niets komt
   }, [clientId]);
 
-  return { berichten, verstuur, wachtOpLau };
+  return { berichten, verstuur, wachtOpLau, aiSuggesties };
 }

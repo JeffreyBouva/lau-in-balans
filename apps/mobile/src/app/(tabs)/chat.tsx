@@ -20,7 +20,7 @@ const cap = (w: string) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w);
 
 export default function Chat() {
   const insets = useSafeAreaInsets();
-  const { berichten, verstuur, wachtOpLau, openFlag, dag } = useKlantData();
+  const { berichten, verstuur, wachtOpLau, openFlag, dag, aiSuggesties } = useKlantData();
   const { openLaura, openLog } = useSheets();
 
   // Klant (voor het weeknummer in de header).
@@ -55,7 +55,8 @@ export default function Chat() {
 
   // Contextuele suggesties: dagdeel + of er vandaag al gelogd is (som van de porties > 0).
   const gelogdVandaag = dag.eiwit + dag.groente + dag.koolhydraten + dag.vet > 0;
-  const suggesties = chatSuggesties(new Date(), { gelogdVandaag });
+  // AI-suggesties (tier 2) hebben voorrang; anders de regel-gebaseerde set (dagdeel + status).
+  const suggesties = aiSuggesties.length ? aiSuggesties : chatSuggesties(new Date(), { gelogdVandaag });
 
   const weekNr = klant ? weekNummer(klant.startdatum, vandaagISO()) : null;
   const datumBron = berichten[0]?.created_at ? new Date(berichten[0].created_at) : new Date();
