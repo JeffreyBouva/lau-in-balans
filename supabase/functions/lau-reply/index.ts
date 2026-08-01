@@ -54,40 +54,31 @@ Deno.serve(async (req) => {
   const clientId = gebruiker.user?.id;
   if (!clientId) return new Response('ongeldige sessie', { status: 401, headers: cors });
 
-  // 2. Context laden met de service role.
+  // 2. Context PARALLEL laden met de service role — scheelt round-trips t.o.v. sequentieel.
   const db = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
     auth: { persistSession: false },
   });
-  const { data: profielRij } = await db
-    .from('ai_profile_versions')
-    .select('profiel')
-    .eq('client_id', clientId)
-    .order('versie', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - 6);
+  const [profielRes, berichtenRes, logsRes] = await Promise.all([
+    db.from('ai_profile_versions').select('profiel').eq('client_id', clientId)
+      .order('versie', { ascending: false }).limit(1).maybeSingle(),
+    db.from('messages').select('sender, tekst').eq('client_id', clientId)
+      .order('created_at', { ascending: false }).limit(20), // nieuwste 20...
+    db.from('food_logs').select('porties').eq('client_id', clientId)
+      .gte('datum', weekStart.toISOString().slice(0, 10)),
+  ]);
+
+  const profielRij = profielRes.data;
   if (!profielRij) return new Response('geen profiel', { status: 409, headers: cors });
   const profiel = profielRij.profiel as AIProfile;
 
-  const { data: rijen } = await db
-    .from('messages')
-    .select('sender, tekst')
-    .eq('client_id', clientId)
-    .order('created_at', { ascending: false }) // nieuwste eerst → pak de recentste 20...
-    .limit(20);
-  const berichten = ((rijen ?? []) as Bericht[]).reverse(); // ...en zet chronologisch (oud → nieuw)
+  const berichten = ((berichtenRes.data ?? []) as Bericht[]).reverse(); // ...chronologisch (oud → nieuw)
   const nieuwBericht = [...berichten].reverse().find((b) => b.sender === 'client')?.tekst;
   if (!nieuwBericht) return new Response('geen klantbericht', { status: 400, headers: cors });
   const historie = berichten.slice(0, -1); // alles behalve het laatste (= het nieuwe bericht)
 
-  // weekcontext (dag-aggregaten van deze week)
-  const weekStart = new Date();
-  weekStart.setDate(weekStart.getDate() - 6);
-  const { data: logs } = await db
-    .from('food_logs')
-    .select('porties')
-    .eq('client_id', clientId)
-    .gte('datum', weekStart.toISOString().slice(0, 10));
-  const gelogd = (logs ?? []).reduce<Porties>((s, r) => {
+  const gelogd = (logsRes.data ?? []).reduce<Porties>((s, r) => {
     const p = r.porties as Porties;
     return {
       eiwit: s.eiwit + p.eiwit,
