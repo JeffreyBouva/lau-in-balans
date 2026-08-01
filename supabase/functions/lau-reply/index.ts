@@ -96,9 +96,11 @@ Deno.serve(async (req) => {
     nieuwBericht,
   });
 
-  // 4. Claude aanroepen (claude-sonnet-5, adaptief denken, effort low, niet-streamend).
+  // 4. Claude STREAMEND aanroepen: schrijf het Lau-bericht zodra de eerste tekst binnen is
+  //    en werk het getembet bij (~elke 250ms). De app laat de tekst live groeien via
+  //    realtime UPDATE-events, zodat het antwoord meteen begint te verschijnen.
   const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY')! });
-  const antwoord = await anthropic.messages.create({
+  const stream = anthropic.messages.stream({
     model: 'claude-sonnet-5',
     max_tokens: 1024,
     thinking: { type: 'adaptive' },
@@ -106,17 +108,37 @@ Deno.serve(async (req) => {
     system,
     messages,
   });
-  // Lees stop_reason vóór content: veiligheidsclassifiers kunnen weigeren (HTTP 200, stop_reason 'refusal').
-  let tekst = 'Ik ben er zo weer — probeer het zo nog eens.';
-  if (antwoord.stop_reason !== 'refusal') {
-    const blok = antwoord.content.find((b) => b.type === 'text');
-    if (blok && blok.type === 'text') tekst = blok.text;
+
+  let tekst = '';
+  let berichtId: string | null = null;
+  let laatsteUpdate = 0;
+  for await (const event of stream) {
+    if (event.type !== 'content_block_delta' || event.delta.type !== 'text_delta') continue; // denk-deltas overslaan
+    tekst += event.delta.text;
+    const nu = Date.now();
+    if (!berichtId) {
+      // Eerste tekst → insert (bubble verschijnt, typ-indicator uit); geen lege bubble.
+      const { data } = await db.from('messages').insert({ client_id: clientId, sender: 'ai', tekst }).select('id').single();
+      berichtId = (data as { id: string } | null)?.id ?? null;
+      laatsteUpdate = nu;
+    } else if (nu - laatsteUpdate >= 250) {
+      await db.from('messages').update({ tekst }).eq('id', berichtId);
+      laatsteUpdate = nu;
+    }
   }
 
-  // 5. AI-bericht wegschrijven → app krijgt het via de bestaande realtime-subscription.
-  // AI-bericht eerst wegschrijven (realtime toont het meteen), dan de suggesties genereren.
-  await db.from('messages').insert({ client_id: clientId, sender: 'ai', tekst });
-  const suggesties = antwoord.stop_reason === 'refusal' ? [] : await genereerSuggesties(anthropic, messages, tekst);
+  const finaal = await stream.finalMessage();
+  // Veiligheidsclassifier kan weigeren (stop_reason 'refusal'): vervang door een warme fallback.
+  if (finaal.stop_reason === 'refusal') tekst = 'Ik ben er zo weer — probeer het zo nog eens.';
+  else if (!tekst) {
+    const blok = finaal.content.find((b) => b.type === 'text');
+    if (blok && blok.type === 'text') tekst = blok.text;
+  }
+  // Slotschrijf: de volledige (of fallback-)tekst — pakt ook de laatste tokens sinds de throttle.
+  if (berichtId) await db.from('messages').update({ tekst }).eq('id', berichtId);
+  else await db.from('messages').insert({ client_id: clientId, sender: 'ai', tekst });
+
+  const suggesties = finaal.stop_reason === 'refusal' ? [] : await genereerSuggesties(anthropic, messages, tekst);
   return new Response(JSON.stringify({ ok: true, suggesties }), {
     headers: { ...cors, 'Content-Type': 'application/json' },
   });

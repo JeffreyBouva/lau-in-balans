@@ -31,12 +31,19 @@ export function useBerichten(clientId: string) {
     // anders gooit supabase-js "cannot add postgres_changes callbacks after subscribe()".
     supabase.getChannels().filter((c) => c.topic === `realtime:${topic}`).forEach((c) => supabase.removeChannel(c));
     const kanaal = supabase.channel(topic)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `client_id=eq.${clientId}` },
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `client_id=eq.${clientId}` },
         (payload) => {
-          const nieuw = payload.new as Bericht;
-          // Dedup: een optimistisch getoond bericht komt ook via de realtime-echo terug.
-          setBerichten((b) => (b.some((m) => m.id === nieuw.id) ? b : [...b, nieuw]));
-          if (nieuw.sender === 'ai') setWachtOpLau(false); // Lau heeft geantwoord → indicator uit
+          if (payload.eventType === 'INSERT') {
+            const nieuw = payload.new as Bericht;
+            // Dedup: een optimistisch getoond bericht komt ook via de realtime-echo terug.
+            setBerichten((b) => (b.some((m) => m.id === nieuw.id) ? b : [...b, nieuw]));
+            if (nieuw.sender === 'ai') setWachtOpLau(false); // Lau's antwoord begint → indicator uit
+          } else if (payload.eventType === 'UPDATE') {
+            // Streaming: Lau's bericht groeit via UPDATE-events; vervang de tekst op id.
+            const gewijzigd = payload.new as Bericht;
+            setBerichten((b) => b.map((m) => (m.id === gewijzigd.id ? { ...m, ...gewijzigd } : m)));
+            if (gewijzigd.sender === 'ai') setWachtOpLau(false);
+          }
         })
       .subscribe();
     // De eerste mount-load kan als anon draaien (sessie nog niet uit storage in geheugen)
