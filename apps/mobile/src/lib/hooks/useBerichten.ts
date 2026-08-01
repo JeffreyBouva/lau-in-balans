@@ -74,10 +74,17 @@ export function useBerichten(clientId: string) {
     const rij = data as Bericht;
     // Optimistisch tonen (dedup tegen de realtime-echo).
     setBerichten((b) => (b.some((m) => m.id === rij.id) ? b : [...b, rij]));
-    // AI-antwoord komt via realtime; de vervolgsuggesties komen terug in het invoke-antwoord.
+    // AI-antwoord groeit via realtime; het invoke-antwoord geeft het volledige antwoord +
+    // de vervolgsuggesties terug.
     supabase.functions.invoke('lau-reply')
       .then(({ data }) => {
-        const s = (data as { suggesties?: unknown } | null)?.suggesties;
+        const d = data as { suggesties?: unknown; berichtId?: string; tekst?: string } | null;
+        // Garandeer de volledige tekst, ook als een streaming-UPDATE onderweg gemist is.
+        if (d?.berichtId && typeof d.tekst === 'string') {
+          const id = d.berichtId, volledig = d.tekst;
+          setBerichten((b) => b.map((m) => (m.id === id ? { ...m, tekst: volledig } : m)));
+        }
+        const s = d?.suggesties;
         if (Array.isArray(s) && s.length) setAiSuggesties(s.filter((x): x is string => typeof x === 'string'));
       })
       .catch(() => setWachtOpLau(false));

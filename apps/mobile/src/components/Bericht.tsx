@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, type StyleProp, type TextStyle } from 'react-native';
 import { HANDMATEN, type Moment, type Porties, type Sender } from '@lau/shared';
 import { colors, radii, fontFamily } from '@/theme/tokens';
+import { useVloeiendeTekst } from '@/lib/useVloeiendeTekst';
 
 type BerichtData = { sender: Sender; tekst: string | null; food_log_id: string | null };
 type Log = { moment: Moment; porties: Porties };
@@ -30,6 +31,9 @@ function RijkeTekst({ tekst, style }: { tekst: string; style: StyleProp<TextStyl
  * - sender 'client' → klant-bubbel (rechts, sage-soft).
  */
 export function Bericht({ bericht, log }: { bericht: BerichtData; log?: Log }) {
+  // Vloeiende reveal voor Lau's streamende antwoord (historische berichten: direct volledig).
+  const vloeiend = useVloeiendeTekst(bericht.tekst ?? '');
+
   // Log-bubbel — de porties zijn los opgehaald (zie chat-scherm) en komen via `log`
   // binnen; zolang die nog niet geresolved is tonen we alleen de lege bubbel.
   if (bericht.food_log_id != null) {
@@ -52,7 +56,7 @@ export function Bericht({ bericht, log }: { bericht: BerichtData; log?: Log }) {
   if (bericht.sender === 'ai') {
     return (
       <View style={s.lau}>
-        <RijkeTekst tekst={bericht.tekst ?? ''} style={s.lauTekst} />
+        <RijkeTekst tekst={vloeiend} style={s.lauTekst} />
       </View>
     );
   }
