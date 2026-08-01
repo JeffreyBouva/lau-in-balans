@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { useKlantData } from '@/lib/klantdata';
 import { useSheets } from '@/lib/sheets';
 import { chatSuggesties } from '@/lib/suggesties';
+import { tik, stoot } from '@/lib/haptics';
 import { LauraKnop } from '@/components/LauraKnop';
 import { Bericht } from '@/components/Bericht';
 import { TypIndicator } from '@/components/TypIndicator';
@@ -49,6 +50,7 @@ export default function Chat() {
   function verstuurInput() {
     const tekst = input.trim();
     if (!tekst) return;
+    stoot();
     verstuur(tekst); // Lau's antwoord komt via de lau-reply Edge Function + realtime
     setInput('');
   }
@@ -110,13 +112,17 @@ export default function Chat() {
         style={s.quickRij}
         contentContainerStyle={s.quickInhoud}
       >
-        <Pressable style={s.actieKnop} onPress={openLog}>
+        <Pressable style={({ pressed }) => [s.actieKnop, pressed && s.gedrukt]} onPress={openLog}>
           <Ionicons name="add" size={18} color={colors.bgSurface} />
           <Text style={s.actieTekst}>Ik heb gegeten</Text>
         </Pressable>
         <View style={s.scheiding} />
         {suggesties.map((q) => (
-          <Pressable key={q} style={s.suggestie} onPress={() => verstuur(q)}>
+          <Pressable
+            key={q}
+            style={({ pressed }) => [s.suggestie, pressed && s.gedrukt]}
+            onPress={() => { tik(); verstuur(q); }}
+          >
             <Text style={s.suggestieTekst}>{q}</Text>
           </Pressable>
         ))}
@@ -134,7 +140,7 @@ export default function Chat() {
           blurOnSubmit={false}
           onSubmitEditing={verstuurInput}
         />
-        <Pressable style={s.verzend} onPress={verstuurInput}>
+        <Pressable style={({ pressed }) => [s.verzend, pressed && s.gedrukt]} onPress={verstuurInput}>
           <Text style={s.verzendGlyph}>↑</Text>
         </Pressable>
       </View>
@@ -212,6 +218,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.bgSurface,
   },
   suggestieTekst: { fontFamily: fontFamily.sans, fontSize: 13, color: colors.body },
+  gedrukt: { opacity: 0.6 }, // druk-feedback voor actie/suggestie/verzend
 
   // composer
   composer: {

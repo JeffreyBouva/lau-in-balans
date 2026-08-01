@@ -1,5 +1,6 @@
 import { Pressable, Text, View, StyleSheet } from 'react-native';
 import { colors, radii, fontFamily } from '@/theme/tokens';
+import { tik } from '@/lib/haptics';
 
 /**
  * Handmaat-stepper (handoff § 3). De getoonde waarde is de dagsom (dag[key]);
@@ -25,11 +26,11 @@ export function HandmaatStepper({
   return (
     <View style={s.rij}>
       <Pressable
-        onPress={onMin}
+        onPress={() => { tik(); onMin(); }}
         disabled={minUit}
         accessibilityRole="button"
         accessibilityLabel="Portie eraf"
-        style={[s.knop, s.min, minUit && s.minUit]}
+        style={({ pressed }) => [s.knop, s.min, minUit && s.minUit, pressed && s.gedrukt]}
       >
         <Text style={[s.minTeken, minUit && s.minTekenUit]}>−</Text>
       </Pressable>
@@ -37,10 +38,10 @@ export function HandmaatStepper({
         {waarde} / {doel}
       </Text>
       <Pressable
-        onPress={onPlus}
+        onPress={() => { tik(); onPlus(); }}
         accessibilityRole="button"
         accessibilityLabel="Portie erbij"
-        style={[s.knop, s.plus]}
+        style={({ pressed }) => [s.knop, s.plus, pressed && s.gedrukt]}
       >
         <Text style={s.plusTeken}>+</Text>
       </Pressable>
@@ -51,6 +52,7 @@ export function HandmaatStepper({
 const s = StyleSheet.create({
   rij: { flexDirection: 'row', alignItems: 'center' },
   knop: { width: 34, height: 34, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
+  gedrukt: { opacity: 0.55, transform: [{ scale: 0.92 }] }, // subtiele iOS-druk-feedback
   min: { backgroundColor: colors.bgSurface, borderWidth: 1, borderColor: colors.hairline },
   minUit: { opacity: 0.4 },
   minTeken: { fontFamily: fontFamily.sans, fontSize: 20, lineHeight: 22, color: colors.ink },
