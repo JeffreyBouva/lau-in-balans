@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
 
   // Server-side enforcement: de slot-UI is geen papieren slot. Een DB-fout is een
   // 503 (retryable), géén 403 — anders leest een storing als "moet upgraden".
-  if (klantRes.error) return new Response('klant onbekend', { status: 503, headers: cors });
+  if (klantRes.error) return new Response('tijdelijk niet beschikbaar', { status: 503, headers: cors });
   const tier = (klantRes.data as { tier: string } | null)?.tier;
   if (tier !== 'coached') return new Response('coached vereist', { status: 403, headers: cors });
 
