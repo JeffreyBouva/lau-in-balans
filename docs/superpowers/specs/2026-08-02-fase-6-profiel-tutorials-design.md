@@ -90,3 +90,18 @@ notificatie-voorkeuren (fase 7/8) · tutorials in het coach-dashboard.
 - **C4** Dashboard-versiehistorie labelt author-null-versies nu "onboarding" — na deze
   fase kan dat ook "klant" betekenen. Label in het dashboard aanpassen naar
   "klant/onboarding" (kleine tekstwijziging, meenemen in Task 3).
+
+## Opvolgpunten uit de eindreview (bewust uitgesteld)
+
+- **M5** `werk_mijn_profiel_bij` accepteert identieke/lege wijzigingen (nieuwe versie
+  zonder verschil) en heeft geen omvang-cap op arrays/strings — een klant kan Laura's
+  versiehistorie laten vollopen. Hardening (no-op-detectie + caps) meenemen met de
+  fase 7-limieten.
+- **M8** De Vandaag-tutorial (stap 1) benoemt de contactdagen-kaart die een free-klant
+  niet ziet (SlotKaart). Tekst free-bewust maken of stappen op `opSlot` variëren.
+- **M10** Twee fase 6-RLS-tests slagen vóór de push om de verkeerde reden (error ≠
+  specifieke error) — optioneel matchen op de foutmelding na de push-verificatie.
+- **M11** Hygiëne: clients-query op het profielscherm zonder catch (consistent met
+  andere schermen, maar unhandled rejection bij netwerkfout); derde lokale pil-knop-
+  variant (delen); untracked `app.json` in de repo-root (EAS-artefact — opruimen of
+  bewust committen).
