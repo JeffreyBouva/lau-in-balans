@@ -67,13 +67,14 @@ Deno.serve(async (req) => {
       .order('created_at', { ascending: false }).limit(20), // nieuwste 20...
     db.from('food_logs').select('porties').eq('client_id', clientId)
       .gte('datum', weekStart.toISOString().slice(0, 10)),
-    db.from('clients').select('tier').eq('id', clientId).single(),
+    db.from('clients').select('tier').eq('id', clientId).maybeSingle(),
   ]);
 
-  // Server-side enforcement: de slot-UI is geen papieren slot.
-  if ((klantRes.data as { tier?: string } | null)?.tier !== 'coached') {
-    return new Response('coached vereist', { status: 403, headers: cors });
-  }
+  // Server-side enforcement: de slot-UI is geen papieren slot. Een DB-fout is een
+  // 503 (retryable), géén 403 — anders leest een storing als "moet upgraden".
+  if (klantRes.error) return new Response('klant onbekend', { status: 503, headers: cors });
+  const tier = (klantRes.data as { tier: string } | null)?.tier;
+  if (tier !== 'coached') return new Response('coached vereist', { status: 403, headers: cors });
 
   const profielRij = profielRes.data;
   if (!profielRij) return new Response('geen profiel', { status: 409, headers: cors });
