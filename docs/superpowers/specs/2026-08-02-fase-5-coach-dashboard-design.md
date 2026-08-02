@@ -136,6 +136,14 @@ AVG-export (fase 8) · deploy/hosting van het dashboard (bij lancering).
 
 ## Opvolgpunten uit de eindreview (bewust uitgesteld, mee in het na-fase-5-gesprek)
 
+- **A3 was ONJUIST** (Jeffrey-feedback 2026-08-02): de design-handoff bevat wél een
+  volledig coach-dashboard-ontwerp (v1.dc.html — meeleesscherm met veel context in één
+  beeld, coach-antwoordbalk, prompt-preview-typografie, max 1320px layout). Het gebouwde
+  dashboard is functioneel maar soberder en wijkt af van dat ontwerp. **Dashboard-v2**:
+  pixel-align op de handoff + prompt-inzicht ("wat ziet Lau"), logisch te combineren met
+  de wekelijks-gesprek-fase (voorstelkaarten + prompt-preview zaten in het oude fase-5-
+  ontwerp). Akkoord Jeffrey: "voor nu oké, maken we later af."
+
 - **M1** De refresh-and-retry op mutaties (coach-bericht, notitie, invite) gaat af op
   élke fout — bij een netwerkbreuk ná een geslaagde server-write kan dat een dubbele
   rij geven. Zelfde huisstijl als de klant-app; nette fix is de retry beperken tot
