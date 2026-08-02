@@ -19,7 +19,7 @@ type SessieContext = {
     wachtwoord: string,
     naam: string,
   ) => Promise<{ error: string | null; bevestigingNodig?: boolean }>;
-  logout: () => Promise<void>;
+  logout: () => Promise<{ error: string | null }>;
 };
 
 const Ctx = createContext<SessieContext | null>(null);
@@ -112,7 +112,11 @@ export function SessieProvider({ children }: { children: ReactNode }) {
     return { error: null, bevestigingNodig: !data.session };
   }
   async function logout() {
-    await supabase.auth.signOut();
+    // De fout niet wegslikken: mislukt het uitloggen (netwerk, storage), dan blijft de
+    // sessie staan en moet de knop dat kunnen laten zien in plaats van te blijven draaien.
+    const { error } = await supabase.auth.signOut();
+    if (error) console.warn('[sessie] uitloggen mislukt:', error.message);
+    return { error: error ? 'Uitloggen lukte niet — probeer het opnieuw.' : null };
   }
 
   return (

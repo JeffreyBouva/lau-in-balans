@@ -104,13 +104,15 @@ export default function Eten() {
 
         {/* Vier portiekaarten */}
         {/* NB: maaltijden die via de log-sheet zijn vastgelegd, kun je hier niet
-            verminderen — alleen wat quick is toegevoegd (open-design-questions). */}
+            verminderen — alleen wat quick is toegevoegd (open-design-questions).
+            Doel 0 zou "3 / 0" en een lege balk geven; dan de standaard tonen — zelfde
+            terugval als op Vandaag. */}
         {HANDMATEN.map((h) => (
           <Portiekaart
             key={h.key}
             handmaat={h}
             waarde={dag[h.key]}
-            doel={doelen[h.key]}
+            doel={doelen[h.key] || h.dagdoel}
             minDisabled={quick[h.key] <= 0}
             onMin={() => pasQuickAan(h.key, -1)}
             onPlus={() => pasQuickAan(h.key, +1)}

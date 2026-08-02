@@ -47,7 +47,7 @@ export interface AiProfileVersionRow {
   client_id: string;
   versie: number;
   profiel: AIProfile;
-  author: string | null; // null = system (onboarding)
+  author: string | null; // null = door de klant zelf (onboarding of profielscherm)
   created_at: string;
 }
 

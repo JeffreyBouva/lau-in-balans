@@ -62,8 +62,10 @@ create policy coach_leest_flags on public.flags
 create policy coach_rondt_flag_af on public.flags
   for update using (public.is_coach_of(client_id));
 
--- ai_profile_versions: klant schrijft alléén versie 1 (onboarding, author=system);
--- lezen is coach-only — het profiel is Laura's gereedschap, niet klant-UI.
+-- ai_profile_versions: klant schrijft via deze policy alléén versie 1 (onboarding);
+-- author null = door de klant zelf (onboarding of profielscherm). Latere klant-versies
+-- lopen via de RPC werk_mijn_profiel_bij (fase 6), die security definer is.
+-- Direct lezen is coach-only — het volledige profiel is Laura's gereedschap, niet klant-UI.
 create policy klant_schrijft_versie_1 on public.ai_profile_versions
   for insert with check (client_id = auth.uid() and versie = 1 and author is null);
 create policy coach_leest_profielen on public.ai_profile_versions

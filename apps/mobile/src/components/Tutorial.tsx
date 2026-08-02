@@ -75,9 +75,13 @@ export function Tutorial({ scherm, stappen }: { scherm: TutorialScherm; stappen:
       easing: Easing.in(Easing.cubic),
       useNativeDriver: true,
     }).start(({ finished }) => {
-      if (!finished) return;
+      // Eerst opruimen, dán pas kijken of de animatie het einde haalde: wordt de fade
+      // onderbroken (tab-wissel, nieuwe animatie), dan zou een vroege return de refs op
+      // "sluitend" laten staan en verschijnt de uitleg nooit meer. De resets zijn
+      // idempotent, dus ze mogen ook bij een onderbreking draaien.
       zichtbaarRef.current = false;
       sluitendRef.current = false;
+      if (!finished) return;
       setZichtbaar(false);
     });
   }
@@ -89,7 +93,10 @@ export function Tutorial({ scherm, stappen }: { scherm: TutorialScherm; stappen:
     // Bewust geen Pressable op de scrim: de uitleg is drie korte stapjes, en een
     // onbedoelde tik naast de kaart zou 'm voorgoed wegklikken. Weg ga je via
     // "Overslaan" of "Klaar" — dat zijn ook de enige twee wegen die de vlag zetten.
-    <Animated.View style={[s.overlay, { opacity: fade }]}>
+    // accessibilityViewIsModal: VoiceOver blijft binnen de uitleg in plaats van door het
+    // scherm eronder te lopen dat op dat moment niet bedienbaar is (iOS; op Android is
+    // dit een no-op).
+    <Animated.View style={[s.overlay, { opacity: fade }]} accessibilityViewIsModal>
       <View style={[s.kaart, { marginBottom: insets.bottom + 84 }]}>
         <Text style={s.titel}>{huidig.titel}</Text>
         <Text style={text.body}>{huidig.tekst}</Text>
@@ -152,7 +159,7 @@ const s = StyleSheet.create({
 
   knopRij: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingTop: 6 },
   overslaan: { paddingVertical: 8 },
-  overslaanTekst: { fontFamily: fontFamily.sans, fontSize: 15, color: colors.muted },
+  overslaanTekst: { fontFamily: fontFamily.sans, fontSize: 15, color: colors.body },
   gedrukt: { opacity: 0.55 },
   primair: { flex: 1 },
 });

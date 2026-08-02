@@ -31,6 +31,11 @@ const LIJST_VELDEN: { veld: ProfielLijstVeld; titel: string; uitleg: string; opt
   { veld: 'checkinRitme', titel: 'Wanneer je van Lau hoort', uitleg: 'Het ritme dat bij jouw dagen past.', opties: CHECKIN_RITME_OPTIES },
 ];
 
+/** Lege extra-chips per lijstveld (nieuwe objecten: de state wordt erin bijgewerkt). */
+function legeExtras(): Record<ProfielLijstVeld, string[]> {
+  return { doelen: [], knelpunten: [], voorkeuren: [], beperkingen: [], checkinRitme: [] };
+}
+
 /** Alleen versturen wat écht veranderd is: elke opslag is een nieuwe profielversie in
  *  Laura's historie, en die hoeft niet vol te lopen met identieke rijen. */
 function bouwWijziging(oud: KlantProfiel, nieuw: KlantProfiel): KlantProfielWijziging {
@@ -53,18 +58,27 @@ export default function Profiel() {
 
   // Bewerkbare kopie; wordt (her)gevuld zodra het profiel binnen is of net opgeslagen werd.
   const [concept, setConcept] = useState<KlantProfiel | null>(null);
+  // Eigen antwoorden die niet in de suggestielijsten staan, bevroren per laadbeurt. Zou
+  // je ze uit de huidige waarden afleiden, dan verdwijnt zo'n chip zodra je 'm uitzet —
+  // en is één mistik genoeg om 'm nooit meer terug te kunnen zetten.
+  const [extras, setExtras] = useState<Record<ProfielLijstVeld, string[]>>(legeExtras);
   useEffect(() => {
-    if (!profiel) { setConcept(null); return; }
+    if (!profiel) { setConcept(null); setExtras(legeExtras()); return; }
     const { versie: _versie, ...velden } = profiel;
     setConcept(velden);
+    const nieuw = legeExtras();
+    LIJST_VELDEN.forEach(({ veld, opties }) => {
+      nieuw[veld] = velden[veld].filter((w) => !opties.includes(w));
+    });
+    setExtras(nieuw);
   }, [profiel]);
 
   const [bezig, setBezig] = useState(false);
   const [melding, setMelding] = useState<string | null>(null);
   const [opslaanFout, setOpslaanFout] = useState<string | null>(null);
-  const [uitlegMelding, setUitlegMelding] = useState<string | null>(null);
   const [codeSheet, setCodeSheet] = useState(false);
   const [uitlogBezig, setUitlogBezig] = useState(false);
+  const [uitlogFout, setUitlogFout] = useState<string | null>(null);
 
   // Naam uit de eigen clients-rij (RLS laat de klant z'n eigen rij lezen).
   const [naam, setNaam] = useState<string | null>(null);
@@ -82,7 +96,10 @@ export default function Profiel() {
   }
 
   function toggle(veld: ProfielLijstVeld, waarde: string) {
-    if (!concept) return;
+    // Tijdens het opslaan niets aannemen: de RPC is al onderweg met de oude waarden en
+    // het [profiel]-effect overschrijft het concept zodra het antwoord binnen is — een
+    // tik van nu zou stil verdwijnen.
+    if (!concept || bezig) return;
     tik();
     const huidig = concept[veld];
     wijzig({
@@ -92,7 +109,7 @@ export default function Profiel() {
   }
 
   function pasDoelAan(key: HandKey, stap: number) {
-    if (!concept) return;
+    if (!concept || bezig) return;
     const nieuw = Math.min(MAX_PORTIEDOEL, Math.max(0, concept.portiedoelen[key] + stap));
     if (nieuw === concept.portiedoelen[key]) return;
     tik();
@@ -120,14 +137,19 @@ export default function Profiel() {
   async function herhaalUitleg() {
     tik();
     await resetTutorials();
-    setUitlegMelding('De uitleg verschijnt weer op elk scherm.');
+    // Terug naar Vandaag (spec § 2): de uitleg die daar meteen verschijnt ís de
+    // bevestiging — een melding op dit scherm zou je die eerste stap laten missen.
+    router.replace('/(tabs)/vandaag');
   }
 
   async function uitloggen() {
     stoot();
     setUitlogBezig(true);
-    // Na het uitloggen stuurt de gate in _layout.tsx vanzelf naar welkom.
-    await logout();
+    setUitlogFout(null);
+    // Lukt het, dan stuurt de gate in _layout.tsx vanzelf naar welkom (dit scherm is dan
+    // al weg). Lukt het niet, dan blijven we hier staan met een nette melding.
+    const { error } = await logout();
+    if (error) { setUitlogBezig(false); setUitlogFout(error); }
   }
 
   function terug() {
@@ -169,7 +191,7 @@ export default function Profiel() {
               "Gratis"-badge die bij een coached klant even voorbijflitst. */}
           {!tierLaden && tier !== null && (
             <View style={[s.badge, tier === 'coached' ? s.badgeCoached : s.badgeGratis]}>
-              <Text style={[s.badgeTekst, { color: tier === 'coached' ? colors.sageDeeper : colors.muted }]}>
+              <Text style={[s.badgeTekst, { color: tier === 'coached' ? colors.sageDeeper : colors.bodySoft }]}>
                 {tier === 'coached' ? 'Coachingtraject' : 'Gratis'}
               </Text>
             </View>
@@ -180,6 +202,7 @@ export default function Profiel() {
             )}
             <SecundaireKnop label="Uitloggen" onPress={uitloggen} bezig={uitlogBezig} />
           </View>
+          {uitlogFout && <Text style={s.foutTekst}>{uitlogFout}</Text>}
         </View>
 
         {laden ? (
@@ -207,7 +230,9 @@ export default function Profiel() {
                   titel={v.titel}
                   uitleg={v.uitleg}
                   opties={v.opties}
+                  extras={extras[v.veld]}
                   waarden={concept[v.veld]}
+                  uit={bezig}
                   onToggle={(waarde) => toggle(v.veld, waarde)}
                 />
               ))}
@@ -229,6 +254,7 @@ export default function Profiel() {
                   <DoelStepper
                     naam={h.naam}
                     waarde={concept.portiedoelen[h.key]}
+                    uit={bezig}
                     onMin={() => pasDoelAan(h.key, -1)}
                     onPlus={() => pasDoelAan(h.key, +1)}
                   />
@@ -254,7 +280,6 @@ export default function Profiel() {
           <View style={s.knopRij}>
             <SecundaireKnop label="Uitleg opnieuw bekijken" onPress={herhaalUitleg} />
           </View>
-          {uitlegMelding && <Text style={s.meldingTekst}>{uitlegMelding}</Text>}
         </View>
       </ScrollView>
 
@@ -263,24 +288,28 @@ export default function Profiel() {
   );
 }
 
-/** Chip-multi-select zoals in de onboarding. Eigen antwoorden (vrije tekst uit de
- *  onboarding of van Laura) staan als extra chip achter de suggesties: zo blijven ze
- *  zichtbaar én bewaard in plaats van bij het eerste opslaan te verdwijnen. */
-function ChipGroep({ titel, uitleg, opties, waarden, onToggle }: {
+/** Chip-multi-select zoals in de onboarding. `extras` zijn eigen antwoorden (vrije tekst
+ *  uit de onboarding of van Laura) die niet in de suggestielijst staan: ze horen erbij te
+ *  staan zolang dit scherm open is, óók als je ze even uitzet — anders is één mistik
+ *  genoeg om ze kwijt te raken. */
+function ChipGroep({ titel, uitleg, opties, extras, waarden, uit, onToggle }: {
   titel: string;
   uitleg: string;
   opties: string[];
+  extras: string[];
   waarden: string[];
+  uit: boolean;
   onToggle: (waarde: string) => void;
 }) {
-  const alle = [...opties, ...waarden.filter((w) => !opties.includes(w))];
+  const alle = [...opties, ...extras.filter((w) => !opties.includes(w))];
   return (
     <View style={{ gap: 10 }}>
       <View style={{ gap: 2 }}>
         <Text style={s.veldTitel}>{titel}</Text>
         <Text style={s.veldUitleg}>{uitleg}</Text>
       </View>
-      <View style={s.chipRij}>
+      {/* Tijdens het opslaan liggen de chips stil (en zien ze er ook zo uit). */}
+      <View style={[s.chipRij, uit && s.bezigUit]} pointerEvents={uit ? 'none' : 'auto'}>
         {alle.map((o) => (
           <Chip key={o} label={o} actief={waarden.includes(o)} onPress={() => onToggle(o)} />
         ))}
@@ -291,14 +320,15 @@ function ChipGroep({ titel, uitleg, opties, waarden, onToggle }: {
 
 /** Mini-stepper voor een dagdoel (0..12). Zelfde knop-gevoel als de HandmaatStepper op
  *  Eten, maar zonder dag/doel-verhouding: hier is het getal zélf het doel. */
-function DoelStepper({ naam, waarde, onMin, onPlus }: {
+function DoelStepper({ naam, waarde, uit, onMin, onPlus }: {
   naam: string;
   waarde: number;
+  uit: boolean;
   onMin: () => void;
   onPlus: () => void;
 }) {
-  const minUit = waarde <= 0;
-  const plusUit = waarde >= MAX_PORTIEDOEL;
+  const minUit = waarde <= 0 || uit;
+  const plusUit = waarde >= MAX_PORTIEDOEL || uit;
   return (
     <View style={s.stepperRij}>
       <Pressable
@@ -310,7 +340,7 @@ function DoelStepper({ naam, waarde, onMin, onPlus }: {
       >
         <Text style={[s.stepTeken, { color: minUit ? colors.muted : colors.ink }]}>−</Text>
       </Pressable>
-      <Text style={s.stepWaarde}>{waarde}</Text>
+      <Text style={[s.stepWaarde, uit && s.bezigUit]}>{waarde}</Text>
       <Pressable
         onPress={onPlus}
         disabled={plusUit}
@@ -358,7 +388,7 @@ const s = StyleSheet.create({
 
   // account
   naam: { fontFamily: fontFamily.serif, fontSize: 21, lineHeight: 28, color: colors.ink },
-  email: { fontFamily: fontFamily.sans, fontSize: 14, color: colors.mutedSoft },
+  email: { fontFamily: fontFamily.sans, fontSize: 14, color: colors.bodySoft },
   badge: { alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 13, borderRadius: radii.pill, borderWidth: 1 },
   badgeCoached: { backgroundColor: colors.sageSoft, borderColor: colors.sageSoftBorder },
   badgeGratis: { backgroundColor: colors.bgNeutralSoft, borderColor: colors.hairlineSoft },
@@ -381,15 +411,16 @@ const s = StyleSheet.create({
 
   // mijn gegevens
   veldTitel: { fontFamily: fontFamily.sans, fontSize: 15, color: colors.ink },
-  veldUitleg: { fontFamily: fontFamily.sans, fontSize: 13, lineHeight: 20, color: colors.mutedSoft },
+  veldUitleg: { fontFamily: fontFamily.sans, fontSize: 13, lineHeight: 20, color: colors.bodySoft },
   chipRij: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  bezigUit: { opacity: 0.5 },
 
   // portiedoelen
   doelRij: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   marker: { width: 14, height: 14, borderRadius: radii.marker },
   doelTekst: { flex: 1, gap: 2 },
   doelNaam: { fontFamily: fontFamily.sans, fontSize: 15, color: colors.ink },
-  doelSub: { fontFamily: fontFamily.sans, fontSize: 12.5, color: colors.mutedSoft },
+  doelSub: { fontFamily: fontFamily.sans, fontSize: 12.5, color: colors.bodySoft },
   stepperRij: { flexDirection: 'row', alignItems: 'center' },
   stepKnop: { width: 34, height: 34, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
   stepMin: { backgroundColor: colors.bgSurface, borderWidth: 1, borderColor: colors.hairline },
