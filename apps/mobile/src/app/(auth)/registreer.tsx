@@ -34,8 +34,7 @@ export default function Registreer() {
     setBezig(false);
     if (error) { setFout(error); return; }
     if (bevestigingNodig) { setBevestigNodig(true); return; }
-    // Task 7 maakt deze route; tot dan kent typedRoutes 'm niet — cast eruit halen zodra hij bestaat.
-    router.replace('/(onboarding)/code' as never); // de gate stuurt sessies zonder profiel hierheen
+    router.replace('/(onboarding)/code'); // de gate laat de hele (onboarding)-groep met rust
   }
 
   if (bevestigNodig) {
