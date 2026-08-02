@@ -133,3 +133,19 @@ AVG-export (fase 8) · deploy/hosting van het dashboard (bij lancering).
   notitie uit review): de LauraKnop is client-side gegate en de inbox is van Laura —
   risico is een enkele free-flag bij een storing. Oppakken bij fase 7 (limieten) als
   server-side hygiëne daar toch wordt aangescherpt.
+
+## Opvolgpunten uit de eindreview (bewust uitgesteld, mee in het na-fase-5-gesprek)
+
+- **M1** De refresh-and-retry op mutaties (coach-bericht, notitie, invite) gaat af op
+  élke fout — bij een netwerkbreuk ná een geslaagde server-write kan dat een dubbele
+  rij geven. Zelfde huisstijl als de klant-app; nette fix is de retry beperken tot
+  auth-fouten (patroon: `slaOp` in useProfielVersies). Geldt dan ook voor mobile.
+- **M5** Klein realtime-gat tussen de eerste chat-fetch en de kanaal-join (bericht in
+  precies dat venster mist tot een herlaad). Goedkoopste fix: refetch bij
+  visibilitychange zoals de klantenlijst al doet.
+- **M6** De chat-autoscroll trekt Laura ook naar beneden als ze historie terugleest;
+  alleen scrollen als ze al onderaan stond.
+- **M7** Wijzigingen die Laura typt terwíjl "Profiel opslaan" loopt gaan verloren bij
+  de versie-bump; velden disablen tijdens het opslaan of de bron-sleutel direct zetten.
+- **M9** `npm run test:rls` is rood (3 verwachte fase5-failures) tot de migratie
+  gepusht is — daarna 34/34 verwacht.
