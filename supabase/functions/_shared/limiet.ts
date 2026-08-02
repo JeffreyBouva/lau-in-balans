@@ -29,6 +29,20 @@ function zoneOffsetMs(moment: Date): number {
 }
 
 /**
+ * De Amsterdamse kalenderdatum van dit moment als 'YYYY-MM-DD' — hetzelfde
+ * formaat als food_logs.datum. 'sv-SE' formatteert precies zo, dus er valt niets
+ * te plakken of te padden.
+ */
+export function amsterdamseDatum(nu: Date = new Date()): string {
+  return new Intl.DateTimeFormat('sv-SE', {
+    timeZone: ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(nu);
+}
+
+/**
  * Begin van de huidige AMSTERDAMSE kalendermaand, als UTC-ISO-string — direct
  * bruikbaar in `.gte('created_at', ...)`. Trekt dezelfde grens als de RPC
  * ai_gebruik_deze_maand, die in Amsterdamse lokale tijd vergelijkt: rond de
@@ -38,15 +52,7 @@ function zoneOffsetMs(moment: Date): number {
 export function maandStartAmsterdamUTC(nu: Date = new Date()): string {
   // 1. In welk Amsterdams jaar/maand zitten we nú? Niet in UTC kijken: op 1 augustus
   //    00:30 lokale tijd is het in UTC nog 31 juli.
-  const [jaar, maand] = new Intl.DateTimeFormat('sv-SE', {
-    timeZone: ZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  })
-    .format(nu)
-    .split('-')
-    .map(Number);
+  const [jaar, maand] = amsterdamseDatum(nu).split('-').map(Number);
   // 2. Amsterdamse middernacht op de 1e, eerst als kaal wandklok-getal (alsof die
   //    lokale tijd UTC wás).
   const wandklok = Date.UTC(jaar, maand - 1, 1, 0, 0, 0, 0);
@@ -56,6 +62,25 @@ export function maandStartAmsterdamUTC(nu: Date = new Date()): string {
   //    moment. Een maandstart valt nooit binnen enkele uren van een DST-sprong (die
   //    zitten op de laatste zondag van maart/oktober om 01:00 UTC), dus na ronde
   //    twee staat de uitkomst vast.
+  const ruw = wandklok - zoneOffsetMs(new Date(wandklok));
+  const exact = wandklok - zoneOffsetMs(new Date(ruw));
+  return new Date(exact).toISOString();
+}
+
+/**
+ * Begin van de huidige AMSTERDAMSE kalenderdag (middernacht), als UTC-ISO-string —
+ * voor `.gte('created_at', ...)` op messages. Zelfde ijk-aanpak als de maandstart
+ * hierboven: eerst de Amsterdamse datum bepalen, dan de wandklok-middernacht
+ * omrekenen naar het echte UTC-moment via twee offset-rondes.
+ *
+ * Anders dan bij de maandstart valt een DAGstart wél samen met een DST-sprong-datum
+ * (laatste zondag van maart/oktober), maar niet met de sprong zelf: die gebeurt om
+ * 01:00 UTC (02:00/03:00 lokaal), uren ná middernacht. De offset op de dagstart is
+ * dus dezelfde als die vlak ervoor, en ronde twee staat vast.
+ */
+export function dagStartAmsterdamUTC(nu: Date = new Date()): string {
+  const [jaar, maand, dag] = amsterdamseDatum(nu).split('-').map(Number);
+  const wandklok = Date.UTC(jaar, maand - 1, dag, 0, 0, 0, 0);
   const ruw = wandklok - zoneOffsetMs(new Date(wandklok));
   const exact = wandklok - zoneOffsetMs(new Date(ruw));
   return new Date(exact).toISOString();

@@ -376,6 +376,12 @@ allow_dynamic_registration = false
 # de CORS-preflight (OPTIONS heeft geen auth-header).
 verify_jwt = false
 
+[functions.lau-ochtend]
+# Geen JWT-flow: de cron roept dit aan als machine, niet als klant. De poort is de
+# x-cron-secret-header (vergeleken met de CRON_SECRET-env), die de functie zelf checkt
+# vóór er ook maar iets uit de database komt.
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.
