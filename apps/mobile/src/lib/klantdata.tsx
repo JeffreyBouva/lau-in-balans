@@ -27,7 +27,8 @@ export function KlantDataProvider({ clientId, children }: { clientId: string; ch
   const berichten = useBerichten(clientId);
   const flag = useFlag(clientId);
   const logs = useVoedingslogs(clientId);
-  // Sleutels botsen niet: berichten/verstuur/wachtOpLau · openFlag/maakFlag · dag/week/quick/pasQuickAan/voegLogToe/herlaad.
+  // Sleutels botsen niet: berichten/verstuur/wachtOpLau/aiSuggesties/limietBereikt ·
+  // openFlag/maakFlag · dag/week/quick/pasQuickAan/voegLogToe/herlaad.
   const v: KlantData = { ...berichten, ...flag, ...logs };
   return <Ctx.Provider value={v}>{children}</Ctx.Provider>;
 }

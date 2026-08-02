@@ -41,7 +41,7 @@ const cap = (w: string) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w);
 
 export default function Chat() {
   const insets = useSafeAreaInsets();
-  const { berichten, verstuur, wachtOpLau, openFlag, dag, aiSuggesties } = useKlantData();
+  const { berichten, verstuur, wachtOpLau, openFlag, dag, aiSuggesties, limietBereikt } = useKlantData();
   const { openLaura, openLog } = useSheets();
   // Zolang het oordeel laadt tonen we het chatscherm zoals het was — dat is de bestaande
   // staat, en zo flitst het slot niet voorbij bij een coached klant of bij sloten-uit.
@@ -69,12 +69,12 @@ export default function Chat() {
   // Autoscroll naar onder bij een nieuw bericht (handoff § Autoscroll: scrollToEnd op
   // de container, niet scrollIntoView).
   const lijstRef = useRef<ScrollView>(null);
-  useEffect(() => { lijstRef.current?.scrollToEnd({ animated: true }); }, [berichten.length, wachtOpLau]);
+  useEffect(() => { lijstRef.current?.scrollToEnd({ animated: true }); }, [berichten.length, wachtOpLau, limietBereikt]);
 
   const [input, setInput] = useState('');
   function verstuurInput() {
     const tekst = input.trim();
-    if (!tekst) return;
+    if (!tekst || limietBereikt) return;
     stoot();
     verstuur(tekst); // Lau's antwoord komt via de lau-reply Edge Function + realtime
     setInput('');
@@ -139,6 +139,19 @@ export default function Chat() {
             {/* Typing-indicator zolang Lau "typt" (lau-reply loopt, ai-antwoord nog niet binnen) */}
             {wachtOpLau && <TypIndicator />}
 
+            {/* Maandlimiet bereikt (429 van lau-reply): rustige systeemregel, geen kooptaal,
+                geen prijzen, geen links — het gesprek loopt via Laura. */}
+            {limietBereikt && (
+              <View style={s.limiet} accessibilityRole="text">
+                <View style={s.limietCirkel}>
+                  <Ionicons name="moon-outline" size={13} color={colors.mutedSoft} />
+                </View>
+                <Text style={s.limietTekst}>
+                  Je Lau-gesprekken voor deze maand zijn op. Bespreek het met Laura — zij kan er meer voor je aanzetten.
+                </Text>
+              </View>
+            )}
+
             {/* Disclaimerregel (guardrail: geen medisch advies, Laura leest mee) */}
             <View style={s.disclaimer}>
               <View style={s.infoCirkel}>
@@ -148,42 +161,55 @@ export default function Chat() {
             </View>
           </ScrollView>
 
-          {/* Quick-reply-rij */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={s.quickRij}
-            contentContainerStyle={s.quickInhoud}
-          >
-            <Pressable style={({ pressed }) => [s.actieKnop, pressed && s.gedrukt]} onPress={openLog}>
-              <Ionicons name="add" size={18} color={colors.bgSurface} />
-              <Text style={s.actieTekst}>Ik heb gegeten</Text>
-            </Pressable>
-            <View style={s.scheiding} />
-            {suggesties.map((q) => (
-              <Pressable
-                key={q}
-                style={({ pressed }) => [s.suggestie, pressed && s.gedrukt]}
-                onPress={() => { tik(); verstuur(q); }}
-              >
-                <Text style={s.suggestieTekst}>{q}</Text>
+          {/* Quick-reply-rij — weg zolang de maandlimiet bereikt is: elke chip zou een
+              gesprek starten dat Lau toch niet beantwoordt. */}
+          {!limietBereikt && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={s.quickRij}
+              contentContainerStyle={s.quickInhoud}
+            >
+              <Pressable style={({ pressed }) => [s.actieKnop, pressed && s.gedrukt]} onPress={openLog} accessibilityRole="button">
+                <Ionicons name="add" size={18} color={colors.bgSurface} />
+                <Text style={s.actieTekst}>Ik heb gegeten</Text>
               </Pressable>
-            ))}
-          </ScrollView>
+              <View style={s.scheiding} />
+              {suggesties.map((q) => (
+                <Pressable
+                  key={q}
+                  style={({ pressed }) => [s.suggestie, pressed && s.gedrukt]}
+                  onPress={() => { tik(); verstuur(q); }}
+                  accessibilityRole="button"
+                >
+                  <Text style={s.suggestieTekst}>{q}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
 
-          {/* Composer (zit boven de tabbar; bottom-padding houdt 'm er vrij van) */}
+          {/* Composer (zit boven de tabbar; bottom-padding houdt 'm er vrij van).
+              Bij de maandlimiet uit: eerlijker dan een bericht laten sturen waar geen
+              antwoord op komt. */}
           <View style={[s.composer, { paddingBottom: insets.bottom + 76 }]}>
             <TextInput
-              style={s.input}
+              style={[s.input, limietBereikt && s.uit]}
               value={input}
               onChangeText={setInput}
-              placeholder="Schrijf iets aan Lau…"
+              editable={!limietBereikt}
+              placeholder={limietBereikt ? 'Lau is er volgende maand weer voor je' : 'Schrijf iets aan Lau…'}
               placeholderTextColor={colors.mutedSoft}
               returnKeyType="send"
               blurOnSubmit={false}
               onSubmitEditing={verstuurInput}
             />
-            <Pressable style={({ pressed }) => [s.verzend, pressed && s.gedrukt]} onPress={verstuurInput}>
+            <Pressable
+              style={({ pressed }) => [s.verzend, limietBereikt && s.uit, pressed && !limietBereikt && s.gedrukt]}
+              onPress={verstuurInput}
+              disabled={limietBereikt}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: limietBereikt }}
+            >
               <Text style={s.verzendGlyph}>↑</Text>
             </Pressable>
           </View>
@@ -245,6 +271,28 @@ const s = StyleSheet.create({
   infoI: { fontFamily: fontFamily.sans, fontSize: 12, color: colors.mutedSoft },
   disclaimerTekst: { flex: 1, fontFamily: fontFamily.sans, fontSize: 12, lineHeight: 18, color: colors.mutedSoft },
 
+  // maandlimiet-regel: disclaimer-stijl, maar als kaartje zodat het als systeemmelding
+  // leest en niet als een bericht van Lau. Neutrale kleuren — geen alarm, geen aanbod.
+  limiet: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.hairlineSoft,
+    backgroundColor: colors.bgNeutralSofter,
+  },
+  limietCirkel: {
+    width: 24,
+    height: 24,
+    borderRadius: radii.pill,
+    backgroundColor: colors.bgSurface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  limietTekst: { flex: 1, fontFamily: fontFamily.sans, fontSize: 12, lineHeight: 18, color: colors.body },
+
   // quick-reply-rij
   quickRij: { flexGrow: 0 },
   quickInhoud: { paddingHorizontal: 22, paddingBottom: 8, gap: 8, alignItems: 'center' },
@@ -273,6 +321,7 @@ const s = StyleSheet.create({
   },
   suggestieTekst: { fontFamily: fontFamily.sans, fontSize: 13, color: colors.body },
   gedrukt: { opacity: 0.6 }, // druk-feedback voor actie/suggestie/verzend
+  uit: { opacity: 0.45 }, // uitgeschakeld (maandlimiet): composer + verzendknop dimmen
 
   // composer
   composer: {

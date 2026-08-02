@@ -6,6 +6,20 @@ export type Bericht = { id: string; sender: Sender; tekst: string | null; food_l
 
 const KOLOMMEN = 'id, sender, tekst, food_log_id, created_at';
 
+/**
+ * Is dit de maandlimiet-afkap (429) van lau-reply?
+ *
+ * supabase-js 2.111 (@supabase/functions-js 2.111): `functions.invoke()` gooit NIET, maar
+ * geeft `{ data: null, error }` terug. Bij een non-2xx doet FunctionsClient intern
+ * `throw new FunctionsHttpError(response)` en `FunctionsError` zet dat argument op
+ * `this.context` — `error.context` ÍS dus de fetch-Response, met `.status` erop.
+ * Defensief uitgelezen: bij een netwerkfout (FunctionsFetchError) is `context` de
+ * onderliggende fetch-error zonder status, en dan is dit gewoon false.
+ */
+function isLimiet(error: unknown): boolean {
+  return (error as { context?: { status?: unknown } } | null | undefined)?.context?.status === 429;
+}
+
 export function useBerichten(clientId: string) {
   const [berichten, setBerichten] = useState<Bericht[]>([]);
   // Typing-indicator: aan vanaf het versturen tot Lau's ai-antwoord via realtime binnenkomt.
@@ -13,6 +27,9 @@ export function useBerichten(clientId: string) {
   // AI-gegenereerde vervolgsuggesties (tier 2) uit het lau-reply-antwoord. Leeg → de chat
   // valt terug op de regel-gebaseerde suggesties.
   const [aiSuggesties, setAiSuggesties] = useState<string[]>([]);
+  // Maandlimiet bereikt (lau-reply gaf 429): je bericht is wél opgeslagen, Lau antwoordt
+  // alleen niet meer deze maand. De chat kapt dan netjes af (zie chat.tsx).
+  const [limietBereikt, setLimietBereikt] = useState(false);
 
   const laad = useCallback(async () => {
     // getSession() wacht op het herstel uit storage; zonder sessie niet query'en, anders
@@ -37,7 +54,12 @@ export function useBerichten(clientId: string) {
             const nieuw = payload.new as Bericht;
             // Dedup: een optimistisch getoond bericht komt ook via de realtime-echo terug.
             setBerichten((b) => (b.some((m) => m.id === nieuw.id) ? b : [...b, nieuw]));
-            if (nieuw.sender === 'ai') setWachtOpLau(false); // Lau's antwoord begint → indicator uit
+            if (nieuw.sender === 'ai') {
+              setWachtOpLau(false); // Lau's antwoord begint → indicator uit
+              // Een nieuw ai-antwoord bewijst dat er weer ruimte is (nieuwe maand of een
+              // door Laura verhoogde limiet) → de afkap-regel mag weg.
+              setLimietBereikt(false);
+            }
           } else if (payload.eventType === 'UPDATE') {
             // Streaming: Lau's bericht groeit via UPDATE-events; vervang de tekst op id.
             const gewijzigd = payload.new as Bericht;
@@ -77,7 +99,14 @@ export function useBerichten(clientId: string) {
     // AI-antwoord groeit via realtime; het invoke-antwoord geeft het volledige antwoord +
     // de vervolgsuggesties terug.
     supabase.functions.invoke('lau-reply')
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        // Maandlimiet: geen antwoord meer, dus ook geen typ-indicator en geen suggesties.
+        // Het eigen bericht blijft staan — het is opgeslagen, Lau reageert alleen niet.
+        if (isLimiet(error)) {
+          setLimietBereikt(true);
+          setWachtOpLau(false);
+          return;
+        }
         const d = data as { suggesties?: unknown; berichtId?: string; tekst?: string } | null;
         // Garandeer de volledige tekst, ook als een streaming-UPDATE onderweg gemist is.
         if (d?.berichtId && typeof d.tekst === 'string') {
@@ -91,5 +120,5 @@ export function useBerichten(clientId: string) {
     setTimeout(() => setWachtOpLau(false), 30_000); // veiligheids-timeout als er niets komt
   }, [clientId]);
 
-  return { berichten, verstuur, wachtOpLau, aiSuggesties };
+  return { berichten, verstuur, wachtOpLau, aiSuggesties, limietBereikt };
 }
