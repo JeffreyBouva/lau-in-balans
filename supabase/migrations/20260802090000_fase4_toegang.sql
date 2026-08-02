@@ -59,7 +59,10 @@ insert into public.app_config (key, value) values
 comment on table public.app_config is 'Publiek leesbaar (ook anon) — hier NOOIT gevoelige waarden in zetten.';
 
 -- ── 4. Registratie-trigger: elke nieuwe auth-user krijgt een clients-rij ──
--- Vlag rol='coach' in app_metadata (gezet door de seed) slaat coach-accounts over.
+-- Vlag rol='coach' in app_metadata zou coach-accounts overslaan, maar LET OP: via de
+-- admin-API werkt dat NIET — GoTrue zet app_metadata pas in een UPDATE ná de insert,
+-- dus de trigger ziet 'm nooit (gepind door de documenting-test in tests/rls/fase4.test.ts).
+-- Afspraak: wie via admin een coach aanmaakt, ruimt de trigger-rij zelf op (seed doet dit).
 -- Bewust app_metadata en niet user_metadata: alleen de service role kan die schrijven,
 -- terwijl user_metadata bij signUp door de gebruiker zelf te vullen is.
 create or replace function public.handle_new_user()

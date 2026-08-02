@@ -22,11 +22,27 @@ async function wisDemoData() {
   if (error) throw error;
   const demo = data.users.filter((u) => u.email?.endsWith(`@${DOMEIN}`));
   const ids = demo.map((u) => u.id);
-  // invite_codes eerst, en onvoorwaardelijk: coach_id → coaches.id cascadeert niet,
-  // dus een achtergebleven code blokkeert het verwijderen van de demo-coaches.
-  const { error: iErr } = await db.from('invite_codes').delete().not('id', 'is', null);
-  if (iErr) throw new Error(`invite_codes opruimen: ${iErr.message}`);
   if (ids.length) {
+    // Pre-flight: hangt er een NIET-demo klant aan een demo-coach (bijv. een echt
+    // account dat een code van Laura verzilverde), dan zou de coach-delete op de FK
+    // knallen mét al half-gewiste demo-data. Guard verbiedt ontkoppelen (coach_id is
+    // onwijzigbaar), dus luid stoppen vóór er iets gewist is.
+    const { data: gekoppeld, error: gErr } = await db.from('clients').select('id, naam').in('coach_id', ids);
+    if (gErr) throw new Error(`controle op niet-demo klanten: ${gErr.message}`);
+    const vreemd = (gekoppeld ?? []).filter((c) => !ids.includes(c.id));
+    if (vreemd.length) {
+      throw new Error(
+        `Stop: ${vreemd.length} niet-demo klant(en) hangen aan een demo-coach (${vreemd
+          .map((c) => c.naam)
+          .join(', ')}). clients.coach_id cascadeert niet en de guard verbiedt ontkoppelen — ` +
+          `verwijder die accounts eerst via Supabase → Authentication.`,
+      );
+    }
+    // Codes van demo-coaches eerst: invite_codes.coach_id → coaches.id cascadeert niet,
+    // dus een achtergebleven code blokkeert het verwijderen van de demo-coaches.
+    // Bewust NIET tabelbreed: codes van echte coaches zijn geen demo-data.
+    const { error: iErr } = await db.from('invite_codes').delete().in('coach_id', ids);
+    if (iErr) throw new Error(`invite_codes opruimen: ${iErr.message}`);
     // FK-veilige volgorde: clients verwijzen naar coaches, dus clients eerst.
     // (Zou je een coach-auth-user eerst verwijderen terwijl haar clients nog
     // bestaan, dan blokkeert de FK clients.coach_id → coaches.id de cascade.)
