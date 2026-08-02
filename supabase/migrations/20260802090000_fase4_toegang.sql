@@ -99,6 +99,10 @@ begin
     return false;
   end if;
   update public.clients set tier = 'coached', coach_id = v_coach where id = auth.uid();
+  if not found then
+    -- Geen clients-rij (bijv. coach-account in de app): rollback, zodat de code niet verbrandt.
+    raise exception 'verzilveren vereist een klant-account';
+  end if;
   return true;
 end;
 $$;
