@@ -39,11 +39,15 @@
   --color-sage: #63805f;
   --color-sage-hover: #55714f;
   --color-sage-deep: #4c6749;
+  /* accent/sage-deeper — hover op de afsluitknop van het wekelijkse gesprek (§9). */
+  --color-sage-deeper: #3d5539;
   --color-sage-soft: #e7eee3;
   --color-sage-soft-border: #cfe0c8;
   --color-sage-ink: #37452f;
   /* accent/sage-mid — uppercase-eyebrow op sage-soft (log-bubbel §8). */
   --color-sage-mid: #6d8a68;
+  /* accent/sage-tint — vlak van een toegepaste voorstelkaart (§9). */
+  --color-sage-tint: #fbfdfa;
 
   /* clay — coach-aandacht (flags) */
   --color-clay: #b0603f;
@@ -63,6 +67,8 @@
   --radius-control: 12px;
   --radius-input: 14px;
   --radius-card: 18px;
+  /* radii.cardLg — de kaarten van het wekelijkse gesprek (§9). */
+  --radius-card-lg: 20px;
 }
 
 /*
