@@ -59,3 +59,19 @@
 ## Self-review
 
 Spec-dekking: RPC's+tests (T1), profielscherm+landing (T2), tutorials+C4-label (T3), verificatie (T4). Aannames B1-B3/C1-C4 verwerkt. Push-afhankelijkheid expliciet; fail-safe UI bij ontbrekende RPC's.
+
+## Jeffrey-stappen (na de bouw)
+
+Eindstand bij oplevering: mobile/coach typecheck 0 · coach build+lint OK · 30 unit-tests
+groen · RLS 38 groen + 4 verwachte fase6-failures (migratie nog niet gepusht; fase 5
+staat al live — die tests draaien 8/8).
+
+1. `supabase db push` — past de fase 6-migratie toe (mijn_profiel + werk_mijn_profiel_bij).
+2. `npx vitest run tests/rls/fase6.test.ts` — verwacht 8/8 groen (of vraag Claude).
+3. App-flow (web preview of toestel): onboarding → landt op **Vandaag** → tutorials
+   verschijnen per scherm → profiel-icoon rechtsboven → gegevens/doelen aanpassen →
+   check dat Eten met de nieuwe doelen rekent én dat het dashboard de nieuwe versie
+   toont (label "klant/onboarding").
+4. PR's (gestapeld): fase-4 → fase-5 (`compare/fase-4-toegang-accounts...fase-5-coach-dashboard`)
+   → fase-6 (`compare/fase-5-coach-dashboard...fase-6-profiel-tutorials`).
+5. Aannames doorlopen: A1-A12 + M-opvolgpunten (fase 5-spec) en B1-B3/C1-C4 (fase 6-spec).
