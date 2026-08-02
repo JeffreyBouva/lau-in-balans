@@ -50,6 +50,8 @@ type Context = {
   gemiddelden: HandmaatGemiddelde[];
   dagenMetLog: number;
   notities: Notitie[];
+  /** Nummer van de hoogste (= actieve) profielversie; null zonder profiel. */
+  profielVersie: number | null;
 };
 
 /**
@@ -96,7 +98,11 @@ function veiligePorties(waarde: unknown, standaard: Porties): Porties {
  * handpalm eiwit op de dagen dat je logt" is coachbare informatie, terwijl delen door
  * 7 vooral meet hoe vaak er gelogd is — dat staat al in `dagenMetLog`.
  */
-function aggregeer(rijen: LogRij[], venster: string[], doelen: Porties): Omit<Context, 'flags' | 'notities'> {
+function aggregeer(
+  rijen: LogRij[],
+  venster: string[],
+  doelen: Porties,
+): Omit<Context, 'flags' | 'notities' | 'profielVersie'> {
   const perDag = new Map<string, Porties>(venster.map((datum) => [datum, { ...LEGE_PORTIES }]));
   const gelogd = new Set<string>();
   for (const rij of rijen) {
@@ -136,7 +142,12 @@ function aggregeer(rijen: LogRij[], venster: string[], doelen: Porties): Omit<Co
 
 /** Lege week met de standaarddoelen — de stand vóór (of ná een mislukte) fetch. */
 function legeContext(): Context {
-  return { flags: [], notities: [], ...aggregeer([], laatsteDagen(VENSTER), PORTIE_DOEL_DEFAULT) };
+  return {
+    flags: [],
+    notities: [],
+    profielVersie: null,
+    ...aggregeer([], laatsteDagen(VENSTER), PORTIE_DOEL_DEFAULT),
+  };
 }
 
 /**
@@ -161,7 +172,8 @@ async function haalContext(clientId: string): Promise<Context> {
       .gte('datum', venster[0]),
     supabase
       .from('ai_profile_versions')
-      .select('profiel')
+      // `versie` erbij voor de profielkaart in de zijbalk — dezelfde rij, geen extra query.
+      .select('versie, profiel')
       .eq('client_id', clientId)
       .order('versie', { ascending: false })
       .limit(1)
@@ -181,12 +193,13 @@ async function haalContext(clientId: string): Promise<Context> {
   if (notities.error) throw notities.error;
 
   // Nog geen profiel (klant midden in de onboarding) → de standaarddoelen.
-  const profielRij = profiel.data as { profiel: AIProfile } | null;
+  const profielRij = profiel.data as { versie: number; profiel: AIProfile } | null;
   const doelen = veiligePorties(profielRij?.profiel?.portiedoelen, PORTIE_DOEL_DEFAULT);
 
   return {
     flags: (flags.data ?? []) as OpenFlag[],
     notities: (notities.data ?? []) as Notitie[],
+    profielVersie: profielRij?.versie ?? null,
     ...aggregeer((logs.data ?? []) as LogRij[], venster, doelen),
   };
 }
@@ -380,6 +393,7 @@ export function useKlantContext(clientId: string) {
     gemiddelden: actueel?.gemiddelden ?? [],
     dagenMetLog: actueel?.dagenMetLog ?? 0,
     notities: actueel?.notities ?? [],
+    profielVersie: actueel?.profielVersie ?? null,
     /** Alleen de allereerste keer: een retry laat de laatste stand staan. */
     laden: actueel === null,
     fout: actueel?.fout ?? null,

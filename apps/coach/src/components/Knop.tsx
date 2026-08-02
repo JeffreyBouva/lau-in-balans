@@ -17,6 +17,14 @@ const varianten = {
     'border border-hairline bg-surface text-ink hover:border-hairline-hover disabled:hover:border-hairline',
 } as const;
 
+/**
+ * Dezelfde vormgeving voor een <a>/<Link> die als knop leest — een navigatie hoort
+ * een link te blijven (nieuw tabblad, sleepbaar), maar niet anders te ogen.
+ */
+export function knopStijl(variant: 'primair' | 'secundair' = 'primair'): string {
+  return `${basis} ${varianten[variant]}`;
+}
+
 export function Knop({ variant = 'primair', className = '', type = 'button', ...rest }: Props) {
-  return <button type={type} className={`${basis} ${varianten[variant]} ${className}`} {...rest} />;
+  return <button type={type} className={`${knopStijl(variant)} ${className}`} {...rest} />;
 }

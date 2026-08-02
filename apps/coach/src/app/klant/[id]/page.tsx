@@ -3,15 +3,15 @@
 import { Fragment, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import type { ClientStatus } from '@lau/shared';
 import { naarISODatum, vandaagISO, weekNummer } from '@lau/shared';
 import { ChatBubbel } from '@/components/ChatBubbel';
 import { FlagKaart } from '@/components/FlagKaart';
-import { Knop } from '@/components/Knop';
+import { Knop, knopStijl } from '@/components/Knop';
 import { Notities } from '@/components/Notities';
+import { Statuspagina } from '@/components/Statuspagina';
 import { StatusChip } from '@/components/StatusChip';
 import { VoedingsWeek } from '@/components/VoedingsWeek';
-import { supabase } from '@/lib/supabase';
+import { useKlant } from '@/lib/hooks/useKlant';
 import { useKlantChat } from '@/lib/hooks/useKlantChat';
 import { useKlantContext } from '@/lib/hooks/useKlantContext';
 
@@ -232,6 +232,28 @@ export default function KlantDetailPagina() {
                 dagenMetLog={context.dagenMetLog}
               />
 
+              {/* Direct onder de voedingsweek: de dagdoelen in die kaart komen uit
+                  precies dit profiel. */}
+              <section
+                aria-labelledby="profiel-kop"
+                className="rounded-card border border-hairline bg-surface p-4"
+              >
+                <h2 id="profiel-kop" className="text-xs tracking-[0.12em] text-body uppercase">
+                  AI-profiel
+                </h2>
+                <p className="mt-1 text-xs text-body">
+                  {context.profielVersie === null
+                    ? 'Nog geen profiel'
+                    : `Versie ${context.profielVersie}`}
+                </p>
+                <Link
+                  href={`/klant/${clientId}/profiel`}
+                  className={`${knopStijl('secundair')} mt-3 w-full`}
+                >
+                  Profiel bewerken
+                </Link>
+              </section>
+
               <Notities
                 notities={context.notities}
                 opOpslaan={context.voegNotitieToe}
@@ -244,51 +266,6 @@ export default function KlantDetailPagina() {
       </div>
     </main>
   );
-}
-
-type Klant = { id: string; naam: string; status: ClientStatus; startdatum: string };
-type KlantStand = { clientId: string; klant: Klant | null; fout: boolean };
-
-/**
- * De klant-rij zelf (naam, status, startdatum). RLS filtert `clients` al op de
- * ingelogde coach, dus geen rij = bestaat niet óf hoort bij een andere coach.
- *
- * Uitkomst getagd met de clientId waarvoor hij opgehaald is, zodat het antwoord van
- * een vorige klant nooit in het nieuwe scherm belandt (zie useKlantChat).
- */
-function useKlant(clientId: string) {
-  const [stand, setStand] = useState<KlantStand | null>(null);
-
-  useEffect(() => {
-    let geldig = true;
-    (async () => {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('id, naam, status, startdatum')
-        .eq('id', clientId)
-        .maybeSingle();
-      if (!geldig) return;
-      // 22P02 = geen geldige uuid in de URL. Dat is geen storing maar gewoon een
-      // adres dat niet bestaat → dezelfde "niet gevonden"-staat.
-      const onbruikbaarId = error?.code === '22P02';
-      if (error && !onbruikbaarId) console.error('[klant] laden mislukt:', error.message);
-      setStand({
-        clientId,
-        klant: (data as Klant | null) ?? null,
-        fout: error != null && !onbruikbaarId,
-      });
-    })();
-    return () => {
-      geldig = false;
-    };
-  }, [clientId]);
-
-  const actueel = stand?.clientId === clientId ? stand : null;
-  return {
-    klant: actueel?.klant ?? null,
-    laden: actueel === null,
-    fout: actueel?.fout ?? false,
-  };
 }
 
 /** Lokale kalenderdag — de scheidingslijn valt op middernacht bij Laura, niet in UTC. */
@@ -310,23 +287,6 @@ function dagLabel(iso: string, nu: Date): string {
     // Jaar alleen als het afwijkt — anders ruis op elke scheider.
     ...(d.getFullYear() === nu.getFullYear() ? {} : { year: 'numeric' }),
   });
-}
-
-/** Sobere volle-pagina-melding met de weg terug (laden, storing, niet gevonden). */
-function Statuspagina({ children, rol }: { children: React.ReactNode; rol?: 'alert' }) {
-  return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-16 text-center">
-      <p role={rol} className="text-sm text-body">
-        {children}
-      </p>
-      <Link
-        href="/"
-        className="mt-4 inline-block text-sm text-sage transition-colors hover:text-sage-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
-      >
-        ← Klanten
-      </Link>
-    </main>
-  );
 }
 
 function ZijbalkSkelet() {
