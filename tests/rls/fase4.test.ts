@@ -19,7 +19,10 @@ import { supabaseEnv } from '../../scripts/supabase-env.mjs';
 
 const WACHTWOORD = 'fase4-test-2026';
 const TEST_DOMEIN = 'test.lauinbalans.nl';
-const TEST_EMAIL = `fase4-${Date.now()}@${TEST_DOMEIN}`;
+// Zelfde random-suffix als elke andere testgebruiker: twee runs binnen dezelfde
+// milliseconde (of een run naast een achtergebleven user) botsen anders op de
+// unieke e-mail in auth.users.
+const TEST_EMAIL = testEmail();
 
 let url: string;
 let anonKey: string;
@@ -86,7 +89,8 @@ beforeAll(async () => {
     { app_metadata: { rol: 'coach' }, user_metadata: { naam: 'Fase Vier Coach' } },
     gemaakteCoaches, // coach ruimen we ná de klanten op
   );
-  await service.from('clients').delete().eq('id', coachUser.id);
+  const { error: cErr } = await service.from('clients').delete().eq('id', coachUser.id);
+  if (cErr) throw cErr; // blijft die rij staan, dan knalt de coaches-insert niet maar klopt de staat niet
   const { error: coachErr } = await service
     .from('coaches')
     .insert({ id: coachUser.id, naam: 'Fase Vier Coach' });
@@ -104,12 +108,16 @@ beforeAll(async () => {
 afterAll(async () => {
   // Best effort: een halverwege gefaalde test mag de opruiming niet laten knallen,
   // en rijen die al weg zijn (of nooit zijn aangemaakt) zijn geen fout.
-  // PostgREST-builders zijn thenables, geen echte Promises → PromiseLike.
+  // PostgREST-builders zijn thenables (geen echte Promises → PromiseLike) en ze
+  // resolven met `{ error }` in plaats van te throwen. Alleen try/catch zou een
+  // mislukte opruiming dus geruisloos laten verdwijnen; daarom loggen we die.
   const stil = async (fn: () => PromiseLike<unknown>) => {
     try {
-      await fn();
-    } catch {
-      /* al weg */
+      const res = await fn();
+      const e = (res as { error?: { message: string } | null })?.error;
+      if (e) console.warn('opruimen faalde:', e.message);
+    } catch (e) {
+      console.warn('opruimen faalde:', (e as Error).message);
     }
   };
 
@@ -164,6 +172,9 @@ describe('registratie-trigger', () => {
     } finally {
       await service.from('clients').delete().eq('id', nep.id);
       await service.auth.admin.deleteUser(nep.id);
+      // Uit de opruimlijst halen: anders waarschuwt afterAll op elke groene run
+      // over een user die deze test zelf al netjes heeft gewist.
+      gemaakteUsers.splice(gemaakteUsers.indexOf(nep.id), 1);
     }
   });
 });
@@ -228,17 +239,55 @@ describe('verzilver_code', () => {
       .single();
     expect(rij).toEqual({ tier: 'free', coach_id: null });
   });
+
+  it('anon kan verzilver_code niet aanroepen (geen execute) en verbrandt niets', async () => {
+    const vers = await nieuweCode();
+    const anon = createClient(url, anonKey, { auth: { persistSession: false } });
+
+    const { error } = await anon.rpc('verzilver_code', { p_code: vers });
+    expect(error).not.toBeNull(); // revoke execute ... from public, anon
+
+    // Eindstaat: de code is niet aangeraakt. (De RPC valt bovendien zélf terug op
+    // false bij auth.uid() is null, maar die tweede lijn mag nooit nodig zijn.)
+    const { data: rij } = await service
+      .from('invite_codes')
+      .select('used_by, used_at')
+      .eq('code', vers)
+      .single();
+    expect(rij!.used_by).toBeNull();
+    expect(rij!.used_at).toBeNull();
+  });
 });
 
 describe('afscherming', () => {
   it('klant ziet invite_codes niet', async () => {
     const { data } = await testUser.from('invite_codes').select('code');
     expect((data ?? []).length).toBe(0);
+
+    // Ook gericht op een code die aantoonbaar bestaat: zonder deze positieve
+    // controle zou de test ook slagen op een lege tabel — dan bewijst hij niets
+    // over RLS.
+    const { data: viaKlant } = await testUser.from('invite_codes').select('code').eq('code', code);
+    expect((viaKlant ?? []).length).toBe(0);
+    const { data: viaService } = await service.from('invite_codes').select('code').eq('code', code);
+    expect(viaService).toHaveLength(1);
   });
 
   it('klant kan maak_invite_code niet aanroepen', async () => {
+    const codes = () =>
+      service
+        .from('invite_codes')
+        .select('code', { count: 'exact', head: true })
+        .eq('coach_id', testCoachId);
+    const { count: voor } = await codes();
+
     const { error } = await testUser.rpc('maak_invite_code', { p_coach: testCoachId });
     expect(error).not.toBeNull(); // execute alleen voor service_role
+
+    // Eindstaat: er is écht niets aangemaakt — een error alleen bewijst dat niet
+    // (de functie is security definer en zou vóór het falen kunnen inserten).
+    const { count: na } = await codes();
+    expect(na).toBe(voor);
   });
 
   it('anon leest app_config (sloten_actief bestaat)', async () => {
