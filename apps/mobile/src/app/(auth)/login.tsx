@@ -13,7 +13,7 @@ export default function Login() {
 
   async function probeer() {
     setBezig(true); setFout(null);
-    const { error } = await login(email.trim(), ww);
+    const { error } = await login(email, ww);
     setBezig(false);
     if (error) setFout(error);
   }

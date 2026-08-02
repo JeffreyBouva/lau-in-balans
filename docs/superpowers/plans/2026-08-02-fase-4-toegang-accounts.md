@@ -630,9 +630,9 @@ export function SocialKnoppen({ onFout }: { onFout: (m: string) => void }) {
 
   async function start(provider: 'google' | 'apple') {
     setBezig(provider);
-    const { error } = await socialLogin(provider);
+    const uitkomst = await socialLogin(provider);
     setBezig(null);
-    if (error) onFout(error);
+    if (uitkomst.status === 'fout') onFout(uitkomst.melding); // 'geannuleerd' = stil, geen melding
   }
 
   return (
@@ -806,17 +806,34 @@ Voeg imports toe (`SocialKnoppen`, `useRouter`, `Pressable`), render `<SocialKno
 </Pressable>
 ```
 
-- [ ] **Step 5: Gate + index-redirect**
+- [ ] **Step 5: OAuth-fout uit de URL tonen op web (login.tsx én registreer.tsx)**
+
+Bij een mislukte social login stuurt Supabase de gebruiker terug met `error`/`error_description`
+in de query. Zonder dit blijft het scherm stil en lijkt er niets gebeurd. Zet in beide schermen:
+
+```ts
+useEffect(() => {
+  if (Platform.OS !== 'web') return;
+  const p = new URLSearchParams(window.location.search);
+  const d = p.get('error_description') ?? p.get('error');
+  if (!d) return;
+  setFout('Inloggen via de provider lukte niet.');
+  ['error', 'error_code', 'error_description'].forEach((k) => p.delete(k));
+  window.history.replaceState(null, '', window.location.pathname + (p.size ? `?${p}` : ''));
+}, []);
+```
+
+- [ ] **Step 6: Gate + index-redirect**
 
 `apps/mobile/src/app/index.tsx`: `<Redirect href="/(auth)/welkom" />`.
 `_layout.tsx` Gate: vervang `router.replace('/(auth)/login')` door `router.replace('/(auth)/welkom')`.
 
-- [ ] **Step 6: Verifieer**
+- [ ] **Step 7: Verifieer**
 
 Run: `npm run typecheck -w apps/mobile` → 0 errors.
 Run: `cd apps/mobile && npx expo export --platform web --output-dir /tmp/f4-t6 && rm -rf /tmp/f4-t6` → OK.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add apps/mobile/src

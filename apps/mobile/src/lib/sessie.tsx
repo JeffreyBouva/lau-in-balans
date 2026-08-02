@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
@@ -10,9 +10,15 @@ type SessieContext = {
   herbepaalProfiel: () => Promise<void>;
   markProfielAangemaakt: () => void;
   tier: 'free' | 'coached' | null;
+  /** Render tier-afhankelijke UI niet zolang tierLaden — anders flitst free-UI voorbij. */
+  tierLaden: boolean;
   herlaadTier: () => Promise<void>;
   login: (email: string, wachtwoord: string) => Promise<{ error: string | null }>;
-  registreer: (email: string, wachtwoord: string, naam: string) => Promise<{ error: string | null }>;
+  registreer: (
+    email: string,
+    wachtwoord: string,
+    naam: string,
+  ) => Promise<{ error: string | null; bevestigingNodig?: boolean }>;
   logout: () => Promise<void>;
 };
 
@@ -24,6 +30,10 @@ export function SessieProvider({ children }: { children: ReactNode }) {
   const [heeftProfiel, setHeeftProfiel] = useState<boolean | null>(null);
   const [tier, setTier] = useState<'free' | 'coached' | null>(null);
   const clientId = session?.user.id ?? null;
+  // Bij een accountwissel (logout → andere login) kan een RPC van de vórige klant nog
+  // onderweg zijn. Beide laders vergelijken de clientId van vóór de await met deze ref
+  // en negeren een verlaat antwoord.
+  const clientIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -38,12 +48,15 @@ export function SessieProvider({ children }: { children: ReactNode }) {
   // bron. markProfielAangemaakt() zet 'm direct op true na de onboarding-insert, zodat
   // de gate niet terugkaatst naar onboarding voordat een verse RPC binnen is.
   const herbepaalProfiel = useCallback(async () => {
+    const eigenClientId = clientIdRef.current;
     const { data } = await supabase.rpc('klant_heeft_profiel');
+    if (clientIdRef.current !== eigenClientId) return;
     setHeeftProfiel(data === true);
   }, []);
   const markProfielAangemaakt = useCallback(() => setHeeftProfiel(true), []);
 
   useEffect(() => {
+    clientIdRef.current = clientId;
     if (!clientId) { setHeeftProfiel(null); return; }
     herbepaalProfiel();
   }, [clientId, herbepaalProfiel]);
@@ -51,26 +64,46 @@ export function SessieProvider({ children }: { children: ReactNode }) {
   // tier ('free' | 'coached') bepaalt wat er open staat; komt uit dezelfde bron als de
   // server-side checks (RPC mijn_tier), zodat app en backend niet uit elkaar lopen.
   const herlaadTier = useCallback(async () => {
-    const { data } = await supabase.rpc('mijn_tier');
+    const eigenClientId = clientIdRef.current;
+    const { data, error } = await supabase.rpc('mijn_tier');
+    if (clientIdRef.current !== eigenClientId) return;
+    // Bij een fout tier op null laten: stil naar 'free' vallen zou een coached klant
+    // ten onrechte achter het slot zetten.
+    if (error) { console.warn('[tier] ophalen mislukt:', error.message); return; }
     setTier(data === 'coached' ? 'coached' : 'free');
   }, []);
 
   useEffect(() => {
+    clientIdRef.current = clientId;
     if (!clientId) { setTier(null); return; }
     herlaadTier();
   }, [clientId, herlaadTier]);
 
   async function login(email: string, wachtwoord: string) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password: wachtwoord });
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: wachtwoord });
     return { error: error ? 'Inloggen lukte niet. Controleer je e-mail en wachtwoord.' : null };
   }
-  async function registreer(email: string, wachtwoord: string, naam: string) {
-    const { error } = await supabase.auth.signUp({
+  async function registreer(
+    email: string,
+    wachtwoord: string,
+    naam: string,
+  ): Promise<{ error: string | null; bevestigingNodig?: boolean }> {
+    const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password: wachtwoord,
       options: { data: { naam: naam.trim() } },
     });
-    return { error: error ? 'Registreren lukte niet. Controleer je gegevens of probeer een ander e-mailadres.' : null };
+    if (error) {
+      if (error.code === 'user_already_exists') return { error: 'Dit e-mailadres is al in gebruik. Log in of kies een ander adres.' };
+      if (error.code === 'weak_password') return { error: 'Kies een wachtwoord van minstens 8 tekens.' };
+      if (error.code === 'over_email_send_rate_limit') return { error: 'Te veel pogingen. Probeer het later opnieuw.' };
+      return { error: 'Registreren lukte niet. Controleer je gegevens.' };
+    }
+    // Enumeration-protection: 200 + lege identities = adres bestaat al.
+    if (data.user && (data.user.identities?.length ?? 0) === 0) {
+      return { error: 'Dit e-mailadres is al in gebruik. Log in of kies een ander adres.' };
+    }
+    return { error: null, bevestigingNodig: !data.session };
   }
   async function logout() {
     await supabase.auth.signOut();
@@ -80,7 +113,8 @@ export function SessieProvider({ children }: { children: ReactNode }) {
     <Ctx.Provider
       value={{
         session, clientId, laden, heeftProfiel, herbepaalProfiel, markProfielAangemaakt,
-        tier, herlaadTier, login, registreer, logout,
+        tier, tierLaden: clientId !== null && tier === null, herlaadTier,
+        login, registreer, logout,
       }}
     >
       {children}

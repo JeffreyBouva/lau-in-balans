@@ -17,6 +17,8 @@ export const supabase = createClient(url, anonKey, {
     persistSession: true,
     flowType: 'pkce',
     // Web: na een OAuth-redirect staat de code in de URL — die moet supabase-js zelf oppakken.
+    // Gereserveerde query-params op web (nooit als route-param gebruiken):
+    // code, error, error_code, error_description, access_token, sb_flow_id.
     detectSessionInUrl: Platform.OS === 'web',
   },
 });
