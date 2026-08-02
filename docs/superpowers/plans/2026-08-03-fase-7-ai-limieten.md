@@ -79,13 +79,34 @@ groen · deno check beide functions schoon · RLS 45 groen + 9 verwachte fase 7-
 1. `supabase db push` — fase 7-migratie (ai_usage, limieten, proactief, flags-tier-check,
    profiel-caps). Daarna `npx vitest run tests/rls/fase7.test.ts` → 12/12 verwacht.
    Let op: niet twee volledige RLS-runs kort na elkaar (GoTrue-ratelimit — 5 min pauze).
-2. `supabase secrets set CRON_SECRET=<lang-willekeurig>` (bijv. `openssl rand -hex 32`).
+2. Cron-secret aanmaken en zetten (twee losse commando's; plak de uitkomst van het
+   eerste in het tweede):
+
+   ```bash
+   openssl rand -hex 32
+   ```
+
+   ```bash
+   supabase secrets set CRON_SECRET=PLAK_HIER_DE_UITKOMST
+   ```
+
    Optioneel: `LAU_MODEL` / `LAU_SUGGESTIE_MODEL` (defaults: sonnet-5 / haiku-4-5).
 3. `supabase functions deploy lau-reply` en `supabase functions deploy lau-ochtend`.
-4. Supabase-dashboard → Integrations → Cron: dagelijkse job om 10:30 Europe/Amsterdam →
-   HTTP request naar de lau-ochtend-URL met header `x-cron-secret: <de secret>`.
-5. Test handmatig: curl met de secret-header → JSON met aantallen; daarna in de app
-   checken dat het ochtendbericht verschijnt (alleen bij een klant zonder log vandaag).
+4. Supabase-dashboard → Integrations → Cron → nieuwe job: schedule `30 8 * * *`
+   (dashboard-cron is UTC; 08:30 UTC = 10:30 NL-zomertijd — in de winter `30 9 * * *`,
+   of gebruik de tijdzone-optie als die er is) → HTTP Request, POST, URL
+   `https://jzovciuubkwvbwxphamf.supabase.co/functions/v1/lau-ochtend`, header
+   `x-cron-secret` met exact dezelfde waarde als in stap 2.
+5. Test handmatig (plak jouw secret erin):
+
+   ```bash
+   curl -X POST https://jzovciuubkwvbwxphamf.supabase.co/functions/v1/lau-ochtend -H "x-cron-secret: PLAK_HIER_DE_UITKOMST"
+   ```
+
+   Verwacht: JSON met aantallen (`bekeken`/`verstuurd`/`overgeslagen`). `401` = header
+   matcht de secret niet · `{"status":"geen-config"}` = migratie nog niet gepusht ·
+   `{"status":"uit"}` = killswitch staat uit in app_config. Daarna in de app checken dat
+   het ochtendbericht verschijnt (alleen bij een klant zonder log vandaag).
 6. Quota testen: dashboard → klantdetail → "Lau-gebruik" → eigen limiet op 1 → in de app
    twee berichten sturen → tweede geeft de nette afkap-melding. Limiet terug op leeg.
 7. PR-keten: fase-6 → fase-7 (`compare/fase-6-profiel-tutorials...fase-7-ai-limieten`).
