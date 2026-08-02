@@ -83,14 +83,14 @@ export default function KlantDetailPagina() {
       <header>
         <Link
           href="/"
-          className="text-sm text-muted transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
+          className="text-sm text-body transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
         >
           ← Klanten
         </Link>
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <h1 className="font-serif text-3xl leading-tight text-ink">{klant.naam}</h1>
           <StatusChip status={klant.status} />
-          <span className="text-xs text-muted">Week {weekNummer(klant.startdatum, vandaag)}</span>
+          <span className="text-xs text-body">Week {weekNummer(klant.startdatum, vandaag)}</span>
         </div>
       </header>
 
@@ -110,7 +110,7 @@ export default function KlantDetailPagina() {
           {chat.laden && <Skelet />}
 
           {!chat.laden && !chat.fout && berichten.length === 0 && (
-            <p className="rounded-card border border-dashed border-hairline px-6 py-12 text-center text-sm text-muted">
+            <p className="rounded-card border border-dashed border-hairline px-6 py-12 text-center text-sm text-body">
               Nog geen berichten.
             </p>
           )}
@@ -124,7 +124,7 @@ export default function KlantDetailPagina() {
                 return (
                   <Fragment key={bericht.id}>
                     {nieuweDag && (
-                      <li className="mt-3 flex items-center gap-3 first:mt-0 text-xs text-muted">
+                      <li className="mt-3 flex items-center gap-3 first:mt-0 text-xs text-body">
                         <span className="h-px flex-1 bg-hairline-soft" aria-hidden="true" />
                         {dagLabel(bericht.created_at, nu)}
                         <span className="h-px flex-1 bg-hairline-soft" aria-hidden="true" />
@@ -159,7 +159,7 @@ export default function KlantDetailPagina() {
               className={veld}
             />
             <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs text-muted">⌘/Ctrl + Enter verstuurt</p>
+              <p className="text-xs text-body">⌘/Ctrl + Enter verstuurt</p>
               <Knop type="submit" disabled={concept.trim() === '' || verstuurt}>
                 {verstuurt ? 'Versturen…' : 'Antwoord als Laura'}
               </Knop>

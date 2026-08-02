@@ -33,7 +33,7 @@ export default function LoginPagina() {
     <main className="flex min-h-dvh items-center justify-center px-5 py-12">
       <div className="w-full max-w-sm rounded-card border border-hairline bg-surface p-8 shadow-[0_1px_2px_rgba(38,42,36,0.04)]">
         <h1 className="font-serif text-2xl text-ink">Lau in Balans</h1>
-        <p className="mt-1 text-sm text-muted">Coach-dashboard</p>
+        <p className="mt-1 text-sm text-body">Coach-dashboard</p>
 
         <form onSubmit={verstuur} className="mt-7 flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">

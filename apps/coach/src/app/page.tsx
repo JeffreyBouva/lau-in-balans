@@ -20,7 +20,7 @@ export default function KlantenPagina() {
     <main className="mx-auto w-full max-w-4xl px-6 py-12">
       <h1 className="font-serif text-3xl text-ink">Klanten</h1>
       {!laden && !fout && klanten.length > 0 && (
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-sm text-body">
           {klanten.length} {klanten.length === 1 ? 'klant' : 'klanten'}
         </p>
       )}
@@ -37,7 +37,7 @@ export default function KlantenPagina() {
       {laden && <Skelet />}
 
       {!laden && !fout && klanten.length === 0 && (
-        <p className="mt-6 rounded-card border border-dashed border-hairline px-6 py-12 text-center text-sm text-muted">
+        <p className="mt-6 rounded-card border border-dashed border-hairline px-6 py-12 text-center text-sm text-body">
           Nog geen klanten.
         </p>
       )}
@@ -76,22 +76,22 @@ function KlantRegel({
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <span className="font-serif text-lg leading-tight text-ink">{klant.naam}</span>
           <StatusChip status={klant.status} />
-          <span className="text-xs text-muted">Week {weekNummer(klant.startdatum, vandaag)}</span>
+          <span className="text-xs text-body">Week {weekNummer(klant.startdatum, vandaag)}</span>
         </div>
 
         <p className="mt-1.5 flex items-baseline gap-1.5 text-sm">
           {bericht ? (
             <>
-              <span className="shrink-0 text-muted">
+              <span className="shrink-0 text-body">
                 {afzender(bericht.sender, klant.naam, coachNaam)}:
               </span>
               <span className="truncate text-body">{samenvatting(bericht)}</span>
-              <span className="shrink-0 text-xs text-muted">
+              <span className="shrink-0 text-xs text-body">
                 · {relatieveTijd(bericht.created_at, nu)}
               </span>
             </>
           ) : (
-            <span className="text-muted">Nog geen berichten</span>
+            <span className="text-body">Nog geen berichten</span>
           )}
         </p>
       </div>

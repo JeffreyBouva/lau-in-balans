@@ -52,7 +52,7 @@ export function ChatBubbel({ bericht, nu }: { bericht: ChatBericht; nu: Date }) 
       <time
         dateTime={bericht.created_at}
         title={volledigeTijd(bericht.created_at)}
-        className="px-1 text-xs text-muted"
+        className="px-1 text-xs text-body"
       >
         {relatieveTijd(bericht.created_at, nu)}
       </time>

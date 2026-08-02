@@ -9,7 +9,7 @@ const stijl: Record<ClientStatus, string> = {
   nieuw: 'border-sage-soft-border bg-sage-soft text-sage-ink',
   actief: 'border-hairline-soft bg-surface-sunken text-body',
   stil: 'border-clay-border bg-clay-soft text-clay-ink',
-  gestopt: 'border-hairline bg-neutral-soft text-muted',
+  gestopt: 'border-hairline bg-neutral-soft text-body',
 };
 
 /** Statuschip van een klant — zelfde vorm op de lijst en op het klantdetail. */
