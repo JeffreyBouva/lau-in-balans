@@ -8,8 +8,12 @@ import {
 import { colors, radii, fontFamily, text } from '@/theme/tokens';
 import { supabase } from '@/lib/supabase';
 import { useKlantData } from '@/lib/klantdata';
+import { useSessie } from '@/lib/sessie';
+import { useConfig } from '@/lib/hooks/useConfig';
 import { useSheets } from '@/lib/sheets';
 import { LauraKnop } from '@/components/LauraKnop';
+import { SlotKaart } from '@/components/SlotKaart';
+import { CodeSheet } from '@/components/CodeSheet';
 
 const WEEKDAG = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
 const GETAL = ['nul', 'één', 'twee', 'drie', 'vier', 'vijf', 'zes', 'zeven'];
@@ -37,6 +41,13 @@ export default function Vandaag() {
 
   const { berichten, openFlag, week, herlaad } = useKlantData();
   const { openLaura } = useSheets();
+  // Alleen een expliciete 'free' zet het slot erop: zolang de tier laadt is 'ie null en
+  // rendert het scherm gewoon open (geen slot-flits bij een coached klant).
+  const { tier } = useSessie();
+  const { slotenActief } = useConfig();
+  const opSlot = tier === 'free' && slotenActief;
+  // De Laura-sheet is coach-contact; bij free opent de knop de code-sheet in plaats daarvan.
+  const [codeSheet, setCodeSheet] = useState(false);
 
   // Week-gemiddelden verversen na terugkeer (bijv. na een log-save in de sheet).
   useFocusEffect(useCallback(() => { herlaad(); }, [herlaad]));
@@ -92,22 +103,29 @@ export default function Vandaag() {
           {weekNr != null && <Text style={text.eyebrow}>Week {weekNr}</Text>}
           <Text style={s.hero}>{hero}</Text>
         </View>
-        <LauraKnop openFlag={openFlag} onPress={openLaura} />
+        <LauraKnop openFlag={openFlag} onPress={opSlot ? () => setCodeSheet(true) : openLaura} />
       </View>
 
       {/* Contactkaart */}
-      <View style={s.contactKaart}>
-        <Text style={s.kaartLabel}>Dagen dat we contact hadden</Text>
-        <View style={s.dagRij}>
-          {contactDagen.map((d) => (
-            <View key={d.datum} style={s.dagKolom}>
-              <View style={[s.blok, d.contact ? s.blokAan : s.blokUit]} />
-              <Text style={s.dagLetter}>{weekdagLetter(d.datum)}</Text>
-            </View>
-          ))}
+      {opSlot ? (
+        <SlotKaart
+          titel="Contact met Lau en Laura"
+          uitleg="Zie hier hoe vaak jullie contact hadden en waar jullie samen aan werken."
+        />
+      ) : (
+        <View style={s.contactKaart}>
+          <Text style={s.kaartLabel}>Dagen dat we contact hadden</Text>
+          <View style={s.dagRij}>
+            {contactDagen.map((d) => (
+              <View key={d.datum} style={s.dagKolom}>
+                <View style={[s.blok, d.contact ? s.blokAan : s.blokUit]} />
+                <Text style={s.dagLetter}>{weekdagLetter(d.datum)}</Text>
+              </View>
+            ))}
+          </View>
+          <Text style={s.kaartOnder}>{contactZin}</Text>
         </View>
-        <Text style={s.kaartOnder}>{contactZin}</Text>
-      </View>
+      )}
 
       {/* Wat opvalt */}
       <View style={s.opvaltKaart}>
@@ -136,23 +154,35 @@ export default function Vandaag() {
         <Text style={s.kaartOnder}>{etenOnder}</Text>
       </View>
 
-      {/* Waar we aan werken */}
-      <View style={s.werkGroep}>
-        <Text style={text.eyebrow}>Waar we aan werken</Text>
-        {WERKPUNTEN.map((w) => (
-          <View key={w.titel} style={s.werkKaart}>
-            <View style={[s.werkBol, { backgroundColor: w.kleur }]} />
-            <Text style={s.werkTitel}>{w.titel}</Text>
-            <Text style={s.werkStatus}>{w.status}</Text>
+      {/* Waar we aan werken + afspraak — bij free samen één slot-kaart, het zijn allebei
+          dingen die uit het traject met Laura komen. */}
+      {opSlot ? (
+        <SlotKaart
+          titel="Waar jullie aan werken"
+          uitleg="Werkpunten en je afspraken met Laura verschijnen hier zodra je een traject volgt."
+        />
+      ) : (
+        <>
+          <View style={s.werkGroep}>
+            <Text style={text.eyebrow}>Waar we aan werken</Text>
+            {WERKPUNTEN.map((w) => (
+              <View key={w.titel} style={s.werkKaart}>
+                <View style={[s.werkBol, { backgroundColor: w.kleur }]} />
+                <Text style={s.werkTitel}>{w.titel}</Text>
+                <Text style={s.werkStatus}>{w.status}</Text>
+              </View>
+            ))}
           </View>
-        ))}
-      </View>
 
-      {/* Afspraak-blok */}
-      <View style={s.afspraak}>
-        <View style={s.lauraAvatar}><Text style={s.lauraAvatarTekst}>La</Text></View>
-        <Text style={s.afspraakTekst}>Donderdag 20 aug · gesprek met Laura, 30 min.</Text>
-      </View>
+          {/* Afspraak-blok */}
+          <View style={s.afspraak}>
+            <View style={s.lauraAvatar}><Text style={s.lauraAvatarTekst}>La</Text></View>
+            <Text style={s.afspraakTekst}>Donderdag 20 aug · gesprek met Laura, 30 min.</Text>
+          </View>
+        </>
+      )}
+
+      {opSlot && <CodeSheet zichtbaar={codeSheet} onSluit={() => setCodeSheet(false)} />}
     </ScrollView>
   );
 }

@@ -6,10 +6,13 @@ import { weekNummer, vandaagISO, type Moment, type Porties } from '@lau/shared';
 import { colors, radii, fontFamily, text } from '@/theme/tokens';
 import { supabase } from '@/lib/supabase';
 import { useKlantData } from '@/lib/klantdata';
+import { useSessie } from '@/lib/sessie';
+import { useConfig } from '@/lib/hooks/useConfig';
 import { useSheets } from '@/lib/sheets';
 import { chatSuggesties } from '@/lib/suggesties';
 import { tik, stoot } from '@/lib/haptics';
 import { LauraKnop } from '@/components/LauraKnop';
+import { SlotKaart } from '@/components/SlotKaart';
 import { Bericht } from '@/components/Bericht';
 import { TypIndicator } from '@/components/TypIndicator';
 
@@ -23,6 +26,10 @@ export default function Chat() {
   const insets = useSafeAreaInsets();
   const { berichten, verstuur, wachtOpLau, openFlag, dag, aiSuggesties } = useKlantData();
   const { openLaura, openLog } = useSheets();
+  // tier is null zolang 'ie laadt: alleen een expliciete 'free' zet het slot erop, anders
+  // flitst het slot-scherm voorbij bij een coached klant.
+  const { tier } = useSessie();
+  const { slotenActief } = useConfig();
 
   // Klant (voor het weeknummer in de header).
   const [klant, setKlant] = useState<{ startdatum: string } | null>(null);
@@ -63,6 +70,29 @@ export default function Chat() {
   const weekNr = klant ? weekNummer(klant.startdatum, vandaagISO()) : null;
   const datumBron = berichten[0]?.created_at ? new Date(berichten[0].created_at) : new Date();
   const datumLabel = cap(datumBron.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' }));
+
+  // Free: de hele tab zit op slot (Lau is de coachingkant). Deze early return staat ná
+  // álle hooks hierboven, zodat de hook-volgorde gelijk blijft als de tier omklapt.
+  if (tier === 'free' && slotenActief) {
+    return (
+      <View style={s.root}>
+        <View style={[s.header, { paddingTop: insets.top + 22 }]}>
+          <View style={s.avatar}>
+            <Text style={s.avatarL}>L</Text>
+          </View>
+          <View style={s.headerTekst}>
+            <Text style={text.chatNaam}>Lau.ai</Text>
+            <Text style={text.caption}>AI-voedingscoach</Text>
+          </View>
+        </View>
+        <SlotKaart
+          variant="scherm"
+          titel="Lau denkt met je mee — dag en nacht"
+          uitleg="Stel vragen over je eten, krijg warme coaching in handmaten en bouw samen aan je ritme. Laura leest mee en stelt Lau op jou af."
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={s.root}>

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
@@ -6,10 +6,13 @@ import { HANDMATEN, type Handmaat } from '@lau/shared';
 import { colors, radii, fontFamily, text } from '@/theme/tokens';
 import { useKlantData } from '@/lib/klantdata';
 import { usePortiedoelen } from '@/lib/hooks/useProfiel';
+import { useSessie } from '@/lib/sessie';
+import { useConfig } from '@/lib/hooks/useConfig';
 import { useSheets } from '@/lib/sheets';
 import { LauraKnop } from '@/components/LauraKnop';
 import { HandmaatStepper } from '@/components/HandmaatStepper';
 import { SlotBalk } from '@/components/SlotBalk';
+import { CodeSheet } from '@/components/CodeSheet';
 
 const WEEKDAG = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
 const GETAL = ['nul', 'één', 'twee', 'drie', 'vier', 'vijf', 'zes', 'zeven'];
@@ -22,6 +25,12 @@ export default function Eten() {
   const { dag, week, quick, pasQuickAan, openFlag, herlaad } = useKlantData();
   const doelen = usePortiedoelen();
   const { openLaura } = useSheets();
+  // Eten blijft bij free volledig open — alleen de Laura-knop (coach-contact) vraagt hier
+  // om een code. Alleen een expliciete 'free' telt: zolang de tier laadt is 'ie null.
+  const { tier } = useSessie();
+  const { slotenActief } = useConfig();
+  const opSlot = tier === 'free' && slotenActief;
+  const [codeSheet, setCodeSheet] = useState(false);
 
   // Dagstand + weekstaafjes verversen na terugkeer (bijv. na een log-save in de sheet).
   useFocusEffect(useCallback(() => { herlaad(); }, [herlaad]));
@@ -62,7 +71,7 @@ export default function Eten() {
           <Text style={text.eyebrow}>{vandaagLabel}</Text>
           <Text style={s.titel}>Vandaag gegeten</Text>
         </View>
-        <LauraKnop openFlag={openFlag} onPress={openLaura} />
+        <LauraKnop openFlag={openFlag} onPress={opSlot ? () => setCodeSheet(true) : openLaura} />
       </View>
 
       {/* Introregel */}
@@ -122,6 +131,8 @@ export default function Eten() {
           </View>
         ))}
       </View>
+
+      {opSlot && <CodeSheet zichtbaar={codeSheet} onSluit={() => setCodeSheet(false)} />}
     </ScrollView>
   );
 }
