@@ -2,17 +2,26 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { vandaagISO } from '@lau/shared';
 import { useCoach } from '@/lib/coach';
+import { initialen } from '@/lib/naam';
+import { langeDatum } from '@/lib/tijd';
 
 const focusRing =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage rounded-full';
+  'rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage';
 
-const navLink = `${focusRing} px-3 py-1.5 text-sm transition-colors`;
+/** Alles rechts van het merk spreekt dezelfde 13px-taal — nav-links incluis (E6). */
+const chromeLink = `${focusRing} text-[13px] transition-colors`;
 
 /**
- * Vaste balk boven elke ingelogde pagina. Bewust géén onderdeel van de gate-logica:
- * de nav toont zichzelf alleen als er een coach is, dus op /login (uitgelogd) blijft
+ * De chrome van het coach-dashboard (handoff §Coach-dashboard): witte balk met het merk
+ * links en de datum + Laura's avatar rechts. Bewust géén onderdeel van de gate-logica:
+ * de balk toont zichzelf alleen als er een coach is, dus op /login (uitgelogd) blijft
  * hij vanzelf weg en hoeft de layout niets te weten over routes.
+ *
+ * Het ontwerp tekent geen navigatie — er is maar één dashboard. Klanten, Invites en
+ * Uitloggen bestaan wél en horen ergens: ze staan hier als compacte tekstlinks in
+ * dezelfde 13px-taal, zodat ze de balk niet tot een menubalk maken.
  */
 export function Nav() {
   const { coach, logout } = useCoach();
@@ -28,25 +37,22 @@ export function Nav() {
   ];
 
   return (
-    <header className="border-b border-hairline bg-cream">
-      <nav
-        aria-label="Hoofdnavigatie"
-        className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-5 gap-y-2 px-6 py-3"
-      >
-        <Link href="/" className={`${focusRing} font-serif text-sm text-ink`}>
-          Lau in Balans
-        </Link>
+    <header className="flex items-center gap-[18px] border-b border-hairline-soft bg-surface px-7 py-[18px]">
+      <Link href="/" className={`${focusRing} font-serif text-[18px] text-ink`}>
+        Lau in Balans{' '}
+        {/* contrast-opvolgpunt: #A3A59A op wit ≈ 2,5:1 — het ontwerp schrijft deze kleur voor. */}
+        <span className="font-sans text-[13px] text-muted-softer">· coach</span>
+      </Link>
 
-        <ul className="flex items-center gap-1">
+      <nav aria-label="Hoofdnavigatie">
+        <ul className="flex items-center gap-4">
           {items.map((item) => (
             <li key={item.href}>
               <Link
                 href={item.href}
                 aria-current={item.actief ? 'page' : undefined}
-                className={`${navLink} ${
-                  item.actief
-                    ? 'bg-neutral-soft font-medium text-ink'
-                    : 'text-body hover:bg-surface-sunken hover:text-ink'
+                className={`${chromeLink} ${
+                  item.actief ? 'font-medium text-ink' : 'text-body-soft hover:text-ink'
                 }`}
               >
                 {item.label}
@@ -54,19 +60,25 @@ export function Nav() {
             </li>
           ))}
         </ul>
-
-        <p className="ml-auto flex items-center gap-2 text-sm text-body">
-          <span>{coach.naam}</span>
-          <span aria-hidden="true">·</span>
-          <button
-            type="button"
-            onClick={() => void logout()}
-            className={`${focusRing} px-1 py-0.5 text-body transition-colors hover:text-ink`}
-          >
-            Uitloggen
-          </button>
-        </p>
       </nav>
+
+      <div className="ml-auto flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => void logout()}
+          className={`${chromeLink} text-body-soft hover:text-ink`}
+        >
+          Uitloggen
+        </button>
+        {/* contrast-opvolgpunt: #8C8F84 op wit ≈ 3,3:1 — ontwerpwaarde voor de datum. */}
+        <time dateTime={vandaagISO()} className="text-[13px] text-muted">
+          {langeDatum()}
+        </time>
+        <span className="flex size-[34px] items-center justify-center rounded-full bg-laura-avatar text-[13px] text-laura-avatar-ink">
+          <span aria-hidden="true">{initialen(coach.naam)}</span>
+          <span className="sr-only">Ingelogd als {coach.naam}</span>
+        </span>
+      </div>
     </header>
   );
 }

@@ -20,6 +20,26 @@ export function relatieveTijd(iso: string, nu: Date = new Date()): string {
   return korteDatum(toen, nu);
 }
 
+/**
+ * Datum-kolom in de klantenlijst: "do 20 aug" (§7). Invoer is een `date`-kolom
+ * (YYYY-MM-DD), dus lokaal parsen — `new Date('2026-08-20')` leest als UTC en valt in
+ * Amsterdam een dag terug.
+ */
+export function korteDagDatum(isoDatum: string): string {
+  const d = new Date(`${isoDatum}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+/**
+ * De datum rechtsboven in de chrome: "Donderdag 13 augustus". Intl geeft de weekdag
+ * in kleine letters; het ontwerp begint met een hoofdletter.
+ */
+export function langeDatum(nu: Date = new Date()): string {
+  const tekst = nu.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
+  return tekst.charAt(0).toUpperCase() + tekst.slice(1);
+}
+
 /** Hele kalenderdagen tussen twee momenten, lokale tijd. */
 function kalenderdagen(van: Date, tot: Date): number {
   const a = new Date(van.getFullYear(), van.getMonth(), van.getDate()).getTime();

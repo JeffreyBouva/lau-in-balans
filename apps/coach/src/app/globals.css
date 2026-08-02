@@ -14,6 +14,9 @@
   --color-surface: #ffffff;
   --color-surface-sunken: #fbf9f5;
   --color-neutral-soft: #efebe2;
+  /* bg/neutral-softer — vlak van de "Stil"-pil (§7). Zelfde hex als --color-table-row,
+     maar dat is een lijn-token: een vlak hoort niet op een randkleur te leunen. */
+  --color-neutral-softer: #f1eee7;
 
   /* lijnen */
   --color-hairline: #dcd6ca;
@@ -25,7 +28,12 @@
   /* tekst */
   --color-ink: #262a24;
   --color-body: #5e6259;
+  /* text/body-soft — teller onder de dashboardkop en "Laatste in de chat" (§7). */
+  --color-body-soft: #6e7168;
   --color-muted: #8c8f84;
+  /* text/muted-softer — kleinste labels: tabelkop, "week N", "N/7", voetnoot (§7).
+     contrast-opvolgpunt: 2,5:1 op wit — het ontwerp schrijft deze kleur voor. */
+  --color-muted-softer: #a3a59a;
 
   /* sage — primair accent, klant & voortgang */
   --color-sage: #63805f;
