@@ -97,3 +97,20 @@
 ## Self-review
 
 Spec-dekking: migratie+RPC (T6), login/gate (T1), klantenlijst (T2), chat+realtime+antwoorden (T3), flags/week/notities (T4), profiel-editor (T5), invites (T6), styling/fonts (T1), tests (T6/T7). Aannames A1-A12 gerespecteerd. Push-afhankelijkheid expliciet gemaakt (T6-volgorde + eerlijke test-rapportage).
+
+## Jeffrey-stappen (na de bouw)
+
+Stand na Task 7: `npm run typecheck -w apps/coach` 0 · `npm run build -w apps/coach` succes · `npm run lint -w apps/coach` schoon · `npm run typecheck -w apps/mobile` 0 · `npm test` 30 groen · `npm run test:rls` 31 groen + 3 rood — die drie zijn allemaal `tests/rls/fase5.test.ts` en vallen om op de nog niet gepushte migratie (`maak_eigen_invite_code` staat niet in de schema-cache). Stap 1 en 2 hieronder maken ze groen.
+
+1. **Migratie pushen** — `supabase db push` zet `supabase/migrations/20260802210000_fase5_dashboard.sql` op de gehoste database (geen lokale Docker-stack).
+2. **RLS-tests fase 5** — `npx vitest run tests/rls/fase5.test.ts` → 8/8 groen verwacht. Daarna is `npm run test:rls` in z'n geheel groen (34).
+3. **Dashboard lokaal** — `npm run dev -w apps/coach` → <http://localhost:3000>. Inloggen met `laura@demo.lauinbalans.nl` / `demo-demo-2026`. `apps/coach/.env.local` bestaat al (NEXT_PUBLIC-vars staan erin), dus er hoeft niets te worden aangemaakt.
+4. **Flow doorlopen** (de visuele check die ik niet kan doen):
+   - klant openen vanuit de lijst;
+   - **als Laura antwoorden in de chat — en dat antwoord ook in de klant-app terugzien**, dat is de kern van fase 5;
+   - een flag afronden (verdwijnt uit "open", teller op de klantenlijst zakt);
+   - profiel bewerken en opslaan → nieuwe versie verschijnt in de versiehistorie;
+   - `/invites`: code maken, kopiëren, en een ongebruikte code weer intrekken.
+5. **PR's openen** — beide branches staan nog lokaal voor; eerst `git push -u origin fase-4-toegang-accounts` en `git push -u origin fase-5-coach-dashboard`, dan:
+   - fase 4: <https://github.com/JeffreyBouva/lau-in-balans/compare/main...fase-4-toegang-accounts>
+   - fase 5 (staat bovenop fase 4): <https://github.com/JeffreyBouva/lau-in-balans/compare/fase-4-toegang-accounts...fase-5-coach-dashboard> — is fase 4 al in `main` gemerged, gebruik dan <https://github.com/JeffreyBouva/lau-in-balans/compare/main...fase-5-coach-dashboard>

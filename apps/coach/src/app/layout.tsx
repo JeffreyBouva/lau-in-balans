@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { DM_Sans, Newsreader } from 'next/font/google';
 import './globals.css';
+import { Nav } from '@/components/Nav';
 import { CoachProvider, Gate } from '@/lib/coach';
 
 // Beide zijn variable fonts (geen weight nodig); de CSS-vars worden in globals.css
@@ -31,7 +32,11 @@ export default function RootLayout({
     <html lang="nl" className={`${newsreader.variable} ${dmSans.variable} h-full`}>
       <body className="min-h-full bg-cream font-sans text-body antialiased">
         <CoachProvider>
-          <Gate>{children}</Gate>
+          <Gate>
+            {/* Nav rendert zichzelf alleen mét coach — op /login blijft hij dus weg. */}
+            <Nav />
+            {children}
+          </Gate>
         </CoachProvider>
       </body>
     </html>
