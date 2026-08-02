@@ -19,7 +19,11 @@ export async function socialLogin(provider: Provider): Promise<OAuthUitkomst> {
   if (Platform.OS === 'web') {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: window.location.origin },
+      // Terug naar /login (niet /): de index-redirect gooit query-params weg, waardoor
+      // useOAuthFoutUitUrl provider-fouten nooit zou zien. Succes werkt daar ook: de
+      // gate stuurt een verse sessie vanzelf door. NB: deze URL moet in de Supabase
+      // Redirect URLs-allowlist staan.
+      options: { redirectTo: `${window.location.origin}/login` },
     });
     return error ? { status: 'fout', melding: FOUT } : { status: 'ok' }; // web redirect: 'ok' = onderweg
   }
