@@ -39,10 +39,11 @@ export function SessieProvider({ children }: { children: ReactNode }) {
   const clientIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLaden(false);
-    });
+    // finally: ook bij een storage-/lock-storing moet laden false worden, anders
+    // blijft de splash (die pas verdwijnt bij !laden) eeuwig staan.
+    supabase.auth.getSession()
+      .then(({ data }) => setSession(data.session))
+      .finally(() => setLaden(false));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
     return () => sub.subscription.unsubscribe();
   }, []);

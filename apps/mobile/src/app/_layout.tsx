@@ -15,7 +15,7 @@ function Gate() {
   // fonts er zijn (RootLayout), dan flitst welkom/login voorbij voordat de gate weet
   // waar een ingelogde gebruiker heen moet. Gate rendert pas als fontsReady, dus
   // !laden hier betekent: fonts én sessie rond.
-  useEffect(() => { if (!laden) SplashScreen.hideAsync(); }, [laden]);
+  useEffect(() => { if (!laden) SplashScreen.hideAsync().catch(() => {}); }, [laden]);
 
   useEffect(() => {
     if (laden) return;
