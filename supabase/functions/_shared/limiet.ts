@@ -2,7 +2,6 @@
 // lau-ochtend moeten precies dezelfde maandgrens en dezelfde limietbepaling hanteren
 // als de dashboard-RPC ai_gebruik_deze_maand — anders telt Laura iets anders dan de
 // afkap doet, en dat is precies het soort verschil dat je pas op 1 augustus merkt.
-import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 
 const ZONE = 'Europe/Amsterdam';
 
@@ -92,18 +91,15 @@ export function dagStartAmsterdamUTC(nu: Date = new Date()): string {
  */
 export function bepaalLimiet(aiLimiet: unknown, configWaarde: unknown): number {
   if (typeof aiLimiet === 'number' && Number.isFinite(aiLimiet) && aiLimiet > 0) return aiLimiet;
+  // Alleen een getal of een cijferstring mag als limiet meetellen. Number() slikt van
+  // alles: `true` wordt 1, een lege array wordt 0, en een als `true` opgeslagen
+  // config-waarde zou zo stilletjes een limiet van één bericht per maand opleveren.
+  if (typeof configWaarde !== 'number' && typeof configWaarde !== 'string') {
+    return STANDAARD_MAANDLIMIET;
+  }
   const uitConfig = Number(configWaarde);
-  // Number(null) is 0 en Number(undefined) is NaN — beide vallen hier netjes door
-  // naar de standaard, net als een per ongeluk op 0 gezette config-waarde.
+  // Number('') is 0 en Number('abc') is NaN — beide vallen hier netjes door naar de
+  // standaard, net als een per ongeluk op 0 gezette config-waarde.
   if (Number.isFinite(uitConfig) && uitConfig > 0) return uitConfig;
   return STANDAARD_MAANDLIMIET;
-}
-
-/**
- * Zelfde uitkomst als bepaalLimiet, maar leest app_config zelf. Voor aanroepers die
- * de config-query niet al parallel meenemen (lau-ochtend loopt per klant).
- */
-export async function leesMaandlimiet(db: SupabaseClient, aiLimiet: unknown): Promise<number> {
-  const { data } = await db.from('app_config').select('value').eq('key', 'ai_maandlimiet').maybeSingle();
-  return bepaalLimiet(aiLimiet, (data as { value: unknown } | null)?.value);
 }

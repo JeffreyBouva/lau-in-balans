@@ -113,9 +113,9 @@ export function LauGebruik({
             />
           </div>
 
-          {eigenLimiet === null && (
-            <p className="mt-2 text-xs text-body">Standaard: {standaardLimiet}/maand</p>
-          )}
+          {/* Ook mét een eigen limiet zichtbaar: anders is er geen enkele plek waar de
+              coach ziet wat "leeg = de standaard" straks betekent. */}
+          <p className="mt-2 text-xs text-body">Standaard: {standaardLimiet}/maand</p>
 
           <form onSubmit={opslaan} className="mt-4 border-t border-hairline-soft pt-3">
             <label htmlFor="ai-limiet" className="text-sm font-medium text-ink">
@@ -126,10 +126,13 @@ export function LauGebruik({
             </p>
             <input
               id="ai-limiet"
-              type="number"
+              // Bewust GEEN type="number": daarbij geeft de browser voor ongeldige invoer
+              // ("2,5", "abc") een lege string terug, en dan leest een vertypte limiet als
+              // "leeg = de standaard" — de guard in opslaan() zou nooit vuren en de klant
+              // zou stilletjes op 300 blijven staan. Met type="text" komt de invoer
+              // ongeschonden binnen; inputMode houdt het cijfertoetsenbord op mobiel.
+              type="text"
               inputMode="numeric"
-              min={1}
-              step={1}
               value={invoer}
               aria-describedby="ai-limiet-hint"
               onChange={(e) => {

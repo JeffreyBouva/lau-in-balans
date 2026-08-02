@@ -63,6 +63,7 @@
 
 - [ ] Batterij: mobile+coach typecheck 0 · coach build+lint OK · `npm test` 30 groen · `npm run test:rls` (verwachte failures exact benoemen) · `deno check` beide functions schoon.
 - [ ] Jeffrey-stappen onderaan dit plan: (1) `supabase db push` (fase 6 + 7 als 6 nog niet gepusht is), (2) `supabase secrets set CRON_SECRET=<lang random>` en optioneel `LAU_MODEL`/`LAU_SUGGESTIE_MODEL`, (3) `supabase functions deploy lau-reply` én `supabase functions deploy lau-ochtend`, (4) Supabase-dashboard → Cron: dagelijkse job ±10:30 Europe/Amsterdam → HTTP-request naar de lau-ochtend-URL met header `x-cron-secret`, (5) test: handmatige curl met de secret → JSON-aantallen; daarna RLS-tests fase 6+7, (6) PR-keten t/m fase-7.
+  > **Volgorde is dwingend: stap 1 (push) vóór stap 3 (deploys).** De nieuwe `lau-reply` selecteert `clients.ai_limiet` en telt op `ai_usage`; staan die er nog niet, dan faalt de klant-query en geeft élk chatbericht een 503. Andersom (push zonder deploy) is ongevaarlijk: de oude function draait gewoon door zonder limiet-check. `lau-ochtend` is in beide richtingen veilig — zonder de `ochtendbericht_actief`-rij antwoordt 'ie `{ status: 'geen-config' }` en doet niets.
 - [ ] Commit: `chore: fase 7 eindverificatie + Jeffrey-stappen`
 
 ## Self-review

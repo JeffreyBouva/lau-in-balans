@@ -93,6 +93,12 @@ Deno.serve(async (req) => {
   // Een DB-FOUT op de telling is bewust FAIL-OPEN: metering is geen veiligheidsgrens
   // (dat is de tier-check hierboven, en die is fail-closed). Een hikje in ai_usage mag
   // een klant zijn gesprek niet kosten — we waarschuwen in de logs en gaan door.
+  if (configRes.error) {
+    // Niet fataal — bepaalLimiet valt terug op de standaard van 300 — maar wel iets om
+    // te weten: is app_config onleesbaar, dan doet een door Laura aangepaste default
+    // niets meer en merkt niemand dat zonder deze regel.
+    console.warn('ai_maandlimiet lezen mislukt, standaard gebruikt:', configRes.error.message);
+  }
   const limiet = bepaalLimiet(klant.ai_limiet, configRes.data?.value);
   if (usageRes.error) {
     console.warn('ai_usage-telling mislukt, limiet niet afgedwongen:', usageRes.error.message);

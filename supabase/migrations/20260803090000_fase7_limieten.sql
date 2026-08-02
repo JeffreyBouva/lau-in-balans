@@ -48,6 +48,17 @@ on conflict (key) do nothing;
 -- ── 4. messages.proactief: door Lau geïnitieerd, niet als antwoord ──
 -- Maakt "heeft deze klant vandaag al een ochtendbericht gehad?" één query.
 alter table public.messages add column proactief boolean not null default false;
+-- De Amsterdamse kalenderdag waarvoor het proactieve bericht bedoeld was. Los van
+-- created_at (timestamptz) omdat de dag in Europe/Amsterdam telt, niet in UTC.
+alter table public.messages add column proactief_datum date;
+-- DB-slot tegen een dubbel ochtendbericht: de "is er vandaag al een proactief bericht?"-
+-- check in lau-ochtend en de insert erna zijn niet atomair, dus twee gelijktijdige runs
+-- (cron-retry, of Jeffrey die handmatig curlt terwijl de schedule loopt) kunnen er allebei
+-- doorheen glippen. Dit slot laat er precies één winnen; de ander krijgt 23505 en telt
+-- als "al bericht". Partial index op proactief: gewone berichten hebben proactief_datum
+-- null en raken deze index niet.
+create unique index messages_proactief_dag_idx
+  on public.messages (client_id, proactief_datum) where proactief;
 
 -- ── 5. RPC ai_gebruik_deze_maand: de teller voor het dashboard ──
 -- Coach-only; lau-reply telt zelf met de service role en heeft deze RPC niet nodig.

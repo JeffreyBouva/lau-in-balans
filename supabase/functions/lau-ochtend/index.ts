@@ -3,16 +3,18 @@
 // Supabase-dashboard (±10:30 Europe/Amsterdam) met de header x-cron-secret; er komt
 // geen JWT aan te pas, de functie draait volledig met de service role.
 //
-// Idempotent: draait 'ie twee keer op een dag, dan slaat de proactief-check van ronde
-// twee alle klanten van ronde één over. Handmatig triggeren (curl met de secret) is
-// dus veilig.
+// Idempotent, op twee niveaus: de proactief-check hieronder slaat klanten over die
+// vandaag al een bericht kregen, en het unique index messages_proactief_dag_idx maakt
+// er een DB-garantie van — check en insert zijn niet atomair, dus twee runs die elkaar
+// overlappen zouden er anders allebei doorheen glippen. Handmatig triggeren (curl met
+// de secret) is dus veilig, ook naast de lopende cron.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import Anthropic from 'npm:@anthropic-ai/sdk';
 import { GUARDRAILS } from '../_shared/guardrails.ts';
 import {
   amsterdamseDatum,
+  bepaalLimiet,
   dagStartAmsterdamUTC,
-  leesMaandlimiet,
   maandStartAmsterdamUTC,
 } from '../_shared/limiet.ts';
 
@@ -31,6 +33,19 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
+/**
+ * De voornaam zoals die de prompt en het bericht in mag: eerste token, hooguit 40
+ * tekens, en uitsluitend letters (unicode — José, Ayşe, Sørine), apostrof of
+ * koppelteken. clients.naam is door de klant zelf ingevuld; alles wat daar niet als
+ * naam uitziet (cijfers, leestekens, een zin, een instructie aan Lau) levert een lege
+ * string op en dan groeten we zonder naam. Liever geen naam dan rommel in de aanhef —
+ * of in de systemprompt.
+ */
+function veiligeVoornaam(naam: string | null): string {
+  const eerste = (naam ?? '').trim().split(/\s+/)[0] ?? '';
+  return /^\p{L}[\p{L}'’-]{0,39}$/u.test(eerste) ? eerste : '';
+}
+
 Deno.serve(async (req) => {
   // 1. De secret-header IS de poort (verify_jwt staat uit voor deze function). Een
   //    ontbrekende CRON_SECRET-env mag daarom nooit fail-open zijn: zonder deze
@@ -46,17 +61,33 @@ Deno.serve(async (req) => {
     { auth: { persistSession: false } },
   );
 
-  // 2. Killswitch (A14). Alles behalve exact `true` betekent stil blijven — ook een
-  //    DB-fout of een ontbrekende rij. Fail-CLOSED is hier het juiste gedrag: een
-  //    ochtend zonder bericht merkt niemand, zes ongewenste berichten wel.
-  const { data: configRij } = await db.from('app_config').select('value')
+  // 2. Killswitch (A14). Alle drie de uitkomsten zijn "niet versturen", maar ze zeggen
+  //    iets anders in de cron-logs: een storing hoort niet als een bewuste uit-stand te
+  //    lezen, en een ontbrekende rij betekent meestal "migratie nog niet gepusht".
+  const { data: configRij, error: configFout } = await db.from('app_config').select('value')
     .eq('key', 'ochtendbericht_actief').maybeSingle();
-  if ((configRij as { value: unknown } | null)?.value !== true) {
-    return json({ status: 'uit' });
+  if (configFout) {
+    console.error('lau-ochtend: killswitch lezen mislukt:', configFout.message);
+    return json({ status: 'storing' }, 503);
   }
+  if (configRij == null) return json({ status: 'geen-config' });
+  if ((configRij as { value: unknown }).value !== true) return json({ status: 'uit' });
 
+  // 3. De config-default één keer lezen (niet per klant). Faalt dit, dan breken we af:
+  //    doorgaan met de ingebakken 300 zou de limiet van Laura stil kunnen negeren.
+  const { data: limietConfig, error: limietConfigFout } = await db.from('app_config')
+    .select('value').eq('key', 'ai_maandlimiet').maybeSingle();
+  if (limietConfigFout) {
+    console.error('lau-ochtend: ai_maandlimiet lezen mislukt:', limietConfigFout.message);
+    return json({ status: 'storing' }, 503);
+  }
+  const configLimiet = (limietConfig as { value: unknown } | null)?.value;
+
+  // Gestopte klanten krijgen geen ochtendbericht meer: het traject is afgelopen, ook al
+  // staat de tier nog op coached (dat is wat de migratie-comment bij ai_limiet bedoelt
+  // met "wie dat wil zet de klant op status 'gestopt'").
   const { data: klantenData, error: klantenError } = await db.from('clients')
-    .select('id, naam, ai_limiet').eq('tier', 'coached');
+    .select('id, naam, ai_limiet').eq('tier', 'coached').neq('status', 'gestopt');
   if (klantenError) {
     console.error('lau-ochtend: klanten laden mislukt:', klantenError.message);
     return new Response('tijdelijk niet beschikbaar', { status: 503 });
@@ -78,7 +109,7 @@ Deno.serve(async (req) => {
   // rest niet blokkeren (vandaar de try/catch binnen de lus).
   for (const klant of klanten) {
     try {
-      // 3. Vier goedkope checks parallel; head+count haalt geen rijen op, we willen
+      // 4. Vier goedkope checks parallel; head+count haalt geen rijen op, we willen
       //    alleen weten óf ze bestaan.
       const [profielRes, logRes, proactiefRes, usageRes] = await Promise.all([
         db.from('ai_profile_versions').select('id', { count: 'exact', head: true })
@@ -101,15 +132,14 @@ Deno.serve(async (req) => {
       if ((proactiefRes.count ?? 0) > 0) { overgeslagen.alBericht++; continue; }
       // D7: wie op de limiet zit krijgt geen ongevraagd bericht — anders is de klant
       // z'n laatste gesprek kwijt aan iets wat 'ie niet gevraagd heeft.
-      const limiet = await leesMaandlimiet(db, klant.ai_limiet);
+      const limiet = bepaalLimiet(klant.ai_limiet, configLimiet);
       if ((usageRes.count ?? 0) >= limiet) { overgeslagen.limiet++; continue; }
 
-      // clients.naam is not null, maar een lege naam mag geen "Goedemorgen  ☀️" geven.
-      const voornaam = (klant.naam ?? '').trim().split(/\s+/)[0] ?? '';
+      const voornaam = veiligeVoornaam(klant.naam);
       const aanhef = voornaam ? `Goedemorgen ${voornaam} ☀️` : 'Goedemorgen ☀️';
       const FALLBACK = `${aanhef} Nog niets gelogd vandaag — twee tikken en je dag staat. Hoe is je ochtend?`;
 
-      // 4. Haiku schrijft het bericht; faalt dat, dan gaat de vaste tekst eruit. Een
+      // 5. Haiku schrijft het bericht; faalt dat, dan gaat de vaste tekst eruit. Een
       //    ochtendbericht overslaan omdat de API hikt zou de klant niets opleveren.
       let tekst = '';
       let inputTokens = 0;
@@ -144,15 +174,23 @@ Deno.serve(async (req) => {
       }
       if (!tekst) tekst = FALLBACK;
 
-      // 5. Het bericht is de opdracht — mislukt de insert, dan telt deze klant als
+      // 6. Het bericht is de opdracht — mislukt de insert, dan telt deze klant als
       //    fout en schrijven we géén usage-rij (er is niets verstuurd).
       const { error: insertFout } = await db.from('messages').insert({
         client_id: klant.id,
         sender: 'ai',
         tekst,
         proactief: true,
+        proactief_datum: vandaag,
       });
-      if (insertFout) throw new Error(insertFout.message);
+      if (insertFout) {
+        // 23505 = unique_violation op messages_proactief_dag_idx: een gelijktijdige run
+        // was ons net voor tussen de check en deze insert. Geen fout — de klant heeft
+        // z'n ochtendbericht, alleen niet van ons. Wel de Claude-call betaald, maar dat
+        // is de goedkope kant van "nooit twee berichten".
+        if (insertFout.code === '23505') { overgeslagen.alBericht++; continue; }
+        throw new Error(insertFout.message);
+      }
       verstuurd++;
 
       // Metering is best-effort: het bericht staat er al, een telfout mag dat niet
@@ -171,8 +209,10 @@ Deno.serve(async (req) => {
     }
   }
 
-  // 6. Aantallen terug: dit is wat Jeffrey in de cron-logs ziet staan.
-  const uitkomst = { ok: true, kandidaten: klanten.length, verstuurd, overgeslagen, fouten };
+  // 7. Aantallen terug: dit is wat Jeffrey in de cron-logs ziet staan. `bekeken` is het
+  //    aantal klanten dat we langsgingen — de echte kandidaten zijn wat er ná de skips
+  //    overblijft, en die staan in `verstuurd`.
+  const uitkomst = { ok: true, bekeken: klanten.length, verstuurd, overgeslagen, fouten };
   console.log('lau-ochtend:', JSON.stringify(uitkomst));
   return json(uitkomst);
 });

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 import type { Sender } from '@lau/shared';
 import { supabase } from '../supabase';
 
@@ -38,7 +39,14 @@ export function useBerichten(clientId: string) {
     if (!session) return;
     const { data } = await supabase.from('messages').select(KOLOMMEN)
       .order('created_at', { ascending: true });
-    if (data) setBerichten(data as Bericht[]);
+    if (data) {
+      setBerichten(data as Bericht[]);
+      // De afkap-vlag is een momentopname van één invoke, geen stand van zaken. Elke
+      // geslaagde (her)laad — mount, INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED —
+      // verdient dus een verse poging: de maand kan om zijn of Laura kan de limiet
+      // verhoogd hebben. Zit 'ie er nog steeds op, dan komt de 429 gewoon terug.
+      setLimietBereikt(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -74,7 +82,18 @@ export function useBerichten(clientId: string) {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       if (session) laad();
     });
-    return () => { supabase.removeChannel(kanaal); sub.subscription.unsubscribe(); };
+    // Zelfde gedachte, tweede ingang: wie de app wegleggt en later terugkomt hoort niet
+    // op een afkap-melding van uren geleden te stuiten. Op web is AppState de
+    // visibilitychange-API; ontbreekt die (SSR, oude browser), dan geeft
+    // addEventListener undefined terug — vandaar de optionele remove().
+    const appSub = AppState.addEventListener('change', (staat) => {
+      if (staat === 'active') setLimietBereikt(false);
+    });
+    return () => {
+      supabase.removeChannel(kanaal);
+      sub.subscription.unsubscribe();
+      appSub?.remove();
+    };
   }, [clientId, laad]);
 
   const verstuur = useCallback(async (tekst: string) => {

@@ -142,7 +142,9 @@ export default function Chat() {
             {/* Maandlimiet bereikt (429 van lau-reply): rustige systeemregel, geen kooptaal,
                 geen prijzen, geen links — het gesprek loopt via Laura. */}
             {limietBereikt && (
-              <View style={s.limiet} accessibilityRole="text">
+              // Live region: de kaart verschijnt ná een verstuurde tik, dus een
+              // schermlezer moet 'm horen zonder dat de focus verspringt.
+              <View style={s.limiet} accessibilityRole="text" accessibilityLiveRegion="polite">
                 <View style={s.limietCirkel}>
                   <Ionicons name="moon-outline" size={13} color={colors.mutedSoft} />
                 </View>
@@ -161,32 +163,32 @@ export default function Chat() {
             </View>
           </ScrollView>
 
-          {/* Quick-reply-rij — weg zolang de maandlimiet bereikt is: elke chip zou een
-              gesprek starten dat Lau toch niet beantwoordt. */}
-          {!limietBereikt && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={s.quickRij}
-              contentContainerStyle={s.quickInhoud}
-            >
-              <Pressable style={({ pressed }) => [s.actieKnop, pressed && s.gedrukt]} onPress={openLog} accessibilityRole="button">
-                <Ionicons name="add" size={18} color={colors.bgSurface} />
-                <Text style={s.actieTekst}>Ik heb gegeten</Text>
+          {/* Quick-reply-rij. Blijft ALTIJD staan: "Ik heb gegeten" is de enige ingang
+              naar de log-sheet, en loggen is geen AI-actie — dat moet gewoon door bij een
+              bereikte maandlimiet. Alleen de suggestie-chips (en hun scheiding) gaan weg:
+              elke chip zou een gesprek starten dat Lau toch niet beantwoordt. */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={s.quickRij}
+            contentContainerStyle={s.quickInhoud}
+          >
+            <Pressable style={({ pressed }) => [s.actieKnop, pressed && s.gedrukt]} onPress={openLog} accessibilityRole="button">
+              <Ionicons name="add" size={18} color={colors.bgSurface} />
+              <Text style={s.actieTekst}>Ik heb gegeten</Text>
+            </Pressable>
+            {!limietBereikt && <View style={s.scheiding} />}
+            {!limietBereikt && suggesties.map((q) => (
+              <Pressable
+                key={q}
+                style={({ pressed }) => [s.suggestie, pressed && s.gedrukt]}
+                onPress={() => { tik(); verstuur(q); }}
+                accessibilityRole="button"
+              >
+                <Text style={s.suggestieTekst}>{q}</Text>
               </Pressable>
-              <View style={s.scheiding} />
-              {suggesties.map((q) => (
-                <Pressable
-                  key={q}
-                  style={({ pressed }) => [s.suggestie, pressed && s.gedrukt]}
-                  onPress={() => { tik(); verstuur(q); }}
-                  accessibilityRole="button"
-                >
-                  <Text style={s.suggestieTekst}>{q}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          )}
+            ))}
+          </ScrollView>
 
           {/* Composer (zit boven de tabbar; bottom-padding houdt 'm er vrij van).
               Bij de maandlimiet uit: eerlijker dan een bericht laten sturen waar geen
@@ -197,6 +199,9 @@ export default function Chat() {
               value={input}
               onChangeText={setInput}
               editable={!limietBereikt}
+              // editable={false} maakt het veld visueel dood, maar zegt een schermlezer
+              // niets — deze regel wel (zelfde signaal als op de verzendknop hieronder).
+              accessibilityState={{ disabled: limietBereikt }}
               placeholder={limietBereikt ? 'Lau is er volgende maand weer voor je' : 'Schrijf iets aan Lau…'}
               placeholderTextColor={colors.mutedSoft}
               returnKeyType="send"
