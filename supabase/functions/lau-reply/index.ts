@@ -60,14 +60,20 @@ Deno.serve(async (req) => {
   });
   const weekStart = new Date();
   weekStart.setDate(weekStart.getDate() - 6);
-  const [profielRes, berichtenRes, logsRes] = await Promise.all([
+  const [profielRes, berichtenRes, logsRes, klantRes] = await Promise.all([
     db.from('ai_profile_versions').select('profiel').eq('client_id', clientId)
       .order('versie', { ascending: false }).limit(1).maybeSingle(),
     db.from('messages').select('sender, tekst').eq('client_id', clientId)
       .order('created_at', { ascending: false }).limit(20), // nieuwste 20...
     db.from('food_logs').select('porties').eq('client_id', clientId)
       .gte('datum', weekStart.toISOString().slice(0, 10)),
+    db.from('clients').select('tier').eq('id', clientId).single(),
   ]);
+
+  // Server-side enforcement: de slot-UI is geen papieren slot.
+  if ((klantRes.data as { tier?: string } | null)?.tier !== 'coached') {
+    return new Response('coached vereist', { status: 403, headers: cors });
+  }
 
   const profielRij = profielRes.data;
   if (!profielRij) return new Response('geen profiel', { status: 409, headers: cors });
