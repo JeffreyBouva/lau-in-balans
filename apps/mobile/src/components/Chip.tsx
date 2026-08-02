@@ -3,7 +3,14 @@ import { colors, radii, fontFamily } from '@/theme/tokens';
 
 export function Chip({ label, actief, onPress }: { label: string; actief: boolean; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={[s.chip, actief ? s.aan : s.uit]}>
+    <Pressable
+      onPress={onPress}
+      // Zonder role geen tabstop op react-native-web en geen "geselecteerd" in VoiceOver;
+      // de chip is een aan/uit-keuze, dus button + selected.
+      accessibilityRole="button"
+      accessibilityState={{ selected: actief }}
+      style={[s.chip, actief ? s.aan : s.uit]}
+    >
       <Text style={[s.tekst, { color: actief ? colors.sageDeeper : colors.body }]}>{label}</Text>
     </Pressable>
   );

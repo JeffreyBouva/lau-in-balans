@@ -23,7 +23,8 @@ function Gate() {
     if (!session) { if (groep !== '(auth)') router.replace('/(auth)/welkom'); return; }
     if (heeftProfiel === null) return;
     if (!heeftProfiel && groep !== '(onboarding)') { router.replace('/(onboarding)'); return; }
-    if (heeftProfiel && (groep === '(auth)' || groep === '(onboarding)')) router.replace('/(tabs)/chat');
+    // B3: de standaard-landing is Vandaag (voortgang eerst), niet de chat.
+    if (heeftProfiel && (groep === '(auth)' || groep === '(onboarding)')) router.replace('/(tabs)/vandaag');
   }, [session, heeftProfiel, laden, segments, router]);
 
   return <Stack screenOptions={{ headerShown: false }} />;

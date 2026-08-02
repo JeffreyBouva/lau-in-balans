@@ -12,16 +12,14 @@ import { supabase } from '@/lib/supabase';
 import { PrimaireKnop } from '@/components/PrimaireKnop';
 import { Chip } from '@/components/Chip';
 import { VoortgangsBalk } from '@/components/VoortgangsBalk';
-import { legeOnboarding, naarProfiel, type OnboardingState } from '@/state/onboarding';
+import {
+  legeOnboarding, naarProfiel, DOEL_OPTIES, WEEKVORM_OPTIES, VOORKEUR_OPTIES, BEPERKING_OPTIES,
+  type OnboardingState,
+} from '@/state/onboarding';
 
 const AANTAL_STAPPEN = 8;
 
 type MultiVeld = 'doelen' | 'weekvorm' | 'voorkeuren' | 'beperkingen';
-
-const DOELEN = ['Duurzaam afvallen', 'Meer energie', "Minder snacken 's avonds", 'Rust rond eten', 'Betere routine met het gezin'];
-const WEEKVORM = ['Druk gezin', 'Werk 3 dagen', 'Wisselende diensten', 'Vaak buitenshuis eten', 'Sport 2x per week'];
-const VOORKEUREN = ['Alles', 'Weinig vlees', 'Vegetarisch', 'Geen vis', 'Snel klaar (< 25 min)'];
-const BEPERKINGEN = ['Noten-allergie', 'Lactose-intolerant', 'Glutenvrij', 'Medicatie', 'Geen van deze'];
 
 const VEILIGHEID_OPTIES: { label: string; waarde: Veiligheidsvlag }[] = [
   { label: 'Nee, dat speelt niet bij mij', waarde: 'geen' },
@@ -71,7 +69,8 @@ export default function Onboarding() {
     // Zet het profiel-vlaggetje meteen op true (C2-fix), ook bij een error (bijv.
     // bestaat al), zodat de routing-gate niet terugkaatst naar onboarding.
     markProfielAangemaakt();
-    router.replace('/(tabs)/chat');
+    // B3: landen op Vandaag — voortgang eerst, dan Lau.ai, dan Eten.
+    router.replace('/(tabs)/vandaag');
   }
 
   function volgende() {
@@ -109,7 +108,7 @@ export default function Onboarding() {
         <>
           <Text style={s.titel}>Waar wil je naartoe?</Text>
           <Text style={s.subtitel}>Kies wat het meest voor je telt. Meerdere mag.</Text>
-          {chipGroep(DOELEN, 'doelen')}
+          {chipGroep(DOEL_OPTIES, 'doelen')}
         </>
       ),
     },
@@ -119,7 +118,7 @@ export default function Onboarding() {
         <>
           <Text style={s.titel}>Hoe ziet je week eruit?</Text>
           <Text style={s.subtitel}>Zo weet ik wanneer een advies realistisch is.</Text>
-          {chipGroep(WEEKVORM, 'weekvorm')}
+          {chipGroep(WEEKVORM_OPTIES, 'weekvorm')}
           <Text style={s.voetnoot}>Vertel later gerust meer in de chat — ik onthoud het.</Text>
         </>
       ),
@@ -130,7 +129,7 @@ export default function Onboarding() {
         <>
           <Text style={s.titel}>Wat eet je graag?</Text>
           <Text style={s.subtitel}>Ik stel nooit iets voor waar jij niks mee kunt.</Text>
-          {chipGroep(VOORKEUREN, 'voorkeuren')}
+          {chipGroep(VOORKEUR_OPTIES, 'voorkeuren')}
           <View style={{ gap: 8, marginTop: 8 }}>
             <Text style={s.veldLabel}>Wat eet je liever niet?</Text>
             <TextInput
@@ -150,7 +149,7 @@ export default function Onboarding() {
         <>
           <Text style={s.titel}>Is er iets waar ik op moet letten?</Text>
           <Text style={s.subtitel}>Allergieën, aandoeningen of medicatie. Alleen wat jij wilt delen.</Text>
-          {chipGroep(BEPERKINGEN, 'beperkingen')}
+          {chipGroep(BEPERKING_OPTIES, 'beperkingen')}
           <TextInput
             style={s.input}
             value={state.extra}

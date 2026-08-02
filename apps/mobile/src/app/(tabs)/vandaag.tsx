@@ -2,11 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import {
   HANDMATEN, weekNummer, vandaagISO, naarISODatum, type Porties,
 } from '@lau/shared';
 import { colors, radii, fontFamily, text } from '@/theme/tokens';
 import { supabase } from '@/lib/supabase';
+import { tik } from '@/lib/haptics';
 import { useKlantData } from '@/lib/klantdata';
 import { useOpSlot } from '@/lib/hooks/useOpSlot';
 import { useSheets } from '@/lib/sheets';
@@ -104,11 +106,23 @@ export default function Vandaag() {
         {/* De knop ziet er in alle standen hetzelfde uit (niets te flitsen). Tijdens het
             laden is de tik bewust een no-op: dan weten we nog niet of dit een free-klant
             is, en Laura's inbox is voor klanten mét traject. */}
-        <LauraKnop
-          openFlag={openFlag}
-          label={opSlot ? 'Ik heb een code' : undefined}
-          onPress={slotLaden ? () => {} : opSlot ? () => setCodeSheet(true) : openLaura}
-        />
+        <View style={s.headerKnoppen}>
+          <LauraKnop
+            openFlag={openFlag}
+            label={opSlot ? 'Ik heb een code' : undefined}
+            onPress={slotLaden ? () => {} : opSlot ? () => setCodeSheet(true) : openLaura}
+          />
+          {/* Profiel: eigen gegevens, doelen, code verzilveren en uitloggen. */}
+          <Pressable
+            onPress={() => { tik(); router.push('/profiel'); }}
+            accessibilityRole="button"
+            accessibilityLabel="Profiel"
+            hitSlop={8}
+            style={({ pressed }) => [s.profielKnop, pressed && s.gedrukt]}
+          >
+            <Ionicons name="person-circle-outline" size={28} color={colors.muted} />
+          </Pressable>
+        </View>
       </View>
 
       {/* Contactkaart */}
@@ -202,6 +216,9 @@ const s = StyleSheet.create({
   // header
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
   headerTekst: { flex: 1, gap: 8 },
+  headerKnoppen: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  profielKnop: { width: 36, height: 36, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
+  gedrukt: { opacity: 0.55, transform: [{ scale: 0.92 }] },
   hero: { fontFamily: fontFamily.serif, fontSize: 30, lineHeight: 37, letterSpacing: -0.4, color: colors.ink },
 
   // contactkaart

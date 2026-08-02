@@ -1,6 +1,20 @@
 import type { AIProfile, Veiligheidsvlag } from '@lau/shared';
 import { PORTIE_DOEL_DEFAULT } from '@lau/shared';
 
+/**
+ * Chip-opties. Ze wonen hier en niet in het onboardingscherm, omdat het profielscherm
+ * dezelfde velden bewerkt — één bron, dus onboarding en profiel blijven gelijklopen.
+ * De lijsten zijn suggesties: eigen antwoorden (uit de vrije tekstvelden of van Laura)
+ * blijven bewaard, het profielscherm toont ze als extra chip.
+ */
+export const DOEL_OPTIES = ['Duurzaam afvallen', 'Meer energie', "Minder snacken 's avonds", 'Rust rond eten', 'Betere routine met het gezin'];
+/** Weekvorm in de onboarding = knelpunten in het profiel (zie naarProfiel). */
+export const WEEKVORM_OPTIES = ['Druk gezin', 'Werk 3 dagen', 'Wisselende diensten', 'Vaak buitenshuis eten', 'Sport 2x per week'];
+export const VOORKEUR_OPTIES = ['Alles', 'Weinig vlees', 'Vegetarisch', 'Geen vis', 'Snel klaar (< 25 min)'];
+export const BEPERKING_OPTIES = ['Noten-allergie', 'Lactose-intolerant', 'Glutenvrij', 'Medicatie', 'Geen van deze'];
+/** Alleen op het profielscherm: de onboarding vraagt (nog) niet naar het check-in-ritme. */
+export const CHECKIN_RITME_OPTIES = ['Elke ochtend', 'Elke avond', 'Een paar keer per week', 'Alleen doordeweeks', 'In het weekend', 'Liever zo min mogelijk'];
+
 export type OnboardingState = {
   doelen: string[]; weekvorm: string[]; voorkeuren: string[]; beperkingen: string[];
   afkeer: string; extra: string; veiligheid: Veiligheidsvlag | null;
