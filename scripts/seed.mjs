@@ -22,6 +22,10 @@ async function wisDemoData() {
   if (error) throw error;
   const demo = data.users.filter((u) => u.email?.endsWith(`@${DOMEIN}`));
   const ids = demo.map((u) => u.id);
+  // invite_codes eerst, en onvoorwaardelijk: coach_id → coaches.id cascadeert niet,
+  // dus een achtergebleven code blokkeert het verwijderen van de demo-coaches.
+  const { error: iErr } = await db.from('invite_codes').delete().not('id', 'is', null);
+  if (iErr) throw new Error(`invite_codes opruimen: ${iErr.message}`);
   if (ids.length) {
     // FK-veilige volgorde: clients verwijzen naar coaches, dus clients eerst.
     // (Zou je een coach-auth-user eerst verwijderen terwijl haar clients nog
@@ -38,12 +42,19 @@ async function wisDemoData() {
   }
 }
 
-async function maakUser(email, naam) {
+async function maakUser(email, naam, { coach = false } = {}) {
   const { data, error } = await db.auth.admin.createUser({
     email: `${email}@${DOMEIN}`,
     password: WACHTWOORD,
     email_confirm: true,
     user_metadata: { naam },
+    // rol 'coach' in app_metadata: de vlag waarop handle_new_user coach-accounts
+    // overslaat. Bewust app_metadata en niet user_metadata: alleen de service role
+    // kan die schrijven, user_metadata vult de gebruiker bij signUp zelf.
+    // LET OP: GoTrue schrijft app_metadata pas in een UPDATE ná de insert op
+    // auth.users, dus de after-insert-trigger ziet 'rol' hier nog níét en maakt
+    // alsnog een clients-rij. Die wissen we bij het aanmaken van de coaches.
+    ...(coach ? { app_metadata: { rol: 'coach' } } : {}),
   });
   if (error) throw error;
   return data.user.id;
@@ -58,8 +69,12 @@ async function invoeg(tabel, rows) {
 await wisDemoData();
 
 // ── Coaches ──
-const lauraId = await maakUser('laura', 'Laura');
-const beaId = await maakUser('bea', 'Bea'); // tweede coach: alleen voor RLS-isolatie-tests
+const lauraId = await maakUser('laura', 'Laura', { coach: true });
+const beaId = await maakUser('bea', 'Bea', { coach: true }); // tweede coach: alleen voor RLS-isolatie-tests
+// Coaches horen géén clients-rij te hebben. De app_metadata-vlag komt bij GoTrue te
+// laat om de trigger te stoppen (zie maakUser), dus wissen we de rij die hij maakte.
+const { error: ccErr } = await db.from('clients').delete().in('id', [lauraId, beaId]);
+if (ccErr) throw new Error(`coach-clients-rijen wissen: ${ccErr.message}`);
 await invoeg('coaches', [
   { id: lauraId, naam: 'Laura' },
   { id: beaId, naam: 'Bea' },
@@ -78,6 +93,12 @@ const klanten = {};
 for (const spec of klantSpecs) {
   const id = await maakUser(spec.email, spec.naam);
   klanten[spec.email] = id;
+  // handle_new_user maakte zojuist al een rij (tier 'free', coach_id null). Wissen en
+  // opnieuw inserten — upserten kán niet: de seed backdate't startdatum en
+  // clients_guard_update weigert elke wijziging daarvan op UPDATE. Veilig: de
+  // trigger-rij is seconden oud en heeft nog geen kinderen.
+  const { error: dErr } = await db.from('clients').delete().eq('id', id);
+  if (dErr) throw new Error(`trigger-rij ${spec.email} wissen: ${dErr.message}`);
   await invoeg('clients', [{
     id,
     coach_id: lauraId,
@@ -85,6 +106,7 @@ for (const spec of klantSpecs) {
     leeftijd: spec.leeftijd,
     startdatum: isoDatum(dagenGeleden((spec.week - 1) * 7 + 1)),
     status: spec.status,
+    tier: 'coached',
   }]);
 }
 const sanne = klanten.sanne;
