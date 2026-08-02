@@ -91,9 +91,16 @@ begin
   if exists (select 1 from public.clients c where c.id = auth.uid() and c.tier = 'coached') then
     return false;
   end if;
+  -- Geen klant-account (bijv. coach-login in de app) → zelfde 'false' als elke andere
+  -- mislukking: geen oracle, en de FK op used_by kan nooit een rauwe error lekken.
+  if not exists (select 1 from public.clients c where c.id = auth.uid()) then
+    return false;
+  end if;
+  -- Claim óók op used_at: een verwijderde klant (used_by → null via FK) mag z'n
+  -- verbrande code niet laten herrijzen.
   update public.invite_codes
      set used_by = auth.uid(), used_at = now()
-   where upper(code) = upper(trim(p_code)) and used_by is null
+   where upper(code) = upper(trim(p_code)) and used_by is null and used_at is null
   returning coach_id into v_coach;
   if v_coach is null then
     return false;
