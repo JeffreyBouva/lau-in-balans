@@ -6,10 +6,14 @@ import { useParams } from 'next/navigation';
 import type { ClientStatus } from '@lau/shared';
 import { naarISODatum, vandaagISO, weekNummer } from '@lau/shared';
 import { ChatBubbel } from '@/components/ChatBubbel';
+import { FlagKaart } from '@/components/FlagKaart';
 import { Knop } from '@/components/Knop';
+import { Notities } from '@/components/Notities';
 import { StatusChip } from '@/components/StatusChip';
+import { VoedingsWeek } from '@/components/VoedingsWeek';
 import { supabase } from '@/lib/supabase';
 import { useKlantChat } from '@/lib/hooks/useKlantChat';
+import { useKlantContext } from '@/lib/hooks/useKlantContext';
 
 const veld =
   'w-full resize-y rounded-input border border-hairline bg-surface px-3.5 py-2.5 text-sm ' +
@@ -22,6 +26,7 @@ export default function KlantDetailPagina() {
   const clientId = id ?? '';
   const klantStand = useKlant(clientId);
   const chat = useKlantChat(clientId);
+  const context = useKlantContext(clientId);
   const [concept, setConcept] = useState('');
   const onderRef = useRef<HTMLDivElement>(null);
 
@@ -94,8 +99,8 @@ export default function KlantDetailPagina() {
         </div>
       </header>
 
-      {/* Twee kolommen: de chat blijft gecentreerd tot taak 4 de context-zijbalk
-          (flags, voedingsweek, notities) rechts ernaast hangt. */}
+      {/* Twee kolommen: gesprek links, context-zijbalk rechts. Onder lg valt de
+          zijbalk weg — het gesprek is het werk, de context is naslag. */}
       <div className="mt-8 flex gap-8">
         <section aria-label="Gesprek" className="mx-auto flex w-full max-w-2xl min-w-0 flex-col">
           {chat.fout && (
@@ -172,7 +177,70 @@ export default function KlantDetailPagina() {
           </form>
         </section>
 
-        {/* Taak 4: <aside> met flags, voedingsweek en notities komt hier. */}
+        <aside
+          aria-label={`Context van ${klant.naam}`}
+          className="hidden w-80 shrink-0 flex-col gap-5 lg:flex"
+        >
+          {context.fout && (
+            <div role="alert" className="rounded-card border border-clay-border bg-clay-soft p-4">
+              <p className="text-sm text-clay-ink">{context.fout}</p>
+              <Knop
+                variant="secundair"
+                onClick={context.herlaad}
+                disabled={context.bezig}
+                className="mt-3"
+              >
+                {context.bezig ? 'Bezig…' : 'Opnieuw proberen'}
+              </Knop>
+            </div>
+          )}
+
+          {context.laden ? (
+            <ZijbalkSkelet />
+          ) : (
+            <>
+              {/* Bovenaan en in clay: een open flag betekent dat een klant op een mens
+                  wacht — dat mag de aandacht trekken die het verdient. */}
+              {context.flags.length > 0 && (
+                <section aria-labelledby="flags-kop">
+                  <h2 id="flags-kop" className="text-xs tracking-[0.12em] text-body uppercase">
+                    {context.flags.length === 1 ? 'Open flag' : `Open flags (${context.flags.length})`}
+                  </h2>
+                  <ul className="mt-2 flex flex-col gap-2.5">
+                    {context.flags.map((flag) => (
+                      <li key={flag.id}>
+                        <FlagKaart
+                          flag={flag}
+                          nu={nu}
+                          bezig={context.bezigeFlag === flag.id}
+                          opAfronden={(flagId) => void context.rondFlagAf(flagId)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                  {context.flagFout && (
+                    <p role="alert" className="mt-2 text-sm text-clay-ink">
+                      {context.flagFout}
+                    </p>
+                  )}
+                </section>
+              )}
+
+              <VoedingsWeek
+                dagen={context.dagen}
+                gemiddelden={context.gemiddelden}
+                dagenMetLog={context.dagenMetLog}
+              />
+
+              <Notities
+                notities={context.notities}
+                opOpslaan={context.voegNotitieToe}
+                bezig={context.notitieBezig}
+                fout={context.notitieFout}
+              />
+            </>
+          )}
+        </aside>
       </div>
     </main>
   );
@@ -258,6 +326,22 @@ function Statuspagina({ children, rol }: { children: React.ReactNode; rol?: 'ale
         ← Klanten
       </Link>
     </main>
+  );
+}
+
+function ZijbalkSkelet() {
+  return (
+    <div className="flex flex-col gap-5" aria-busy="true">
+      <span className="sr-only">Klantcontext laden…</span>
+      {[160, 200].map((hoogte) => (
+        <div
+          key={hoogte}
+          aria-hidden="true"
+          style={{ height: hoogte }}
+          className="animate-pulse rounded-card border border-hairline bg-surface"
+        />
+      ))}
+    </div>
   );
 }
 
