@@ -1,24 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import type { ClientStatus, Sender } from '@lau/shared';
+import type { Sender } from '@lau/shared';
 import { vandaagISO, weekNummer } from '@lau/shared';
 import { Knop } from '@/components/Knop';
+import { StatusChip } from '@/components/StatusChip';
 import { useCoach } from '@/lib/coach';
 import { useKlanten, type KlantRij } from '@/lib/hooks/useKlanten';
 import { relatieveTijd } from '@/lib/tijd';
-
-/*
- * Kleurregel: sage = klant & voortgang, clay = coach-aandacht. Vandaar 'stil' in
- * clay (die klant vraagt om een zetje) en 'actief' juist rustig-neutraal: als vier
- * van de zes rijen groen oplichten, licht er niets meer op.
- */
-const statusStijl: Record<ClientStatus, string> = {
-  nieuw: 'border-sage-soft-border bg-sage-soft text-sage-ink',
-  actief: 'border-hairline-soft bg-surface-sunken text-body',
-  stil: 'border-clay-border bg-clay-soft text-clay-ink',
-  gestopt: 'border-hairline bg-neutral-soft text-muted',
-};
 
 export default function KlantenPagina() {
   const { coach } = useCoach();
@@ -86,11 +75,7 @@ function KlantRegel({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <span className="font-serif text-lg leading-tight text-ink">{klant.naam}</span>
-          <span
-            className={`rounded-full border px-2.5 py-0.5 text-xs ${statusStijl[klant.status]}`}
-          >
-            {klant.status}
-          </span>
+          <StatusChip status={klant.status} />
           <span className="text-xs text-muted">Week {weekNummer(klant.startdatum, vandaag)}</span>
         </div>
 
