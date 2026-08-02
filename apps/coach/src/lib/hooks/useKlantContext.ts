@@ -10,10 +10,13 @@ import { useCoach } from '@/lib/coach';
 const VENSTER = 7;
 /** Ruim boven wat Laura in één blik leest; oudere notities horen in het klantdossier. */
 const NOTITIE_LIMIET = 20;
+/** Zelfde getal als de seed van app_config.ai_maandlimiet (fase 7-migratie). */
+const STANDAARD_MAANDLIMIET = 300;
 
 const LAADFOUT = 'De klantcontext laden lukte niet — probeer opnieuw.';
 const FLAGFOUT = 'Deze flag afronden lukte niet — probeer het opnieuw.';
 const NOTITIEFOUT = 'Je notitie opslaan lukte niet — probeer het opnieuw.';
+const LIMIETFOUT = 'De limiet opslaan lukte niet — probeer het opnieuw.';
 
 export type OpenFlag = {
   id: string;
@@ -44,15 +47,32 @@ export type HandmaatGemiddelde = {
   doel: number;
 };
 
-type Context = {
-  flags: OpenFlag[];
+/** De drie staafjes-velden apart: `aggregeer` levert precies dit blok. */
+type Week = {
   dagen: Voedingsdag[];
   gemiddelden: HandmaatGemiddelde[];
   dagenMetLog: number;
-  notities: Notitie[];
-  /** Nummer van de hoogste (= actieve) profielversie; null zonder profiel. */
-  profielVersie: number | null;
 };
+
+/** Het Lau-gebruik van deze maand plus de limiet die erbij hoort. */
+type Gebruik = {
+  /** Beantwoorde Lau-berichten deze kalendermaand (Europe/Amsterdam, zie de RPC). */
+  gebruik: number;
+  /** Eigen maandlimiet van deze klant; null = de standaard uit app_config. */
+  eigenLimiet: number | null;
+  /** Standaard-maandlimiet uit app_config; STANDAARD_MAANDLIMIET zolang die rij ontbreekt. */
+  standaardLimiet: number;
+  /** false = de fase 7-migratie staat nog niet in de database (teller/limiet bestaan niet). */
+  gebruikBeschikbaar: boolean;
+};
+
+type Context = Week &
+  Gebruik & {
+    flags: OpenFlag[];
+    notities: Notitie[];
+    /** Nummer van de hoogste (= actieve) profielversie; null zonder profiel. */
+    profielVersie: number | null;
+  };
 
 /**
  * Alles wat aan één klant hangt in één state-object, getagd met de clientId waarvoor
@@ -98,11 +118,7 @@ function veiligePorties(waarde: unknown, standaard: Porties): Porties {
  * handpalm eiwit op de dagen dat je logt" is coachbare informatie, terwijl delen door
  * 7 vooral meet hoe vaak er gelogd is — dat staat al in `dagenMetLog`.
  */
-function aggregeer(
-  rijen: LogRij[],
-  venster: string[],
-  doelen: Porties,
-): Omit<Context, 'flags' | 'notities' | 'profielVersie'> {
+function aggregeer(rijen: LogRij[], venster: string[], doelen: Porties): Week {
   const perDag = new Map<string, Porties>(venster.map((datum) => [datum, { ...LEGE_PORTIES }]));
   const gelogd = new Set<string>();
   for (const rij of rijen) {
@@ -140,24 +156,48 @@ function aggregeer(
   return { dagen, gemiddelden, dagenMetLog };
 }
 
+/**
+ * Herkent "dit object bestaat nog niet" — dan is de fase7-migratie nog niet gepusht.
+ * PGRST202 = functie niet in de schema-cache · 42883 = undefined_function ·
+ * 42703 = undefined_column (clients.ai_limiet) · 42P01 = undefined_table · 42501 =
+ * geen execute-recht (de grant hoort bij dezelfde migratie). Bewust lokaal en niet
+ * gedeeld met useInvites: welke codes "nog niet gepusht" betekenen verschilt per fase.
+ */
+function ontbreektNog(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  if (['PGRST202', '42883', '42703', '42P01', '42501'].includes(error.code ?? '')) return true;
+  const m = (error.message ?? '').toLowerCase();
+  return m.includes('schema cache'); // bewust smal: 'does not exist' matcht ook onverwante schemafouten
+}
+
 /** Lege week met de standaarddoelen — de stand vóór (of ná een mislukte) fetch. */
 function legeContext(): Context {
   return {
     flags: [],
     notities: [],
     profielVersie: null,
+    gebruik: 0,
+    eigenLimiet: null,
+    standaardLimiet: STANDAARD_MAANDLIMIET,
+    // Zonder verse teller liever géén getallen: "0 van 300" zou een verzonnen stand
+    // zijn. De foutmelding boven de zijbalk vertelt intussen wat er echt aan de hand is.
+    gebruikBeschikbaar: false,
     ...aggregeer([], laatsteDagen(VENSTER), PORTIE_DOEL_DEFAULT),
   };
 }
 
 /**
- * Vier lichte query's parallel (A11: zes klanten, geen view-optimalisatie). Gooit door
+ * Zeven lichte query's parallel (A11: zes klanten, geen view-optimalisatie). Gooit door
  * bij élke fout: een mislukte deelquery zou anders als "geen flags" of "niets gelogd"
  * op het scherm belanden — precies het soort stilte waar een coach op afgaat.
+ *
+ * Uitzondering: de drie fase 7-query's (teller, eigen limiet, config-default) mogen
+ * ontbreken zolang die migratie niet gepusht is. Dat is geen storing maar een bekende
+ * tussenstand, en de rest van de zijbalk werkt gewoon — zie `ontbreektNog`.
  */
 async function haalContext(clientId: string): Promise<Context> {
   const venster = laatsteDagen(VENSTER);
-  const [flags, logs, profiel, notities] = await Promise.all([
+  const [flags, logs, profiel, notities, gebruik, limiet, config] = await Promise.all([
     supabase
       .from('flags')
       .select('id, tekst, redenen, created_at')
@@ -186,20 +226,44 @@ async function haalContext(clientId: string): Promise<Context> {
       // Twee notities op dezelfde dag houden zo een vaste volgorde (datum is een date).
       .order('created_at', { ascending: false })
       .limit(NOTITIE_LIMIET),
+    // Coach-only RPC; telt de kalendermaand in Europe/Amsterdam (de app-tijdzone).
+    supabase.rpc('ai_gebruik_deze_maand', { p_client: clientId }),
+    // Aparte mini-query i.p.v. meeliften op useKlant: die hook kent geen herlaadpad,
+    // en na `stelLimietIn` moet dit getal meteen weer kloppen.
+    supabase.from('clients').select('ai_limiet').eq('id', clientId).maybeSingle(),
+    supabase.from('app_config').select('value').eq('key', 'ai_maandlimiet').maybeSingle(),
   ]);
   if (flags.error) throw flags.error;
   if (logs.error) throw logs.error;
   if (profiel.error) throw profiel.error;
   if (notities.error) throw notities.error;
+  // Alleen "bestaat nog niet" is hier zacht; een échte storing (geen recht, netwerk)
+  // hoort net zo hard door te gooien als de vier query's hierboven.
+  const fase7Ontbreekt = ontbreektNog(gebruik.error) || ontbreektNog(limiet.error);
+  if (gebruik.error && !ontbreektNog(gebruik.error)) throw gebruik.error;
+  if (limiet.error && !ontbreektNog(limiet.error)) throw limiet.error;
 
   // Nog geen profiel (klant midden in de onboarding) → de standaarddoelen.
   const profielRij = profiel.data as { versie: number; profiel: AIProfile } | null;
   const doelen = veiligePorties(profielRij?.profiel?.portiedoelen, PORTIE_DOEL_DEFAULT);
 
+  // Alle drie via Number(): het zijn een RPC-uitkomst, een nullable kolom en jsonb —
+  // het type zegt niets over wat er echt staat, en een NaN in de balk is onbruikbaar.
+  const geteld = Number(gebruik.data);
+  const eigen = Number((limiet.data as { ai_limiet: number | null } | null)?.ai_limiet);
+  // Ontbrekende of onzinnige config → de seed-waarde; de rij is niet kritiek genoeg
+  // om de zijbalk voor te laten vallen (config.error blijft daarom ongemoeid).
+  const standaard = Number((config.data as { value: unknown } | null)?.value);
+
   return {
     flags: (flags.data ?? []) as OpenFlag[],
     notities: (notities.data ?? []) as Notitie[],
     profielVersie: profielRij?.versie ?? null,
+    gebruik: Number.isFinite(geteld) ? Math.max(0, Math.trunc(geteld)) : 0,
+    eigenLimiet: Number.isFinite(eigen) && eigen > 0 ? Math.trunc(eigen) : null,
+    standaardLimiet:
+      Number.isFinite(standaard) && standaard > 0 ? Math.trunc(standaard) : STANDAARD_MAANDLIMIET,
+    gebruikBeschikbaar: !fase7Ontbreekt,
     ...aggregeer((logs.data ?? []) as LogRij[], venster, doelen),
   };
 }
@@ -208,8 +272,8 @@ async function haalContext(clientId: string): Promise<Context> {
  * De context-zijbalk van één klant: open flags (live), de voedingsweek en de notities.
  *
  * Flags hebben realtime nodig — een klant die om Laura vraagt terwijl het scherm
- * openstaat, mag niet wachten op een refresh. Eén tik herlaadt het hele blok: bij vier
- * lichte query's weegt één code-pad zwaarder dan het uitsparen van drie requests.
+ * openstaat, mag niet wachten op een refresh. Eén tik herlaadt het hele blok: bij zeven
+ * lichte query's weegt één code-pad zwaarder dan het uitsparen van zes requests.
  */
 export function useKlantContext(clientId: string) {
   const { coach } = useCoach();
@@ -291,6 +355,7 @@ export function useKlantContext(clientId: string) {
   // pas ná de re-render zichtbaar in deze closures.
   const flagRef = useRef(false);
   const notitieRef = useRef(false);
+  const limietRef = useRef(false);
 
   /** true = afgerond (de kaart verdwijnt uit de open-lijst). */
   const rondFlagAf = useCallback(
@@ -387,6 +452,51 @@ export function useKlantContext(clientId: string) {
     [clientId],
   );
 
+  /**
+   * De maandlimiet van deze klant zetten (`null` = terug naar de standaard uit
+   * app_config). `error` is null bij succes; de tekst is bedoeld om te tonen.
+   */
+  const stelLimietIn = useCallback(
+    async (waarde: number | null): Promise<{ error: string | null }> => {
+      // Er loopt er al één: die schrijft dezelfde knopstand weg, dus geen tweede ronde
+      // en ook geen foutmelding voor een klik die niets kapotmaakt.
+      if (limietRef.current) return { error: null };
+      limietRef.current = true;
+
+      // De guard-trigger op clients bevriest alleen id/coach_id/startdatum/created_at;
+      // coach_wijzigt_klanten dekt deze update al. De check-constraint eist null of > 0.
+      const stel = () =>
+        supabase.from('clients').update({ ai_limiet: waarde }).eq('id', clientId).select('id');
+      let { data, error } = await stel();
+      if (error && !ontbreektNog(error)) {
+        // Vrijwel altijd een verlopen token (laptop uit slaapstand) → sessie verversen
+        // en precies één keer opnieuw proberen. Bij een ontbrekende kolom heeft dat geen zin.
+        await supabase.auth.refreshSession();
+        ({ data, error } = await stel());
+      }
+
+      limietRef.current = false;
+      // LET OP: een door RLS geweigerde update geeft géén error maar 0 rijen — zonder
+      // deze telling zou een mislukte wijziging als succes op het scherm komen.
+      if (error || (data ?? []).length === 0) {
+        console.error('[klantcontext] limiet opslaan mislukt:', error?.message ?? '0 rijen geraakt');
+        if (ontbreektNog(error)) {
+          // De migratie blijkt tóch niet gepusht (kolom weg, cache verlopen): het blok
+          // valt terug op zijn neutrale regel in plaats van een knop die nooit werkt.
+          setStand((s) => (s?.clientId === clientId ? { ...s, gebruikBeschikbaar: false } : s));
+          return { error: null };
+        }
+        return { error: LIMIETFOUT };
+      }
+
+      // Herladen i.p.v. de waarde lokaal wegschrijven: het blok toont "N van M" mét
+      // deze limiet, en zo staat er precies wat de database ervan gemaakt heeft.
+      setTik((t) => t + 1);
+      return { error: null };
+    },
+    [clientId],
+  );
+
   return {
     flags: actueel?.flags ?? [],
     dagen: actueel?.dagen ?? [],
@@ -394,6 +504,12 @@ export function useKlantContext(clientId: string) {
     dagenMetLog: actueel?.dagenMetLog ?? 0,
     notities: actueel?.notities ?? [],
     profielVersie: actueel?.profielVersie ?? null,
+    gebruik: actueel?.gebruik ?? 0,
+    eigenLimiet: actueel?.eigenLimiet ?? null,
+    standaardLimiet: actueel?.standaardLimiet ?? STANDAARD_MAANDLIMIET,
+    /** false = fase 7 staat nog niet in de database; het blok toont dan geen getallen. */
+    gebruikBeschikbaar: actueel?.gebruikBeschikbaar ?? false,
+    stelLimietIn,
     /** Alleen de allereerste keer: een retry laat de laatste stand staan. */
     laden: actueel === null,
     fout: actueel?.fout ?? null,

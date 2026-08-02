@@ -7,6 +7,7 @@ import { naarISODatum, vandaagISO, weekNummer } from '@lau/shared';
 import { ChatBubbel } from '@/components/ChatBubbel';
 import { FlagKaart } from '@/components/FlagKaart';
 import { Knop, knopStijl } from '@/components/Knop';
+import { LauGebruik } from '@/components/LauGebruik';
 import { Notities } from '@/components/Notities';
 import { Statuspagina } from '@/components/Statuspagina';
 import { StatusChip } from '@/components/StatusChip';
@@ -253,6 +254,16 @@ export default function KlantDetailPagina() {
                   Profiel bewerken
                 </Link>
               </section>
+
+              {/* Onder het profiel, boven de notities: het gebruik hoort bij Lau's
+                  werk aan deze klant, niet bij Laura's eigen aantekeningen. */}
+              <LauGebruik
+                gebruik={context.gebruik}
+                eigenLimiet={context.eigenLimiet}
+                standaardLimiet={context.standaardLimiet}
+                beschikbaar={context.gebruikBeschikbaar}
+                opOpslaan={context.stelLimietIn}
+              />
 
               <Notities
                 notities={context.notities}
