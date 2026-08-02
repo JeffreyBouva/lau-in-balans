@@ -8,8 +8,7 @@ import {
 import { colors, radii, fontFamily, text } from '@/theme/tokens';
 import { supabase } from '@/lib/supabase';
 import { useKlantData } from '@/lib/klantdata';
-import { useSessie } from '@/lib/sessie';
-import { useConfig } from '@/lib/hooks/useConfig';
+import { useOpSlot } from '@/lib/hooks/useOpSlot';
 import { useSheets } from '@/lib/sheets';
 import { LauraKnop } from '@/components/LauraKnop';
 import { SlotKaart } from '@/components/SlotKaart';
@@ -41,11 +40,10 @@ export default function Vandaag() {
 
   const { berichten, openFlag, week, herlaad } = useKlantData();
   const { openLaura } = useSheets();
-  // Alleen een expliciete 'free' zet het slot erop: zolang de tier laadt is 'ie null en
-  // rendert het scherm gewoon open (geen slot-flits bij een coached klant).
-  const { tier } = useSessie();
-  const { slotenActief } = useConfig();
-  const opSlot = tier === 'free' && slotenActief;
+  // Drie standen in plaats van twee: zolang het oordeel laadt blijven de tier-gevoelige
+  // posities leeg. Dat is de kleinste ingreep die béide flitsen voorkomt — geen slot dat
+  // een coached klant even ziet, en geen coach-blok dat een free klant even ziet.
+  const { opSlot, laden: slotLaden } = useOpSlot();
   // De Laura-sheet is coach-contact; bij free opent de knop de code-sheet in plaats daarvan.
   const [codeSheet, setCodeSheet] = useState(false);
 
@@ -103,14 +101,18 @@ export default function Vandaag() {
           {weekNr != null && <Text style={text.eyebrow}>Week {weekNr}</Text>}
           <Text style={s.hero}>{hero}</Text>
         </View>
+        {/* Bewust op `opSlot` en niet op de laad-staat: de knop ziet er in beide gevallen
+            hetzelfde uit (dus niets te flitsen), en tijdens het laden is geen flag naar
+            Laura sturen de veilige kant — die inbox is voor klanten mét traject. */}
         <LauraKnop openFlag={openFlag} onPress={opSlot ? () => setCodeSheet(true) : openLaura} />
       </View>
 
       {/* Contactkaart */}
-      {opSlot ? (
+      {slotLaden ? null : opSlot ? (
         <SlotKaart
           titel="Contact met Lau en Laura"
           uitleg="Zie hier hoe vaak jullie contact hadden en waar jullie samen aan werken."
+          onCode={() => setCodeSheet(true)}
         />
       ) : (
         <View style={s.contactKaart}>
@@ -156,10 +158,11 @@ export default function Vandaag() {
 
       {/* Waar we aan werken + afspraak — bij free samen één slot-kaart, het zijn allebei
           dingen die uit het traject met Laura komen. */}
-      {opSlot ? (
+      {slotLaden ? null : opSlot ? (
         <SlotKaart
           titel="Waar jullie aan werken"
           uitleg="Werkpunten en je afspraken met Laura verschijnen hier zodra je een traject volgt."
+          onCode={() => setCodeSheet(true)}
         />
       ) : (
         <>
@@ -182,7 +185,8 @@ export default function Vandaag() {
         </>
       )}
 
-      {opSlot && <CodeSheet zichtbaar={codeSheet} onSluit={() => setCodeSheet(false)} />}
+      {/* Buiten de slot-conditie: zo overleeft de sheet het omklappen naar coached. */}
+      <CodeSheet zichtbaar={codeSheet} onSluit={() => setCodeSheet(false)} />
     </ScrollView>
   );
 }

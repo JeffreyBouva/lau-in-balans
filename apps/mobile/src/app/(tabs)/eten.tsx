@@ -6,8 +6,7 @@ import { HANDMATEN, type Handmaat } from '@lau/shared';
 import { colors, radii, fontFamily, text } from '@/theme/tokens';
 import { useKlantData } from '@/lib/klantdata';
 import { usePortiedoelen } from '@/lib/hooks/useProfiel';
-import { useSessie } from '@/lib/sessie';
-import { useConfig } from '@/lib/hooks/useConfig';
+import { useOpSlot } from '@/lib/hooks/useOpSlot';
 import { useSheets } from '@/lib/sheets';
 import { LauraKnop } from '@/components/LauraKnop';
 import { HandmaatStepper } from '@/components/HandmaatStepper';
@@ -26,10 +25,9 @@ export default function Eten() {
   const doelen = usePortiedoelen();
   const { openLaura } = useSheets();
   // Eten blijft bij free volledig open — alleen de Laura-knop (coach-contact) vraagt hier
-  // om een code. Alleen een expliciete 'free' telt: zolang de tier laadt is 'ie null.
-  const { tier } = useSessie();
-  const { slotenActief } = useConfig();
-  const opSlot = tier === 'free' && slotenActief;
+  // om een code. Er verandert niets aan de layout, dus hier valt niets te flitsen: zolang
+  // het oordeel laadt is opSlot false en gedraagt de knop zich als vanouds.
+  const { opSlot } = useOpSlot();
   const [codeSheet, setCodeSheet] = useState(false);
 
   // Dagstand + weekstaafjes verversen na terugkeer (bijv. na een log-save in de sheet).
@@ -132,7 +130,8 @@ export default function Eten() {
         ))}
       </View>
 
-      {opSlot && <CodeSheet zichtbaar={codeSheet} onSluit={() => setCodeSheet(false)} />}
+      {/* Buiten de slot-conditie: zo overleeft de sheet het omklappen naar coached. */}
+      <CodeSheet zichtbaar={codeSheet} onSluit={() => setCodeSheet(false)} />
     </ScrollView>
   );
 }

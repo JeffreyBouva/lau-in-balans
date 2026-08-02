@@ -3,6 +3,7 @@ import {
   Animated,
   Dimensions,
   Easing,
+  KeyboardAvoidingView,
   Modal,
   PanResponder,
   Platform,
@@ -21,25 +22,39 @@ import { colors, radii, shadow } from '@/theme/tokens';
  * korte ease-in naar beneden. Aan het handvat kun je de sheet naar beneden slepen om te
  * sluiten (drag voorbij de drempel of met genoeg snelheid → dicht, anders veert 'ie terug).
  * De Modal blijft gemount tot de sluit-animatie klaar is.
+ *
+ * Het toetsenbord wordt hier opgevangen, niet in de sheet-inhoud: een KeyboardAvoidingView
+ * rekent met z'n eigen frame, en binnen de sheet-body is dat frame ~0 px van de onderkant
+ * af — de verschuiving komt dan altijd op 0 uit en het toetsenbord bedekt het invoerveld.
+ * (frame.y is parent-relatief; de KAV vergelijkt frame.y + hoogte met de toetsenbordpositie.)
+ * De KAV moet dus schermvullend zijn (hier: rond de sheet, buiten de scrim).
+ *
+ * `sluitbaar={false}` zet alle sluit-wegen dicht (scrim, sleep, Android-back) — voor een
+ * sheet die midden in een actie zit en niet halverwege weg mag vallen.
  */
 export function Sheet({
   zichtbaar,
   onSluit,
   children,
   maxHeight,
+  sluitbaar = true,
 }: {
   zichtbaar: boolean;
   onSluit: () => void;
   children: ReactNode;
   maxHeight?: number;
+  sluitbaar?: boolean;
 }) {
   const schermH = Dimensions.get('window').height;
   const y = useRef(new Animated.Value(schermH)).current;
   const [gemount, setGemount] = useState(zichtbaar);
 
-  // Laatste onSluit in een ref, zodat de één-keer-aangemaakte PanResponder niet stale wordt.
+  // Laatste onSluit + sluitbaar in refs, zodat de één-keer-aangemaakte PanResponder niet
+  // stale wordt (hij ziet anders eeuwig de waarden van de eerste render).
   const sluitRef = useRef(onSluit);
   sluitRef.current = onSluit;
+  const sluitbaarRef = useRef(sluitbaar);
+  sluitbaarRef.current = sluitbaar;
 
   const springNaarOpen = () =>
     Animated.spring(y, { toValue: 0, stiffness: 220, damping: 24, mass: 1, useNativeDriver: true }).start();
@@ -65,7 +80,8 @@ export function Sheet({
   // met vaart (vy > 0.6) → sluiten via onSluit (de effect-animatie maakt het af), anders terug.
   const pan = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_e, g) => g.dy > 4 && Math.abs(g.dy) > Math.abs(g.dx),
+      onMoveShouldSetPanResponder: (_e, g) =>
+        sluitbaarRef.current && g.dy > 4 && Math.abs(g.dy) > Math.abs(g.dx),
       onPanResponderMove: (_e, g) => {
         if (g.dy > 0) y.setValue(g.dy);
       },
@@ -86,25 +102,48 @@ export function Sheet({
   const maxH: DimensionValue = maxHeight ?? '82%';
 
   return (
-    <Modal transparent visible={gemount} animationType="none" onRequestClose={onSluit} statusBarTranslucent>
+    <Modal
+      transparent
+      visible={gemount}
+      animationType="none"
+      onRequestClose={() => { if (sluitbaar) onSluit(); }}
+      statusBarTranslucent
+    >
       <View style={s.root}>
         <Animated.View style={[s.scrim, { opacity: scrimOpacity }]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={onSluit} accessibilityLabel="Sluiten" />
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={onSluit}
+            disabled={!sluitbaar}
+            accessibilityRole="button"
+            accessibilityLabel="Sluiten"
+          />
         </Animated.View>
-        <Animated.View style={[s.sheet, { maxHeight: maxH, transform: [{ translateY: y }] }]}>
-          <View style={s.greepZone} {...pan.panHandlers}>
-            <View style={s.greep} />
-          </View>
-          {children}
-        </Animated.View>
+        {/* box-none: de KAV vult het scherm (nodig voor een juiste toetsenbordmeting),
+            maar mag zelf geen tikken vangen — die horen bij de scrim eronder. */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={s.kav}
+          pointerEvents="box-none"
+        >
+          <Animated.View style={[s.sheet, { maxHeight: maxH, transform: [{ translateY: y }] }]}>
+            <View style={s.greepZone} {...pan.panHandlers}>
+              <View style={s.greep} />
+            </View>
+            {children}
+          </Animated.View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, justifyContent: 'flex-end' },
+  root: { flex: 1 },
   scrim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.scrim },
+  // De onderaan-uitlijning verhuisde van root naar de KAV: die schuift bij een open
+  // toetsenbord z'n onderrand omhoog, en de sheet gaat mee.
+  kav: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: colors.bgApp,
     borderTopLeftRadius: radii.sheetTop,

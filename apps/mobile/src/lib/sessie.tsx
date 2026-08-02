@@ -29,8 +29,9 @@ export function SessieProvider({ children }: { children: ReactNode }) {
   const [laden, setLaden] = useState(true);
   const [heeftProfiel, setHeeftProfiel] = useState<boolean | null>(null);
   const [tier, setTier] = useState<'free' | 'coached' | null>(null);
-  // Eén mislukte tier-RPC mag tierLaden niet eeuwig op true laten hangen (skeleton-stall):
-  // bij een fout renderen consumers free-UI en is herlaadTier() de "opnieuw proberen".
+  // Eén mislukte tier-RPC mag tierLaden niet eeuwig op true laten hangen (skeleton-stall).
+  // tier blijft bij een fout op null, dus consumers renderen de OPEN UI (nooit een slot op
+  // basis van een storing); herlaadTier() is de "opnieuw proberen".
   const [tierFout, setTierFout] = useState(false);
   const clientId = session?.user.id ?? null;
   // Bij een accountwissel (logout → andere login) kan een RPC van de vórige klant nog

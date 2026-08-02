@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { verzilverCode } from '@/lib/codes';
 import { useSessie } from '@/lib/sessie';
 import { colors, fontFamily, text } from '@/theme/tokens';
@@ -7,7 +7,10 @@ import { Sheet } from '@/components/Sheet';
 import { PrimaireKnop } from '@/components/PrimaireKnop';
 import { CodeInvoer } from '@/components/CodeInvoer';
 
-/** Code verzilveren vanaf een slot-staat. Na succes: tier herladen — de app klapt open. */
+/**
+ * Code verzilveren vanaf een slot-staat. Na succes: tier herladen — de app klapt open.
+ * Het toetsenbord vangt `Sheet` zelf op (schermvullende KAV daar); hier geen tweede.
+ */
 export function CodeSheet({ zichtbaar, onSluit }: { zichtbaar: boolean; onSluit: () => void }) {
   const { herlaadTier } = useSessie();
   const [code, setCode] = useState('');
@@ -15,10 +18,10 @@ export function CodeSheet({ zichtbaar, onSluit }: { zichtbaar: boolean; onSluit:
   const [bezig, setBezig] = useState(false);
 
   // Anders dan het onboarding-codescherm blijft dit component tussen twee keer openen door
-  // gemonteerd (het leeft in SlotKaart / een tabscherm). Zonder deze reset kijk je bij het
-  // heropenen naar de code en de foutmelding van de vorige poging.
+  // gemonteerd (het hangt onder een tabscherm). Resetten bij het sluiten, zoals LauraSheet:
+  // je begint schoon, en het wissen valt buiten beeld in plaats van vlak vóór het openen.
   useEffect(() => {
-    if (zichtbaar) {
+    if (!zichtbaar) {
       setCode('');
       setFout(null);
     }
@@ -40,28 +43,26 @@ export function CodeSheet({ zichtbaar, onSluit }: { zichtbaar: boolean; onSluit:
       setFout('Deze code klopt niet of is al gebruikt.');
       return;
     }
-    // Succes: de sheet sluit wel, maar dit component blijft gemonteerd — dus bezig hier
-    // wél terugzetten, anders staat de knop bij een volgende keer openen nog te draaien.
-    await herlaadTier();
-    setCode('');
+    // Eerst sluiten, dán de tier herladen: zo speelt de sluit-animatie nog vóór de schermen
+    // erachter omklappen naar hun open versie. bezig gaat hier ook terug — dit component
+    // overleeft het omklappen, anders draait de knop bij de volgende opening nog.
     setBezig(false);
     onSluit();
+    await herlaadTier();
   }
 
   return (
-    <Sheet zichtbaar={zichtbaar} onSluit={onSluit}>
-      {/* Sheet zelf heeft geen KeyboardAvoidingView: zonder deze wikkel valt het
-          invoerveld onder het toetsenbord zodra het opent. */}
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={s.inhoud}>
-          <Text style={s.titel}>Code van Laura</Text>
-          <Text style={text.body}>Vul de 6-tekencode in die je van Laura hebt gekregen.</Text>
-          <CodeInvoer waarde={code} onWijzig={(v) => { setCode(v); setFout(null); }}
-            onVoltooi={verzilver} editable={!bezig} autoFocus />
-          {fout && <Text style={[text.bodyKlein, { color: colors.clayInk }]}>{fout}</Text>}
-          <PrimaireKnop label="Verzilveren" onPress={verzilver} bezig={bezig} />
-        </View>
-      </KeyboardAvoidingView>
+    // Wegtikken terwijl de RPC loopt zou een net verbruikte code in het niets laten lopen:
+    // zolang bezig blijft de sheet staan.
+    <Sheet zichtbaar={zichtbaar} onSluit={onSluit} sluitbaar={!bezig}>
+      <View style={s.inhoud}>
+        <Text style={s.titel}>Code van Laura</Text>
+        <Text style={text.body}>Vul de 6-tekencode in die je van Laura hebt gekregen.</Text>
+        <CodeInvoer waarde={code} onWijzig={(v) => { setCode(v); setFout(null); }}
+          onVoltooi={verzilver} editable={!bezig} autoFocus />
+        {fout && <Text style={[text.bodyKlein, { color: colors.clayInk }]}>{fout}</Text>}
+        <PrimaireKnop label="Verzilveren" onPress={verzilver} bezig={bezig} />
+      </View>
     </Sheet>
   );
 }

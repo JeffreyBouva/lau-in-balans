@@ -12,6 +12,10 @@ export function LauraKnop({ openFlag, onPress }: { openFlag: boolean; onPress: (
   return (
     <Pressable
       onPress={() => { stoot(); onPress(); }}
+      // Zonder role geeft react-native-web een Pressable geen tabstop; het label vertelt
+      // wat het bolletje visueel doet (screenreaders zien de kleur niet).
+      accessibilityRole="button"
+      accessibilityLabel={openFlag ? 'Laura — bericht verstuurd' : 'Praat met Laura'}
       style={({ pressed }) => [s.knop, openFlag ? s.aan : s.uit, pressed && s.gedrukt]}
     >
       <View style={[s.bol, { backgroundColor: openFlag ? colors.sage : colors.hairlineHover }]} />

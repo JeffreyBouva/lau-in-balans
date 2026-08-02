@@ -6,13 +6,13 @@ import { weekNummer, vandaagISO, type Moment, type Porties } from '@lau/shared';
 import { colors, radii, fontFamily, text } from '@/theme/tokens';
 import { supabase } from '@/lib/supabase';
 import { useKlantData } from '@/lib/klantdata';
-import { useSessie } from '@/lib/sessie';
-import { useConfig } from '@/lib/hooks/useConfig';
+import { useOpSlot } from '@/lib/hooks/useOpSlot';
 import { useSheets } from '@/lib/sheets';
 import { chatSuggesties } from '@/lib/suggesties';
 import { tik, stoot } from '@/lib/haptics';
 import { LauraKnop } from '@/components/LauraKnop';
 import { SlotKaart } from '@/components/SlotKaart';
+import { CodeSheet } from '@/components/CodeSheet';
 import { Bericht } from '@/components/Bericht';
 import { TypIndicator } from '@/components/TypIndicator';
 
@@ -26,10 +26,11 @@ export default function Chat() {
   const insets = useSafeAreaInsets();
   const { berichten, verstuur, wachtOpLau, openFlag, dag, aiSuggesties } = useKlantData();
   const { openLaura, openLog } = useSheets();
-  // tier is null zolang 'ie laadt: alleen een expliciete 'free' zet het slot erop, anders
-  // flitst het slot-scherm voorbij bij een coached klant.
-  const { tier } = useSessie();
-  const { slotenActief } = useConfig();
+  // Zolang het oordeel laadt tonen we het chatscherm zoals het was — dat is de bestaande
+  // staat, en zo flitst het slot niet voorbij bij een coached klant of bij sloten-uit.
+  const { opSlot, laden: slotLaden } = useOpSlot();
+  const toonSlot = opSlot && !slotLaden;
+  const [codeSheet, setCodeSheet] = useState(false);
 
   // Klant (voor het weeknummer in de header).
   const [klant, setKlant] = useState<{ startdatum: string } | null>(null);
@@ -71,29 +72,9 @@ export default function Chat() {
   const datumBron = berichten[0]?.created_at ? new Date(berichten[0].created_at) : new Date();
   const datumLabel = cap(datumBron.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' }));
 
-  // Free: de hele tab zit op slot (Lau is de coachingkant). Deze early return staat ná
-  // álle hooks hierboven, zodat de hook-volgorde gelijk blijft als de tier omklapt.
-  if (tier === 'free' && slotenActief) {
-    return (
-      <View style={s.root}>
-        <View style={[s.header, { paddingTop: insets.top + 22 }]}>
-          <View style={s.avatar}>
-            <Text style={s.avatarL}>L</Text>
-          </View>
-          <View style={s.headerTekst}>
-            <Text style={text.chatNaam}>Lau.ai</Text>
-            <Text style={text.caption}>AI-voedingscoach</Text>
-          </View>
-        </View>
-        <SlotKaart
-          variant="scherm"
-          titel="Lau denkt met je mee — dag en nacht"
-          uitleg="Stel vragen over je eten, krijg warme coaching in handmaten en bouw samen aan je ritme. Laura leest mee en stelt Lau op jou af."
-        />
-      </View>
-    );
-  }
-
+  // Free: de hele tab zit op slot (Lau ís de coachingkant). Bewust géén early return maar
+  // één boom met een schakelaar erin — zo blijft de CodeSheet hieronder dezelfde instantie
+  // wanneer de tier omklapt en kan die z'n sluit-animatie afmaken.
   return (
     <View style={s.root}>
       {/* Header */}
@@ -103,77 +84,94 @@ export default function Chat() {
         </View>
         <View style={s.headerTekst}>
           <Text style={text.chatNaam}>Lau.ai</Text>
-          <Text style={text.caption}>Ingesteld door Laura{weekNr != null ? ` · week ${weekNr}` : ''}</Text>
+          <Text style={text.caption}>
+            {toonSlot ? 'AI-voedingscoach' : `Ingesteld door Laura${weekNr != null ? ` · week ${weekNr}` : ''}`}
+          </Text>
         </View>
-        <LauraKnop openFlag={openFlag} onPress={openLaura} />
+        {/* Op slot is er nog geen coach om te bereiken; de code-knop in de kaart is de weg. */}
+        {!toonSlot && <LauraKnop openFlag={openFlag} onPress={openLaura} />}
       </View>
 
-      {/* Berichtenlijst */}
-      <ScrollView
-        ref={lijstRef}
-        style={s.lijst}
-        contentContainerStyle={s.lijstInhoud}
-        onContentSizeChange={() => lijstRef.current?.scrollToEnd({ animated: false })}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Datumscheiding */}
-        <Text style={s.datum}>{datumLabel}</Text>
-
-        {berichten.map((b) => (
-          <Bericht key={b.id} bericht={b} log={b.food_log_id ? logMap[b.food_log_id] : undefined} />
-        ))}
-
-        {/* Typing-indicator zolang Lau "typt" (lau-reply loopt, ai-antwoord nog niet binnen) */}
-        {wachtOpLau && <TypIndicator />}
-
-        {/* Disclaimerregel (guardrail: geen medisch advies, Laura leest mee) */}
-        <View style={s.disclaimer}>
-          <View style={s.infoCirkel}>
-            <Text style={s.infoI}>i</Text>
-          </View>
-          <Text style={s.disclaimerTekst}>Lau geeft geen medisch advies. Laura leest mee.</Text>
-        </View>
-      </ScrollView>
-
-      {/* Quick-reply-rij */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={s.quickRij}
-        contentContainerStyle={s.quickInhoud}
-      >
-        <Pressable style={({ pressed }) => [s.actieKnop, pressed && s.gedrukt]} onPress={openLog}>
-          <Ionicons name="add" size={18} color={colors.bgSurface} />
-          <Text style={s.actieTekst}>Ik heb gegeten</Text>
-        </Pressable>
-        <View style={s.scheiding} />
-        {suggesties.map((q) => (
-          <Pressable
-            key={q}
-            style={({ pressed }) => [s.suggestie, pressed && s.gedrukt]}
-            onPress={() => { tik(); verstuur(q); }}
-          >
-            <Text style={s.suggestieTekst}>{q}</Text>
-          </Pressable>
-        ))}
-      </ScrollView>
-
-      {/* Composer (zit boven de tabbar; bottom-padding houdt 'm er vrij van) */}
-      <View style={[s.composer, { paddingBottom: insets.bottom + 76 }]}>
-        <TextInput
-          style={s.input}
-          value={input}
-          onChangeText={setInput}
-          placeholder="Schrijf iets aan Lau…"
-          placeholderTextColor={colors.mutedSoft}
-          returnKeyType="send"
-          blurOnSubmit={false}
-          onSubmitEditing={verstuurInput}
+      {toonSlot ? (
+        <SlotKaart
+          variant="scherm"
+          titel="Lau denkt met je mee — dag en nacht"
+          uitleg="Stel vragen over je eten, krijg warme coaching in handmaten en bouw samen aan je ritme. Laura leest mee en stelt Lau op jou af."
+          onCode={() => setCodeSheet(true)}
         />
-        <Pressable style={({ pressed }) => [s.verzend, pressed && s.gedrukt]} onPress={verstuurInput}>
-          <Text style={s.verzendGlyph}>↑</Text>
-        </Pressable>
-      </View>
+      ) : (
+        <>
+          {/* Berichtenlijst */}
+          <ScrollView
+            ref={lijstRef}
+            style={s.lijst}
+            contentContainerStyle={s.lijstInhoud}
+            onContentSizeChange={() => lijstRef.current?.scrollToEnd({ animated: false })}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Datumscheiding */}
+            <Text style={s.datum}>{datumLabel}</Text>
+
+            {berichten.map((b) => (
+              <Bericht key={b.id} bericht={b} log={b.food_log_id ? logMap[b.food_log_id] : undefined} />
+            ))}
+
+            {/* Typing-indicator zolang Lau "typt" (lau-reply loopt, ai-antwoord nog niet binnen) */}
+            {wachtOpLau && <TypIndicator />}
+
+            {/* Disclaimerregel (guardrail: geen medisch advies, Laura leest mee) */}
+            <View style={s.disclaimer}>
+              <View style={s.infoCirkel}>
+                <Text style={s.infoI}>i</Text>
+              </View>
+              <Text style={s.disclaimerTekst}>Lau geeft geen medisch advies. Laura leest mee.</Text>
+            </View>
+          </ScrollView>
+
+          {/* Quick-reply-rij */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={s.quickRij}
+            contentContainerStyle={s.quickInhoud}
+          >
+            <Pressable style={({ pressed }) => [s.actieKnop, pressed && s.gedrukt]} onPress={openLog}>
+              <Ionicons name="add" size={18} color={colors.bgSurface} />
+              <Text style={s.actieTekst}>Ik heb gegeten</Text>
+            </Pressable>
+            <View style={s.scheiding} />
+            {suggesties.map((q) => (
+              <Pressable
+                key={q}
+                style={({ pressed }) => [s.suggestie, pressed && s.gedrukt]}
+                onPress={() => { tik(); verstuur(q); }}
+              >
+                <Text style={s.suggestieTekst}>{q}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
+          {/* Composer (zit boven de tabbar; bottom-padding houdt 'm er vrij van) */}
+          <View style={[s.composer, { paddingBottom: insets.bottom + 76 }]}>
+            <TextInput
+              style={s.input}
+              value={input}
+              onChangeText={setInput}
+              placeholder="Schrijf iets aan Lau…"
+              placeholderTextColor={colors.mutedSoft}
+              returnKeyType="send"
+              blurOnSubmit={false}
+              onSubmitEditing={verstuurInput}
+            />
+            <Pressable style={({ pressed }) => [s.verzend, pressed && s.gedrukt]} onPress={verstuurInput}>
+              <Text style={s.verzendGlyph}>↑</Text>
+            </Pressable>
+          </View>
+        </>
+      )}
+
+      {/* Buiten de slot-conditie: zo overleeft de sheet het omklappen naar coached. */}
+      <CodeSheet zichtbaar={codeSheet} onSluit={() => setCodeSheet(false)} />
     </View>
   );
 }

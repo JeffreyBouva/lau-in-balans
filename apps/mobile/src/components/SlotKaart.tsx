@@ -1,21 +1,20 @@
-import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radii, fontFamily } from '@/theme/tokens';
-import { CodeSheet } from '@/components/CodeSheet';
 
 /**
  * Zichtbaar-maar-op-slot (fase 4-spec). Warm en eerlijk: wat het is + dat het bij een
  * coachingtraject hoort. NOOIT prijzen, links of koop-taal (App Store 3.1.3).
  * variant "kaart" = blok tussen andere kaarten; "scherm" = vult een hele tab.
  *
- * Na een geslaagde verzilvering hoeft hier niets te gebeuren: de CodeSheet herlaadt de
- * tier en de schermen die deze kaart tonen renderen vanzelf hun open versie.
+ * De CodeSheet hangt bewust niet hier maar één niveau hoger, in het scherm: twee slot-
+ * kaarten op één scherm zouden anders elk hun eigen sheet meeslepen, en de sheet moet het
+ * omklappen naar coached overleven om z'n sluit-animatie te kunnen afmaken. Na een
+ * geslaagde verzilvering hoeft deze kaart zelf niets: het scherm rendert z'n open versie.
  */
-export function SlotKaart({ titel, uitleg, variant = 'kaart' }: {
-  titel: string; uitleg: string; variant?: 'kaart' | 'scherm';
+export function SlotKaart({ titel, uitleg, onCode, variant = 'kaart' }: {
+  titel: string; uitleg: string; onCode: () => void; variant?: 'kaart' | 'scherm';
 }) {
-  const [sheetOpen, setSheetOpen] = useState(false);
   return (
     <View style={variant === 'scherm' ? s.scherm : s.kaart}>
       <View style={s.slotBol}>
@@ -28,11 +27,10 @@ export function SlotKaart({ titel, uitleg, variant = 'kaart' }: {
       <Pressable
         accessibilityRole="button"
         style={({ pressed }) => [s.knop, pressed && { opacity: 0.7 }]}
-        onPress={() => setSheetOpen(true)}
+        onPress={onCode}
       >
         <Text style={s.knopTekst}>Ik heb een code</Text>
       </Pressable>
-      <CodeSheet zichtbaar={sheetOpen} onSluit={() => setSheetOpen(false)} />
     </View>
   );
 }
