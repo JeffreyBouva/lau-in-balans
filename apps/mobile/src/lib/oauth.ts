@@ -31,7 +31,7 @@ export async function socialLogin(provider: Provider): Promise<OAuthUitkomst> {
   if (error || !data.url) return { status: 'fout', melding: FOUT };
   const res = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
   if (res.type !== 'success') {
-    // 'locked' = er liep al een auth-sessie; de rest (cancel/dismiss/opened) is gewoon afhaken.
+    // 'locked' = er liep al een auth-sessie; de rest (cancel/dismiss) is gewoon afhaken.
     return res.type === WebBrowser.WebBrowserResultType.LOCKED
       ? { status: 'fout', melding: FOUT }
       : { status: 'geannuleerd' };

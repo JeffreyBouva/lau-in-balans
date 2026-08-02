@@ -29,6 +29,9 @@ export function SessieProvider({ children }: { children: ReactNode }) {
   const [laden, setLaden] = useState(true);
   const [heeftProfiel, setHeeftProfiel] = useState<boolean | null>(null);
   const [tier, setTier] = useState<'free' | 'coached' | null>(null);
+  // Eén mislukte tier-RPC mag tierLaden niet eeuwig op true laten hangen (skeleton-stall):
+  // bij een fout renderen consumers free-UI en is herlaadTier() de "opnieuw proberen".
+  const [tierFout, setTierFout] = useState(false);
   const clientId = session?.user.id ?? null;
   // Bij een accountwissel (logout → andere login) kan een RPC van de vórige klant nog
   // onderweg zijn. Beide laders vergelijken de clientId van vóór de await met deze ref
@@ -68,14 +71,15 @@ export function SessieProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase.rpc('mijn_tier');
     if (clientIdRef.current !== eigenClientId) return;
     // Bij een fout tier op null laten: stil naar 'free' vallen zou een coached klant
-    // ten onrechte achter het slot zetten.
-    if (error) { console.warn('[tier] ophalen mislukt:', error.message); return; }
+    // ten onrechte achter het slot zetten. tierFout voorkomt dat tierLaden blijft hangen.
+    if (error) { console.warn('[tier] ophalen mislukt:', error.message); setTierFout(true); return; }
+    setTierFout(false);
     setTier(data === 'coached' ? 'coached' : 'free');
   }, []);
 
   useEffect(() => {
     clientIdRef.current = clientId;
-    if (!clientId) { setTier(null); return; }
+    if (!clientId) { setTier(null); setTierFout(false); return; }
     herlaadTier();
   }, [clientId, herlaadTier]);
 
@@ -113,7 +117,7 @@ export function SessieProvider({ children }: { children: ReactNode }) {
     <Ctx.Provider
       value={{
         session, clientId, laden, heeftProfiel, herbepaalProfiel, markProfielAangemaakt,
-        tier, tierLaden: clientId !== null && tier === null, herlaadTier,
+        tier, tierLaden: clientId !== null && tier === null && !tierFout, herlaadTier,
         login, registreer, logout,
       }}
     >
