@@ -1,12 +1,18 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { Knop } from '@/components/Knop';
 
 const veld =
-  'w-full rounded-input border border-hairline bg-surface px-3 py-2 text-sm ' +
-  'text-ink placeholder:text-body focus:border-sage focus:outline-2 focus:outline-offset-0 ' +
+  'w-full rounded-control border border-hairline-soft bg-surface px-3 py-2 text-[13px] ' +
+  'text-ink placeholder:text-muted focus:border-sage focus:outline-2 focus:outline-offset-0 ' +
   'focus:outline-sage/40';
+
+/** Zelfde knopvorm als "Bewaren" bij de notities — kolom 3 spreekt één taal (§8). */
+const knop =
+  'rounded-full border border-hairline bg-surface px-4 py-2.5 text-[12.5px] text-body ' +
+  'transition-colors duration-150 hover:border-sage hover:text-sage-deep ' +
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage ' +
+  'disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-hairline disabled:hover:text-body';
 
 /** Vanaf 90% kleurt de balk clay: bijna op is iets om nú over te beslissen. */
 const AANDACHT_VANAF = 0.9;
@@ -87,18 +93,19 @@ export function LauGebruik({
   return (
     <section
       aria-labelledby="lau-gebruik-kop"
-      className="rounded-card border border-hairline bg-surface p-4"
+      className="rounded-input border border-hairline-soft bg-surface px-[17px] py-[15px]"
     >
-      <h2 id="lau-gebruik-kop" className="text-xs tracking-[0.12em] text-body uppercase">
+      {/* contrast-opvolgpunt: #8C8F84 op wit ≈ 3,3:1 bij 12px — ontwerpwaarde (§8-kaartkop). */}
+      <h2 id="lau-gebruik-kop" className="text-xs text-muted">
         Lau-gebruik
       </h2>
 
       {!beschikbaar ? (
         // Neutraal, niet in clay: dit is een openstaande deploystap, geen storing.
-        <p className="mt-3 text-sm text-body">{NOG_NIET}</p>
+        <p className="mt-3 text-[13px] text-body">{NOG_NIET}</p>
       ) : (
         <>
-          <p className="mt-1 text-sm text-ink tabular-nums">
+          <p className="mt-2 text-[13px] text-ink tabular-nums">
             {gebruik} van {limiet} deze maand
           </p>
 
@@ -115,13 +122,13 @@ export function LauGebruik({
 
           {/* Ook mét een eigen limiet zichtbaar: anders is er geen enkele plek waar de
               coach ziet wat "leeg = de standaard" straks betekent. */}
-          <p className="mt-2 text-xs text-body">Standaard: {standaardLimiet}/maand</p>
+          <p className="mt-2 text-[11.5px] text-muted">Standaard: {standaardLimiet}/maand</p>
 
-          <form onSubmit={opslaan} className="mt-4 border-t border-hairline-soft pt-3">
-            <label htmlFor="ai-limiet" className="text-sm font-medium text-ink">
+          <form onSubmit={opslaan} className="mt-3.5 border-t border-hairline-soft pt-3">
+            <label htmlFor="ai-limiet" className="text-[13px] text-body">
               Eigen limiet
             </label>
-            <p id="ai-limiet-hint" className="mt-0.5 text-xs text-body">
+            <p id="ai-limiet-hint" className="mt-0.5 text-[11.5px] text-muted">
               Leeg = de standaard.
             </p>
             <input
@@ -143,18 +150,18 @@ export function LauGebruik({
               placeholder={String(standaardLimiet)}
               className={`${veld} mt-1.5 tabular-nums`}
             />
-            <div className="mt-2 flex justify-end">
-              <Knop type="submit" variant="secundair" disabled={bezig}>
+            <div className="mt-2.5 flex justify-end">
+              <button type="submit" disabled={bezig} className={knop}>
                 {bezig ? 'Opslaan…' : 'Limiet opslaan'}
-              </Knop>
+              </button>
             </div>
             {fout && (
-              <p role="alert" className="mt-2 text-sm text-clay-ink">
+              <p role="alert" className="mt-2 text-[12.5px] text-clay-ink">
                 {fout}
               </p>
             )}
             {!fout && opgeslagen && (
-              <p role="status" className="mt-2 text-xs text-body">
+              <p role="status" className="mt-2 text-[11.5px] text-muted">
                 Opgeslagen.
               </p>
             )}

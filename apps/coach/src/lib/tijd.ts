@@ -21,6 +21,29 @@ export function relatieveTijd(iso: string, nu: Date = new Date()): string {
 }
 
 /**
+ * Dezelfde tijd als `relatieveTijd`, maar als zinsdeel: "Sanne vroeg {…} om jou" (§8).
+ * Vandaar de losse vorm — "zojuist geleden" en "gisteren geleden" bestaan niet.
+ */
+export function relatieveZin(iso: string, nu: Date = new Date()): string {
+  const kort = relatieveTijd(iso, nu);
+  if (kort === '' || kort === 'zojuist' || kort === 'gisteren') return kort;
+  // "12 min" / "3 uur" → "12 min geleden"; een datum ("12 mrt") → "op 12 mrt".
+  return /^\d+\s(min|uur)$/.test(kort) ? `${kort} geleden` : `op ${kort}`;
+}
+
+/**
+ * "Open sinds 11:20" (§8). Buiten vandaag staat de datum erbij: een flag van eergisteren
+ * die alleen "09:14" zou tonen, leest als vanochtend.
+ */
+export function openSindsLabel(iso: string, nu: Date = new Date()): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const klok = d.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  if (kalenderdagen(d, nu) === 0) return klok;
+  return `${korteDatum(d, nu)} ${klok}`;
+}
+
+/**
  * Datum-kolom in de klantenlijst: "do 20 aug" (§7). Invoer is een `date`-kolom
  * (YYYY-MM-DD), dus lokaal parsen — `new Date('2026-08-20')` leest als UTC en valt in
  * Amsterdam een dag terug.

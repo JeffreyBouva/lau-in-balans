@@ -42,6 +42,8 @@
   --color-sage-soft: #e7eee3;
   --color-sage-soft-border: #cfe0c8;
   --color-sage-ink: #37452f;
+  /* accent/sage-mid — uppercase-eyebrow op sage-soft (log-bubbel §8). */
+  --color-sage-mid: #6d8a68;
 
   /* clay — coach-aandacht (flags) */
   --color-clay: #b0603f;
@@ -54,8 +56,11 @@
   --color-laura-bubble-ink: #6e4331;
   --color-laura-avatar: #efebe2;
   --color-laura-avatar-ink: #8c6a56;
+  /* laura/avatar-ink-hover — hover op de verzendknop van de coach (§8 antwoordbalk). */
+  --color-laura-avatar-ink-hover: #765645;
 
   /* radii — bron: radii in tokens.ts */
+  --radius-control: 12px;
   --radius-input: 14px;
   --radius-card: 18px;
 }
@@ -74,4 +79,11 @@
    in een dark-mode-browser donker op een crème achtergrond. */
 :root {
   color-scheme: light;
+
+  /*
+   * Hoogte van de chrome-balk (Nav): 34px avatar + 2 × 18px padding + 1px onderrand.
+   * Het klantdetail (§8) vult exact de rest van het venster, want daar scrollt elke
+   * kolom apart — dat kan alleen met een vaste hoogte onder de chrome.
+   */
+  --hoogte-chrome: 71px;
 }

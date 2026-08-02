@@ -263,7 +263,7 @@ function korteDatum(iso: string, nu: Date): string {
   });
 }
 
-/** Het exacte tijdstip als tooltip — de relatieve tijd blijft kort (zie FlagKaart). */
+/** Het exacte tijdstip als tooltip — de relatieve tijd blijft kort (zie ChatBubbel). */
 function volledigeTijd(iso: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime())

@@ -40,6 +40,8 @@ export type Voedingsdag = {
 export type HandmaatGemiddelde = {
   key: HandKey;
   naam: string;
+  /** De hand die de maat is ("Handpalm") — §8 toont "Eiwit · handpalm". */
+  hand: string;
   kleur: string;
   /** Gemiddelde per gelogde dag — niet per kalenderdag (zie `aggregeer`). */
   gemiddeld: number;
@@ -147,6 +149,7 @@ function aggregeer(rijen: LogRij[], venster: string[], doelen: Porties): Week {
     return {
       key: h.key,
       naam: h.naam,
+      hand: h.hand,
       kleur: h.kleur,
       gemiddeld: dagenMetLog > 0 ? som / dagenMetLog : 0,
       doel: doelen[h.key],

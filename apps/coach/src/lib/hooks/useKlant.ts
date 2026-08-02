@@ -4,7 +4,14 @@ import { useEffect, useState } from 'react';
 import type { ClientStatus } from '@lau/shared';
 import { supabase } from '@/lib/supabase';
 
-export type Klant = { id: string; naam: string; status: ClientStatus; startdatum: string };
+export type Klant = {
+  id: string;
+  naam: string;
+  status: ClientStatus;
+  startdatum: string;
+  /** null = niet ingevuld; de metaregel in §8 laat de leeftijd dan gewoon weg. */
+  leeftijd: number | null;
+};
 
 type KlantStand = { clientId: string; klant: Klant | null; fout: boolean };
 
@@ -23,7 +30,7 @@ export function useKlant(clientId: string) {
     (async () => {
       const { data, error } = await supabase
         .from('clients')
-        .select('id, naam, status, startdatum')
+        .select('id, naam, status, startdatum, leeftijd')
         .eq('id', clientId)
         .maybeSingle();
       if (!geldig) return;
