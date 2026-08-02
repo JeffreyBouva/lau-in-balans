@@ -11,6 +11,12 @@ function Gate() {
   const router = useRouter();
   const segments = useSegments();
 
+  // De splash blijft staan tot de sessie-check klaar is. Zou 'ie al weggaan zodra de
+  // fonts er zijn (RootLayout), dan flitst welkom/login voorbij voordat de gate weet
+  // waar een ingelogde gebruiker heen moet. Gate rendert pas als fontsReady, dus
+  // !laden hier betekent: fonts én sessie rond.
+  useEffect(() => { if (!laden) SplashScreen.hideAsync(); }, [laden]);
+
   useEffect(() => {
     if (laden) return;
     const groep = segments[0];
@@ -28,7 +34,6 @@ export default function RootLayout() {
     Newsreader_300Light, Newsreader_400Regular, Newsreader_500Medium,
     DMSans_300Light, DMSans_400Regular, DMSans_500Medium,
   });
-  useEffect(() => { if (fontsReady) SplashScreen.hideAsync(); }, [fontsReady]);
-  if (!fontsReady) return null;
+  if (!fontsReady) return null; // splash verdwijnt in Gate, zodra ook de sessie bekend is
   return <SessieProvider><Gate /></SessieProvider>;
 }

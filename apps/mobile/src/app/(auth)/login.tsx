@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
+import {
+  View, Text, TextInput, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, Pressable,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSessie } from '@/lib/sessie';
 import { useOAuthFoutUitUrl } from '@/lib/hooks/useOAuthFoutUitUrl';
@@ -14,6 +16,8 @@ export default function Login() {
   const [ww, setWw] = useState('');
   const [fout, setFout] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
+  // Loopt er een social-flow, dan gaat de e-mail-knop op slot (en andersom).
+  const [socialBezig, setSocialBezig] = useState(false);
   useOAuthFoutUitUrl(setFout);
 
   async function probeer() {
@@ -24,25 +28,30 @@ export default function Login() {
   }
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.root}>
-      <View style={s.inner}>
-        <Text style={s.merk}>Lau in Balans</Text>
-        <Text style={[text.bodyGroot, { marginBottom: 24 }]}>Welkom terug. Log in om verder te gaan.</Text>
-        <SocialKnoppen onFout={setFout} />
-        <TextInput style={s.input} placeholder="E-mail" autoCapitalize="none" keyboardType="email-address"
-          value={email} onChangeText={setEmail} placeholderTextColor={colors.mutedSoft} />
-        <TextInput style={s.input} placeholder="Wachtwoord" secureTextEntry
-          value={ww} onChangeText={setWw} placeholderTextColor={colors.mutedSoft} />
-        {fout && <Text style={[text.bodyKlein, { color: colors.clayInk, marginBottom: 8 }]}>{fout}</Text>}
-        <PrimaireKnop label="Inloggen" onPress={probeer} bezig={bezig} />
-        <Pressable onPress={() => router.replace('/(auth)/registreer')} style={s.wissel}>
-          <Text style={s.wisselTekst}>Nieuw hier? Account maken</Text>
-        </Pressable>
-      </View>
+      <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+        <View style={s.inner}>
+          <Text style={s.merk}>Lau in Balans</Text>
+          <Text style={[text.bodyGroot, { marginBottom: 24 }]}>Welkom terug. Log in om verder te gaan.</Text>
+          <SocialKnoppen onFout={setFout} disabled={bezig} onBezig={setSocialBezig} />
+          <TextInput style={s.input} placeholder="E-mail" autoCapitalize="none" keyboardType="email-address"
+            autoComplete="email" textContentType="emailAddress" autoCorrect={false}
+            value={email} onChangeText={setEmail} placeholderTextColor={colors.mutedSoft} />
+          <TextInput style={s.input} placeholder="Wachtwoord" secureTextEntry
+            autoComplete="current-password" textContentType="password"
+            value={ww} onChangeText={setWw} placeholderTextColor={colors.mutedSoft} />
+          {fout && <Text style={[text.bodyKlein, { color: colors.clayInk, marginBottom: 8 }]}>{fout}</Text>}
+          <PrimaireKnop label="Inloggen" onPress={probeer} bezig={bezig || socialBezig} />
+          <Pressable onPress={() => router.replace('/(auth)/registreer')} style={s.wissel} accessibilityRole="button">
+            <Text style={s.wisselTekst}>Nieuw hier? Account maken</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bgApp, justifyContent: 'center' },
+  root: { flex: 1, backgroundColor: colors.bgApp },
+  scroll: { flexGrow: 1, justifyContent: 'center' },
   inner: { padding: 26 },
   merk: { fontFamily: fontFamily.serif, fontSize: 22, color: colors.sage, letterSpacing: 0.4, marginBottom: 8 },
   input: { padding: 14, borderWidth: 1, borderColor: colors.hairlineSoft, borderRadius: radii.input, backgroundColor: colors.bgSurface, fontFamily: fontFamily.sans, fontSize: 15, marginBottom: 12, color: colors.ink },

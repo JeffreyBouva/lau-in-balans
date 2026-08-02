@@ -1194,6 +1194,7 @@ Schrijf in de commit-message of PR-tekst:
 **Jeffrey-stappen (in de eindrapportage vermelden):**
 - Supabase dashboard → Authentication → Sign In / Up → Email: **Confirm email UIT** (anders geen sessie direct na registratie).
 - Google-login activeren: Google Cloud-project → OAuth consent + Web client-id/secret → Supabase dashboard → Authentication → Providers → Google. (Zonder dit werkt de Google-knop nog niet; de rest van de app wel.)
+- Supabase → Authentication → URL Configuration → Redirect URLs: voeg de web-preview-origin + `/login` toe (bijv. `http://localhost:8081/login`), anders is de OAuth-foutafhandeling stil dood.
 - `supabase functions deploy lau-reply` (bevat ook de eerdere streaming-fixes).
 
 - [ ] **Step 4: Commit**
