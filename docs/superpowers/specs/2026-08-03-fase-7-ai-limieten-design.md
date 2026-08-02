@@ -98,3 +98,16 @@ wekelijks-gesprek-fase met echte gesprekdata).
 - **D7** Proactieve berichten tellen mee in de maandlimiet (het is Lau-gebruik), maar
   de ochtend-function slaat klanten óver die op de limiet zitten (geen afkap-verrassing
   door een bericht dat de klant niet vroeg).
+
+## Opvolgpunten uit de eindreview (bewust uitgesteld)
+
+- **I5** `_shared/limiet.ts` (de tijdzone-wiskunde — riskantste code van deze fase) heeft
+  geen tests in de batterij: `npm test` dekt `supabase/functions` niet. Toevoegen aan de
+  test-glob + een `limiet.test.ts` met vaste momenten op de DST-randen én een run in een
+  niet-Amsterdamse TZ (vitest pint nu Europe/Amsterdam).
+- **M6** `zoneOffsetMs` parseert het `sv-SE`-datumpatroon; `formatToParts()` zou het
+  locale-data-proof maken.
+- **M10** De suggestie-Haiku-call logt geen tokens in ai_usage — het kostenlogboek mist
+  daarmee structureel een deel van de rekening (D1 telt bewust alleen berichten).
+- **LogSheet-gap** (Task 4): de fire-and-forget lau-reply-call na een maaltijd-log toont
+  de afkap-regel niet (alleen chat-berichten doen dat) — gedeelde setter nodig.
