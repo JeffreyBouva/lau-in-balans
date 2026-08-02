@@ -101,10 +101,14 @@ export default function Vandaag() {
           {weekNr != null && <Text style={text.eyebrow}>Week {weekNr}</Text>}
           <Text style={s.hero}>{hero}</Text>
         </View>
-        {/* Bewust op `opSlot` en niet op de laad-staat: de knop ziet er in beide gevallen
-            hetzelfde uit (dus niets te flitsen), en tijdens het laden is geen flag naar
-            Laura sturen de veilige kant — die inbox is voor klanten mét traject. */}
-        <LauraKnop openFlag={openFlag} onPress={opSlot ? () => setCodeSheet(true) : openLaura} />
+        {/* De knop ziet er in alle standen hetzelfde uit (niets te flitsen). Tijdens het
+            laden is de tik bewust een no-op: dan weten we nog niet of dit een free-klant
+            is, en Laura's inbox is voor klanten mét traject. */}
+        <LauraKnop
+          openFlag={openFlag}
+          label={opSlot ? 'Ik heb een code' : undefined}
+          onPress={slotLaden ? () => {} : opSlot ? () => setCodeSheet(true) : openLaura}
+        />
       </View>
 
       {/* Contactkaart */}

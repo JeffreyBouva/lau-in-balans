@@ -27,7 +27,7 @@ export default function Eten() {
   // Eten blijft bij free volledig open — alleen de Laura-knop (coach-contact) vraagt hier
   // om een code. Er verandert niets aan de layout, dus hier valt niets te flitsen: zolang
   // het oordeel laadt is opSlot false en gedraagt de knop zich als vanouds.
-  const { opSlot } = useOpSlot();
+  const { opSlot, laden: slotLaden } = useOpSlot();
   const [codeSheet, setCodeSheet] = useState(false);
 
   // Dagstand + weekstaafjes verversen na terugkeer (bijv. na een log-save in de sheet).
@@ -69,7 +69,12 @@ export default function Eten() {
           <Text style={text.eyebrow}>{vandaagLabel}</Text>
           <Text style={s.titel}>Vandaag gegeten</Text>
         </View>
-        <LauraKnop openFlag={openFlag} onPress={opSlot ? () => setCodeSheet(true) : openLaura} />
+        {/* Tijdens het laden bewust een no-op: nog onbekend of dit een free-klant is. */}
+        <LauraKnop
+          openFlag={openFlag}
+          label={opSlot ? 'Ik heb een code' : undefined}
+          onPress={slotLaden ? () => {} : opSlot ? () => setCodeSheet(true) : openLaura}
+        />
       </View>
 
       {/* Introregel */}

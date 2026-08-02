@@ -85,13 +85,16 @@ export default function Chat() {
         <View style={s.headerTekst}>
           <Text style={text.chatNaam}>Lau.ai</Text>
           <Text style={text.caption}>
-            {toonSlot ? 'AI-voedingscoach' : `Ingesteld door Laura${weekNr != null ? ` · week ${weekNr}` : ''}`}
+            {toonSlot || slotLaden ? 'AI-voedingscoach' : `Ingesteld door Laura${weekNr != null ? ` · week ${weekNr}` : ''}`}
           </Text>
         </View>
-        {/* Op slot is er nog geen coach om te bereiken; de code-knop in de kaart is de weg. */}
-        {!toonSlot && <LauraKnop openFlag={openFlag} onPress={openLaura} />}
+        {/* Op slot is er nog geen coach om te bereiken; tijdens het laden weten we het
+            nog niet — dan óók geen knop, zodat een free-klant geen flag kan sturen. */}
+        {!toonSlot && !slotLaden && <LauraKnop openFlag={openFlag} onPress={openLaura} />}
       </View>
 
+      {/* Drie standen: slot · laden (alleen header, leest als "aan het laden") · open.
+          Zo flitst de chat-UI niet voorbij bij een free-klant tijdens de tier-load. */}
       {toonSlot ? (
         <SlotKaart
           variant="scherm"
@@ -99,7 +102,7 @@ export default function Chat() {
           uitleg="Stel vragen over je eten, krijg warme coaching in handmaten en bouw samen aan je ritme. Laura leest mee en stelt Lau op jou af."
           onCode={() => setCodeSheet(true)}
         />
-      ) : (
+      ) : slotLaden ? null : (
         <>
           {/* Berichtenlijst */}
           <ScrollView

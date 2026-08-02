@@ -8,14 +8,19 @@ import { stoot } from '@/lib/haptics';
  * - Geen flag: wit, rand hairline, tekst body, bolletje hairlineHover (#C7BEAE).
  * - Flag verstuurd: sage-soft, rand sage, tekst sage-deep, bolletje sage.
  */
-export function LauraKnop({ openFlag, onPress }: { openFlag: boolean; onPress: () => void }) {
+export function LauraKnop({ openFlag, onPress, label }: {
+  openFlag: boolean;
+  onPress: () => void;
+  /** Overschrijft het a11y-label — bijv. 'Ik heb een code' als de knop de CodeSheet opent. */
+  label?: string;
+}) {
   return (
     <Pressable
       onPress={() => { stoot(); onPress(); }}
       // Zonder role geeft react-native-web een Pressable geen tabstop; het label vertelt
       // wat het bolletje visueel doet (screenreaders zien de kleur niet).
       accessibilityRole="button"
-      accessibilityLabel={openFlag ? 'Laura — bericht verstuurd' : 'Praat met Laura'}
+      accessibilityLabel={label ?? (openFlag ? 'Laura — bericht verstuurd' : 'Praat met Laura')}
       style={({ pressed }) => [s.knop, openFlag ? s.aan : s.uit, pressed && s.gedrukt]}
     >
       <View style={[s.bol, { backgroundColor: openFlag ? colors.sage : colors.hairlineHover }]} />
