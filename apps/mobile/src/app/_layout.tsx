@@ -14,7 +14,7 @@ function Gate() {
   useEffect(() => {
     if (laden) return;
     const groep = segments[0];
-    if (!session) { if (groep !== '(auth)') router.replace('/(auth)/login'); return; }
+    if (!session) { if (groep !== '(auth)') router.replace('/(auth)/welkom'); return; }
     if (heeftProfiel === null) return;
     if (!heeftProfiel && groep !== '(onboarding)') { router.replace('/(onboarding)'); return; }
     if (heeftProfiel && (groep === '(auth)' || groep === '(onboarding)')) router.replace('/(tabs)/chat');
