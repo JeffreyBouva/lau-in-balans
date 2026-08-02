@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { supabase } from '@/lib/supabase';
+import { verzilverCode } from '@/lib/codes';
 import { useSessie } from '@/lib/sessie';
 import { colors, fontFamily, text } from '@/theme/tokens';
 import { PrimaireKnop } from '@/components/PrimaireKnop';
@@ -26,19 +26,21 @@ export default function Code() {
   async function verzilver() {
     if (code.length < 6) { setFout('Vul de 6-tekencode in die je van Laura hebt gekregen.'); return; }
     setBezig(true); setFout(null);
-    const { data, error } = await supabase.rpc('verzilver_code', { p_code: code });
-    setBezig(false);
-    if (error) {
-      // Netwerk/serverfout is iets anders dan een foute code — anders sturen we iemand
-      // met een prima code naar Laura terwijl alleen de verbinding hapert.
-      console.warn('[code] verzilveren mislukt:', error.message);
+    const resultaat = await verzilverCode(code);
+    // Storing is iets anders dan een foute code — anders sturen we iemand met een prima
+    // code naar Laura terwijl alleen de verbinding hapert.
+    if (resultaat === 'storing') {
+      setBezig(false);
       setFout('Het lukte even niet om je code te controleren. Probeer het zo nog eens.');
       return;
     }
-    if (data !== true) {
+    if (resultaat === 'ongeldig') {
+      setBezig(false);
       setFout('Deze code klopt niet of is al gebruikt. Check ’m bij Laura.');
       return;
     }
+    // Succes: bezig blijft bewust op true. Het scherm verdwijnt zo, en tot die tijd kan
+    // een tweede tik de net verbruikte code niet nog eens insturen.
     await herlaadTier();
     router.replace('/(onboarding)');
   }
@@ -55,7 +57,8 @@ export default function Code() {
             kun je gewoon je voeding bijhouden.
           </Text>
           <View style={s.invoerBlok}>
-            <CodeInvoer waarde={code} onWijzig={(v) => { setCode(v); setFout(null); }} />
+            <CodeInvoer waarde={code} onWijzig={(v) => { setCode(v); setFout(null); }}
+              onVoltooi={verzilver} editable={!bezig} />
             {fout && <Text style={[text.bodyKlein, { color: colors.clayInk }]}>{fout}</Text>}
           </View>
           <PrimaireKnop label="Code verzilveren" onPress={verzilver} bezig={bezig} />

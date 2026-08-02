@@ -982,10 +982,17 @@ git commit -m "feat(mobile): codescherm in onboarding-flow + CodeInvoer"
 
 - [ ] **Step 1: `CodeSheet.tsx`** (bottom-sheet rond CodeInvoer, hergebruikt `Sheet`)
 
+Let op: `Sheet` heeft geen KeyboardAvoidingView — wikkel de CodeSheet-inhoud in een KAV of
+geef de sheet er een, anders valt het invoerveld onder het toetsenbord.
+
+De RPC zit sinds Task 7 achter `verzilverCode()` in `@/lib/codes` (drie staten: `ok` /
+`ongeldig` / `storing`) — roep 'm niet opnieuw rechtstreeks aan. Anders dan het codescherm
+blijft dit component ná succes gemonteerd, dus hier `bezig` wél terugzetten.
+
 ```tsx
 import { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { supabase } from '@/lib/supabase';
+import { verzilverCode } from '@/lib/codes';
 import { useSessie } from '@/lib/sessie';
 import { colors, fontFamily, text } from '@/theme/tokens';
 import { Sheet } from '@/components/Sheet';
@@ -1000,15 +1007,22 @@ export function CodeSheet({ zichtbaar, onSluit }: { zichtbaar: boolean; onSluit:
   const [bezig, setBezig] = useState(false);
 
   async function verzilver() {
+    if (code.length < 6) { setFout('Vul de 6-tekencode in die je van Laura hebt gekregen.'); return; }
     setBezig(true); setFout(null);
-    const { data } = await supabase.rpc('verzilver_code', { p_code: code });
-    setBezig(false);
-    if (data !== true) {
+    const resultaat = await verzilverCode(code);
+    if (resultaat === 'storing') {
+      setBezig(false);
+      setFout('Het lukte even niet om je code te controleren. Probeer het zo nog eens.');
+      return;
+    }
+    if (resultaat === 'ongeldig') {
+      setBezig(false);
       setFout('Deze code klopt niet of is al gebruikt.');
       return;
     }
     await herlaadTier();
     setCode('');
+    setBezig(false);
     onSluit();
   }
 
@@ -1017,7 +1031,8 @@ export function CodeSheet({ zichtbaar, onSluit }: { zichtbaar: boolean; onSluit:
       <View style={s.inhoud}>
         <Text style={s.titel}>Code van Laura</Text>
         <Text style={text.body}>Vul de 6-tekencode in die je van Laura hebt gekregen.</Text>
-        <CodeInvoer waarde={code} onWijzig={setCode} />
+        <CodeInvoer waarde={code} onWijzig={(v) => { setCode(v); setFout(null); }}
+          onVoltooi={verzilver} editable={!bezig} />
         {fout && <Text style={[text.bodyKlein, { color: colors.clayInk }]}>{fout}</Text>}
         <PrimaireKnop label="Verzilveren" onPress={verzilver} bezig={bezig} />
       </View>
