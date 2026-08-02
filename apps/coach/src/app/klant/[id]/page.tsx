@@ -118,7 +118,6 @@ export default function KlantDetailPagina() {
           <p className="truncate text-xs text-muted">{meta.join(' · ')}</p>
         </div>
 
-        {/* De gespreksroute komt in Task 3 (§9); tot die tijd geeft deze link een 404. */}
         <Link
           href={`/klant/${clientId}/gesprek`}
           className="ml-auto flex-none rounded-full bg-sage px-[18px] py-[11px] text-[13px] text-white transition-colors duration-150 hover:bg-sage-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"

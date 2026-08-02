@@ -13,7 +13,7 @@
 - Bestaande data-laag NIET herbouwen: `useKlanten`, `useKlantChat`, `useKlantContext` (flags/voedingsweek/notities/gebruik/limiet), `useProfielVersies`, `useInvites`, `CoachProvider`. UI mag volledig vervangen; hooks alleen uitbreiden waar data mist (laatste weekly_session-datum in de lijst).
 - Tailwind-tokens in `apps/coach/src/app/globals.css` (@theme) — vul aan met wat §7-§9 nodig heeft (table-row/head bestaan al; check clay-varianten, laura-kleuren, radius-waarden 14/16/20).
 - Chat-realtime + antwoorden-als-Laura + flag-afronden + profiel-opslaan + notities bestaan en werken — herstyle ze naar de handoff-vorm (antwoordbalk, compacte bubbels, flag-banner) zonder de logica te slopen.
-- Edge functions: patroon lau-ochtend (coach/service-clients, model-env, deno check, config.toml verify_jwt=false is hier FOUT — deze twee zijn coach-calls mét JWT: geen config-blok nodig, default verify_jwt=true is prima; de functie checkt daarbovenop is_coach_of). `_shared/prompt-builder.ts` bouwt {system, messages}; weekcontext-aggregatie zoals lau-reply.
+- Edge functions: patroon lau-ochtend (coach/service-clients, model-env, deno check) mét het config.toml-blok van lau-reply: `verify_jwt = false` is hier NODIG — de browser stuurt een CORS-preflight (OPTIONS zonder auth-header) en platform-verificatie blokkeert die, waardoor de functie onbereikbaar is vanuit het dashboard (zie commit 17e3643). De JWT wordt in de functie zelf gecheckt (getUser + clients.coach_id). `_shared/prompt-builder.ts` bouwt {system, messages}; weekcontext-aggregatie zoals lau-reply.
 - `weekly_sessions`: (client_id, datum default vandaag, notitie, signalen text[], voorstellen jsonb, resulting_profile_version uuid). Coach-RLS: select+insert eigen klanten (bestaat).
 - NL, WCAG-lessen (text-body-equivalenten — let op: de handoff schrijft soms #8C8F84 voor betekenisvolle tekst; volg het ontwerp maar noteer contrast-afwijkingen als opvolgpunt i.p.v. stil aanpassen).
 
@@ -53,7 +53,7 @@
 
 **Files:** Create `supabase/functions/prompt-preview/index.ts`, `supabase/functions/sessie-voorstellen/index.ts`.
 
-- [ ] Beide: JWT-flow zoals lau-reply (anon-client + getUser), maar de caller is een COACH: check via service-client `clients.select('id').eq('id', body.client_id).eq('coach_id', coachId)` (1 rij = ok, anders 403). Geen config.toml-blok (verify_jwt default aan is juist hier). CORS zoals lau-reply.
+- [ ] Beide: JWT-flow zoals lau-reply (anon-client + getUser), maar de caller is een COACH: check via service-client `clients.select('id').eq('id', body.client_id).eq('coach_id', coachId)` (1 rij = ok, anders 403). CORS zoals lau-reply, inclusief het config.toml-blok met `verify_jwt = false` — anders sneuvelt de preflight en is de functie vanuit de browser onbereikbaar.
 - [ ] `prompt-preview`: body `{ client_id, concept_profiel? }`; profiel = concept of hoogste versie (service); weekcontext = zelfde aggregatie als lau-reply; `bouwPrompt` uit `_shared/prompt-builder.ts` met een fictief nieuwBericht ("(ochtend-opening)") — response bevat `systemPrompt`; daarna één create-call (`LAU_SUGGESTIE_MODEL`, max_tokens 300, system = die prompt + instructie "schrijf het eerste ochtendbericht van maandag aan [voornaam], max 2 zinnen") → `opening` (refusal/fout → opening null, systemPrompt blijft). Response `{ systemPrompt, opening }`.
 - [ ] `sessie-voorstellen`: body `{ client_id, notitie, signalen }`; context = profiel + weekdata; create-call (`LAU_MODEL` — dit verdient het betere model, max_tokens 1000) met een strak geformatteerde opdracht: retourneer UITSLUITEND JSON-array van max 3 `{ veld, oud, nieuw, toelichting }` waar veld ∈ {doelen, portiedoelen, knelpunten, voorkeuren, beperkingen, checkinRitme, aanpak, toon, vermijdenInCoaching} en oud/nieuw strings zijn (voor lijstvelden: de lijst als '· '-gejoined string; de app parsed lijstvelden terug op '·'). Parse defensief (patroon genereerSuggesties), valideer veldnamen, max 3. Fout → `{ voorstellen: [] }`.
 - [ ] `deno check` beide + lau-reply schoon; deno.lock terugdraaien.
@@ -91,9 +91,11 @@ niets te pushen; alleen de twee nieuwe functions moeten de deur uit.
    een bundel-fout op `../../../packages/shared/...` = je draait het commando niet vanuit de
    repo-root (de functions importeren de gedeelde types via een relatief pad).
 
-   Geen `config.toml`-blok nodig: beide functions worden door het dashboard met Laura's JWT
-   aangeroepen, dus de standaard `verify_jwt = true` is hier precies goed. Ze checken daarbovenop
-   zelf dat de klant van de ingelogde coach is (anders 403).
+   Beide functions staan in `config.toml` op `verify_jwt = false`, net als lau-reply. Dat is
+   géén versoepeling: de browser doet vóór de POST een CORS-preflight (OPTIONS **zonder**
+   auth-header), en platform-verificatie blokkeert die — de functie zou dan nooit bereikt
+   worden. De poort zit in de functie zelf: `getUser()` op Laura's JWT plus de check dat de
+   klant van déze coach is (anders 403). Deploy pikt dat blok automatisch mee.
 
    Secrets: `ANTHROPIC_API_KEY` staat er al sinds fase 3 en is het enige wat verplicht is.
    `LAU_MODEL` (default `claude-sonnet-5`, gebruikt door `sessie-voorstellen`) en

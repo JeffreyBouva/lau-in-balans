@@ -10,29 +10,8 @@ import type { Notitie } from '@/lib/hooks/useKlantContext';
  * tekst, nieuwste boven. Bewust sober: dit is een kladblok naast het gesprek, geen
  * tweede chat.
  */
-export function Notities({
-  notities,
-  opOpslaan,
-  bezig,
-  fout,
-}: {
-  notities: Notitie[];
-  /** true = opgeslagen; alleen dán maakt het formulier de textarea leeg. */
-  opOpslaan: (tekst: string) => Promise<boolean>;
-  bezig: boolean;
-  fout: string | null;
-}) {
-  const [concept, setConcept] = useState('');
+export function Notities({ notities }: { notities: Notitie[] }) {
   const nu = new Date();
-
-  async function opslaan(e: FormEvent) {
-    e.preventDefault();
-    const tekst = concept.trim();
-    if (!tekst || bezig) return;
-    const gelukt = await opOpslaan(tekst);
-    // Alleen leegmaken als de notitie echt staat — anders is Laura haar tekst kwijt.
-    if (gelukt) setConcept('');
-  }
 
   return (
     <section aria-labelledby="notities-kop" className="flex flex-col gap-3.5">
@@ -60,32 +39,63 @@ export function Notities({
           ))}
         </ol>
       )}
-
-      <form onSubmit={opslaan} className="flex flex-col gap-2.5">
-        <label htmlFor="notitie" className="sr-only">
-          Nieuwe notitie
-        </label>
-        <textarea
-          id="notitie"
-          value={concept}
-          onChange={(e) => setConcept(e.target.value)}
-          placeholder="Notitie toevoegen…"
-          className="min-h-[70px] w-full resize-y rounded-input border border-hairline-soft bg-surface px-3.5 py-3 text-[13.5px] leading-[1.55] text-ink placeholder:text-muted focus:border-sage focus:outline-2 focus:outline-offset-0 focus:outline-sage/40"
-        />
-        <button
-          type="submit"
-          disabled={concept.trim() === '' || bezig}
-          className="rounded-full border border-hairline bg-surface px-4 py-3 text-[13px] text-body transition-colors duration-150 hover:border-sage hover:text-sage-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-hairline disabled:hover:text-body"
-        >
-          {bezig ? 'Bewaren…' : 'Bewaren'}
-        </button>
-        {fout && (
-          <p role="alert" className="text-[12.5px] text-clay-ink">
-            {fout}
-          </p>
-        )}
-      </form>
     </section>
+  );
+}
+
+/**
+ * Het toevoegformulier, apart van de lijst: §8 zet het als vaste voet ónder het
+ * scrollgebied van kolom 3 (`padding: 0 24px 24px`). Een notitie maken is de actie die
+ * altijd binnen bereik hoort te zijn — ook als Laura halverwege een lange lijst leest.
+ */
+export function NotitieFormulier({
+  opOpslaan,
+  bezig,
+  fout,
+}: {
+  /** true = opgeslagen; alleen dán maakt het formulier de textarea leeg. */
+  opOpslaan: (tekst: string) => Promise<boolean>;
+  bezig: boolean;
+  fout: string | null;
+}) {
+  const [concept, setConcept] = useState('');
+
+  async function opslaan(e: FormEvent) {
+    e.preventDefault();
+    const tekst = concept.trim();
+    if (!tekst || bezig) return;
+    const gelukt = await opOpslaan(tekst);
+    // Alleen leegmaken als de notitie echt staat — anders is Laura haar tekst kwijt.
+    if (gelukt) setConcept('');
+  }
+
+  return (
+    <form onSubmit={opslaan} className="flex flex-none flex-col gap-2.5 px-6 pb-6">
+      <label htmlFor="notitie" className="sr-only">
+        Nieuwe notitie
+      </label>
+      {/* resize-none per ontwerp: dit veld staat in een vaste voet, en meegroeien zou de
+          lijst erboven wegduwen in plaats van het formulier ruimte te geven. */}
+      <textarea
+        id="notitie"
+        value={concept}
+        onChange={(e) => setConcept(e.target.value)}
+        placeholder="Notitie toevoegen…"
+        className="min-h-[70px] w-full resize-none rounded-input border border-hairline-soft bg-surface px-3.5 py-3 text-[13.5px] leading-[1.55] text-ink placeholder:text-muted focus:border-sage focus:outline-2 focus:outline-offset-0 focus:outline-sage/40"
+      />
+      <button
+        type="submit"
+        disabled={concept.trim() === '' || bezig}
+        className="rounded-full border border-hairline bg-surface px-4 py-3 text-[13px] text-body transition-colors duration-150 hover:border-sage hover:text-sage-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-hairline disabled:hover:text-body"
+      >
+        {bezig ? 'Bewaren…' : 'Bewaren'}
+      </button>
+      {fout && (
+        <p role="alert" className="text-[12.5px] text-clay-ink">
+          {fout}
+        </p>
+      )}
+    </form>
   );
 }
 

@@ -102,14 +102,28 @@ function isTekstVeld(veld: string): veld is TekstVeld {
 }
 
 /**
+ * Plafonds gelijk aan het klant-pad (`werk_mijn_profiel_bij`, fase 7): 20 items van elk
+ * hoogstens 200 tekens. Dit profiel gaat bij élk bericht mee in Lau's systemprompt, en
+ * een uitgelopen lijst zou daar de context vullen. De coach-kant schrijft rechtstreeks
+ * in `ai_profile_versions` en heeft dus geen database-cap die dit voor haar doet.
+ */
+const MAX_ITEMS = 20;
+const MAX_ITEM = 200;
+
+/**
  * '·'-gejoinde string → lijst. Dat is het formaat waarin de function lijstvelden
  * aanlevert (Task 4), precies zodat een voorstel één leesbare regel blijft.
+ *
+ * Ook op •, puntkomma en regeleinde: dat is wat een model ervan maakt als het de
+ * opdracht net anders leest, en dan hoort elk item een eigen chip te worden in plaats
+ * van één regel met scheidingstekens erin.
  */
 function naarLijst(waarde: string): string[] {
   return waarde
-    .split('·')
-    .map((deel) => deel.trim())
-    .filter((deel) => deel !== '');
+    .split(/[·•\n;]/)
+    .map((deel) => deel.trim().slice(0, MAX_ITEM))
+    .filter((deel) => deel !== '')
+    .slice(0, MAX_ITEMS);
 }
 
 /**
@@ -241,6 +255,10 @@ export function useGesprek(clientId: string) {
   const [vastleggenBezig, setVastleggenBezig] = useState(false);
   const [vastlegFout, setVastlegFout] = useState<string | null>(null);
   const [opgeslagen, setOpgeslagen] = useState(false);
+  // De profielversie is geschreven, de sessie-rij (nog) niet. Vanaf dat moment liggen de
+  // besluiten vast: een omgezet besluit zou bij een tweede poging een TWEEDE versie
+  // bovenop de eerste zetten, want dan past de sleutel van `geschrevenRef` niet meer.
+  const [versieGeschreven, setVersieGeschreven] = useState(false);
   /** Het versienummer dat dit gesprek opleverde; null = er is niets aan het profiel veranderd. */
   const [nieuweVersie, setNieuweVersie] = useState<number | null>(null);
 
@@ -412,6 +430,9 @@ export function useGesprek(clientId: string) {
         }
         versieId = await haalVersieId(clientId, versie);
         geschrevenRef.current = { sleutel, versie, id: versieId };
+        // Meteen op slot: deze besluiten staan nu in het profiel. Faalt de sessie-rij
+        // hierna, dan doet een retry alléén die insert opnieuw (zie de sleutel-check).
+        setVersieGeschreven(true);
       }
     }
 
@@ -463,6 +484,13 @@ export function useGesprek(clientId: string) {
     voorstellenFout,
     beslis,
     aantalToegepast: toegepast.length,
+    /**
+     * De noemer van de teller: alleen voorstellen waar Laura écht een besluit over neemt.
+     * `sessie-voorstellen` levert alleen toepasbare velden, maar een oudere deploy (of een
+     * model dat een veldnaam verzint) zou anders een kaart meetellen die geen knoppen heeft
+     * — en dan haalt "3 van 3 toegepast" nooit zijn eigen noemer.
+     */
+    aantalBeslisbaar: (voorstellen ?? []).filter((v) => isToepasbaar(v.veld)).length,
     preview,
     haalPreview,
     previewBezig,
@@ -476,6 +504,8 @@ export function useGesprek(clientId: string) {
     vastleggenBezig,
     vastlegFout,
     opgeslagen,
+    /** true = de profielversie staat er al; de besluiten liggen vast (zie de state). */
+    versieGeschreven,
     nieuweVersie,
     /** De profielversies van deze klant — de pagina toont er de laad-/foutstaat van. */
     profiel,

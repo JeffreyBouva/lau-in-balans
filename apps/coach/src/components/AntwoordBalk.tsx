@@ -43,6 +43,7 @@ export function AntwoordBalk({
 
   const coach = eersteNaam(coachNaam);
   const klant = eersteNaam(klantNaam);
+  const bevestiging = `Verstuurd als ${coach} · ${klant} krijgt een melding`;
 
   useEffect(() => {
     // Laatste timer opruimen bij unmount (andere klant, weg van de pagina).
@@ -96,10 +97,17 @@ export function AntwoordBalk({
       </form>
 
       <div className="flex items-center gap-2.5">
+        {/* De aankondiging staat in een eigen live-region die vanaf de eerste render
+            bestaat maar leeg is. Een `role="status"` dat de hint-regel permanent draagt
+            zou die uitleg als mededeling voorlezen — en een live-region die pas mét tekst
+            in de DOM verschijnt, wordt door veel screenreaders juist níet voorgelezen. */}
+        <p aria-live="polite" className="sr-only">
+          {netVerstuurd ? bevestiging : ''}
+        </p>
         {/* contrast-opvolgpunt: #A3A59A op #FBF9F5 ≈ 2,4:1 bij 11,5px — ontwerpwaarden. */}
-        <p role="status" className="text-[11.5px] text-muted-softer">
+        <p className="text-[11.5px] text-muted-softer">
           {netVerstuurd
-            ? `Verstuurd als ${coach} · ${klant} krijgt een melding`
+            ? bevestiging
             : `${klant} ziet duidelijk dat dit bericht van jou komt, niet van Lau.`}
         </p>
         {flagOpen && (

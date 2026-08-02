@@ -6,8 +6,10 @@
 // _shared — dezelfde functie die lau-reply gebruikt. Verandert de identiteit, de guardrails
 // of het profielblok, dan verandert deze preview mee, zonder dat iemand er hier aan denkt.
 //
-// De caller is een COACH met een gewone JWT (verify_jwt staat dus terecht aan, geen
-// config.toml-blok nodig); de functie checkt daarbovenop dat de klant van déze coach is.
+// De caller is een COACH met een gewone JWT. `verify_jwt = false` in config.toml (net als
+// lau-reply): platform-verificatie blokkeert de CORS-preflight, want die OPTIONS-request
+// draagt geen auth-header. De poort staat hieronder — getUser() op de JWT plus de check
+// dat de klant van déze coach is.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import Anthropic from 'npm:@anthropic-ai/sdk';
 import { bouwPrompt } from '../_shared/prompt-builder.ts';

@@ -3,7 +3,7 @@
 import { HandmatenKaart } from '@/components/HandmatenKaart';
 import { Knop } from '@/components/Knop';
 import { LauGebruik } from '@/components/LauGebruik';
-import { Notities } from '@/components/Notities';
+import { NotitieFormulier, Notities } from '@/components/Notities';
 import type { useKlantContext } from '@/lib/hooks/useKlantContext';
 
 /*
@@ -21,7 +21,7 @@ export function EtenNotitiesKolom({ context }: { context: ReturnType<typeof useK
 
       {/* flex-auto onder 1200px (gestapelde kolom zonder vaste hoogte), flex-1 daarboven
           waar dit gebied de resthoogte van de kolom vult en zelf scrollt. */}
-      <div className="flex flex-auto flex-col gap-3.5 overflow-y-auto px-6 pt-1 pb-6 min-[1200px]:flex-1">
+      <div className="flex flex-auto flex-col gap-3.5 overflow-y-auto px-6 pt-1 pb-4 min-[1200px]:flex-1">
         {context.fout && (
           <div role="alert" className="rounded-input border border-clay-border bg-clay-soft p-4">
             <p className="text-[13px] text-clay-ink">{context.fout}</p>
@@ -42,12 +42,7 @@ export function EtenNotitiesKolom({ context }: { context: ReturnType<typeof useK
           <>
             <HandmatenKaart gemiddelden={context.gemiddelden} dagenMetLog={context.dagenMetLog} />
 
-            <Notities
-              notities={context.notities}
-              opOpslaan={context.voegNotitieToe}
-              bezig={context.notitieBezig}
-              fout={context.notitieFout}
-            />
+            <Notities notities={context.notities} />
 
             {/* Onderaan: het gebruik hoort bij Lau's werk aan deze klant, niet bij
                 Laura's eigen aantekeningen. Dit blok mount opnieuw per klant (de
@@ -63,6 +58,15 @@ export function EtenNotitiesKolom({ context }: { context: ReturnType<typeof useK
           </>
         )}
       </div>
+
+      {/* Vaste voet onder het scrollgebied (§8): het notitieformulier zakt niet mee met
+          de lijst. Het Lau-gebruik blijft wél in de scroll — dat is informatie, geen
+          actie die altijd binnen bereik hoeft te zijn. */}
+      <NotitieFormulier
+        opOpslaan={context.voegNotitieToe}
+        bezig={context.notitieBezig}
+        fout={context.notitieFout}
+      />
     </>
   );
 }

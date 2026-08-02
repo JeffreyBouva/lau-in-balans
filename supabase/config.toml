@@ -382,6 +382,14 @@ verify_jwt = false
 # vóór er ook maar iets uit de database komt.
 verify_jwt = false
 
+[functions.prompt-preview]
+# Zelfde reden als lau-reply: de functie verifieert de JWT zelf via getUser() én checkt
+# clients.coach_id; platform-verificatie blokkeert anders de CORS-preflight.
+verify_jwt = false
+
+[functions.sessie-voorstellen]
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.

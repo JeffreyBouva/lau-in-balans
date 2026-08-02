@@ -5,8 +5,10 @@
 // "Overslaan", en pas dán schrijft het dashboard een nieuwe profielversie. Daarom is de
 // output hier een strak contract (veld/oud/nieuw/toelichting) en geen vrije tekst.
 //
-// De caller is een COACH met een gewone JWT (verify_jwt default aan is dus juist, geen
-// config.toml-blok); de functie checkt daarbovenop dat de klant van déze coach is.
+// De caller is een COACH met een gewone JWT. `verify_jwt = false` in config.toml (net als
+// lau-reply): platform-verificatie blokkeert de CORS-preflight, want die OPTIONS-request
+// draagt geen auth-header. De poort staat hieronder — getUser() op de JWT plus de check
+// dat de klant van déze coach is.
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import Anthropic from 'npm:@anthropic-ai/sdk';
 import { cors } from '../_shared/cors.ts';
@@ -22,10 +24,16 @@ const MODEL = Deno.env.get('LAU_MODEL') ?? 'claude-sonnet-5';
 const LEEG: Porties = { eiwit: 0, groente: 0, koolhydraten: 0, vet: 0 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** De velden die een voorstel mag raken — exact de enum die `useGesprek` terugvertaalt. */
+/**
+ * De velden die een voorstel mag raken — exact de enum die `useGesprek` terugvertaalt.
+ *
+ * `portiedoelen` staat er bewust NIET bij: dat zijn getallen die elke dag in Lau's prompt
+ * meegaan, en ze verschuiven is een besluit dat Laura in kolom 2 van het klantdossier
+ * neemt (mét het weekgemiddelde ernaast), niet iets wat via een zin in een voorstel de
+ * database in glijdt. Het dashboard heeft er dan ook geen "Toepassen"-knop voor.
+ */
 const VELDEN = [
   'doelen',
-  'portiedoelen',
   'knelpunten',
   'voorkeuren',
   'beperkingen',
@@ -46,6 +54,13 @@ const MAX_SIGNAAL = 120;
 // liever vallen dan half opslaan.
 const MAX_NIEUW = 800;
 const MAX_TOELICHTING = 300;
+// Lijstvelden worden in het dashboard terug gesplitst op de scheidingstekens; de grens
+// geldt daarom per item en niet per veld — exact de caps van het klant-pad
+// (werk_mijn_profiel_bij, fase 7): hoogstens 20 items van elk 200 tekens. Eén uitgelopen
+// item verdwijnt; de rest van het voorstel blijft gewoon bruikbaar.
+const LIJSTVELDEN = ['doelen', 'knelpunten', 'voorkeuren', 'beperkingen', 'checkinRitme'];
+const MAX_ITEMS = 20;
+const MAX_ITEM = 200;
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -59,6 +74,20 @@ function tekst(waarde: unknown): string {
 }
 
 type Voorstel = { veld: string; oud: string; nieuw: string; toelichting: string };
+
+/**
+ * Een lijstveld-waarde opschonen: zelfde split als het dashboard (' · ' opgedragen, maar
+ * een model maakt er ook wel eens een bullet of een regeleinde van), items boven de grens
+ * eruit, en weer netjes samengevoegd. Leeg terug = er bleef niets bruikbaars over.
+ */
+function schoonLijst(nieuw: string): string {
+  return nieuw
+    .split(/[·•\n;]/)
+    .map((deel) => deel.trim())
+    .filter((deel) => deel !== '' && deel.length <= MAX_ITEM)
+    .slice(0, MAX_ITEMS)
+    .join(' · ');
+}
 
 /**
  * Het antwoord van het model → voorstellen. Defensief in elke stap: dit is LLM-output die
@@ -88,11 +117,14 @@ function leesVoorstellen(txt: string): Voorstel[] {
     if (!(VELDEN as readonly string[]).includes(veld)) continue; // verzonnen veldnaam
     if (nieuw === '' || nieuw.length > MAX_NIEUW) continue; // niets te beslissen, of te lang
     if (uit.some((r) => r.veld === veld)) continue; // twee voorstellen voor één veld: het tweede overschrijft het eerste stilletjes
+    // Lijstvelden per item begrenzen; blijft er niets over, dan is er niets voor te stellen.
+    const waarde = LIJSTVELDEN.includes(veld) ? schoonLijst(nieuw) : nieuw;
+    if (waarde === '') continue;
     uit.push({
       veld,
       // oud en toelichting zijn toonwerk: afkappen is hier onschadelijk.
       oud: tekst(v.oud).slice(0, MAX_NIEUW),
-      nieuw,
+      nieuw: waarde,
       toelichting: tekst(v.toelichting).slice(0, MAX_TOELICHTING),
     });
   }
@@ -196,7 +228,7 @@ Deno.serve(async (req) => {
       `- "veld" is precies één van: ${VELDEN.join(', ')}.`,
       '- "oud" is de huidige waarde van dat veld en "nieuw" de VOLLEDIGE nieuwe waarde — niet alleen wat erbij komt, want "nieuw" vervangt het veld in zijn geheel.',
       '- Lijstvelden (doelen, knelpunten, voorkeuren, beperkingen, checkinRitme) schrijf je als één string met " · " tussen de items.',
-      '- portiedoelen schrijf je als "3 handpalm eiwit · 4 vuist groente · 2 holle hand koolhydraten · 2 duim vet".',
+      '- De portiedoelen (handmaten) staan niet in die lijst en stel je niet voor: die zet Laura zelf bij in het profiel. Wat de logs zeggen mag je wél gebruiken als reden voor een ander veld.',
       '- "toelichting" is één zin voor Laura: waarom deze bijstelling.',
       '- Stel alleen iets voor waar de notitie of de signalen aanleiding toe geven. Herhaal geen ongewijzigde waarden en verzin geen veldnamen.',
       '- Geen aanleiding gezien? Antwoord dan met [].',

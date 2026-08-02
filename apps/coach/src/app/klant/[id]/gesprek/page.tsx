@@ -76,8 +76,10 @@ export default function GesprekPagina() {
   } = gesprek;
   const heeftNotitie = notitie.trim() !== '';
   // Na het vastleggen verandert er niets meer aan de sessie-rij; velden die dan nog
-  // bewerkbaar lijken zouden wijzigingen beloven die nergens meer heen gaan.
-  const opSlot = opgeslagen;
+  // bewerkbaar lijken zouden wijzigingen beloven die nergens meer heen gaan. Hetzelfde
+  // slot gaat erop zodra de profielversie geschreven is (en alleen de sessie-rij nog
+  // moet): die besluiten staan dan al in het profiel en kunnen niet meer terug.
+  const opSlot = opgeslagen || gesprek.versieGeschreven;
 
   async function opAfsluiten() {
     // §9: eerste klik legt vast, tweede klik gaat terug naar het klantdetail.
@@ -196,9 +198,12 @@ export default function GesprekPagina() {
                 </div>
               ) : (
                 <>
+                  {/* Kaal: de kop staat al op deze kaart en de slotzin hieronder is de
+                      §9-variant — de eigen voetnoot van de kaart zou hem herhalen. */}
                   <HandmatenKaart
                     gemiddelden={context.gemiddelden}
                     dagenMetLog={context.dagenMetLog}
+                    variant="kaal"
                   />
                   {/* contrast-opvolgpunt: #A3A59A op wit ≈ 2,5:1 bij 12,5px — ontwerpwaarde. */}
                   <p className="text-[12.5px] leading-[1.55] text-muted-softer">
@@ -219,7 +224,9 @@ export default function GesprekPagina() {
                 <p className="text-xs text-muted-softer">
                   {voorstellen === null || voorstellen.length === 0
                     ? 'nog geen voorstellen'
-                    : `${gesprek.aantalToegepast} van ${voorstellen.length} toegepast`}
+                    : gesprek.aantalBeslisbaar === 0
+                      ? 'niets om te beslissen'
+                      : `${gesprek.aantalToegepast} van ${gesprek.aantalBeslisbaar} toegepast`}
                 </p>
               </div>
 
