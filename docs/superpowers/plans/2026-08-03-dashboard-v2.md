@@ -64,3 +64,82 @@
 ## Self-review
 
 Dekking: §7 (T1), §8 (T2), §9 (T3+T4), E1-E8 verwerkt, bestaande features behouden (E6), geen migratie nodig (weekly_sessions bestaat, RLS dekt). Prompt-preview via de echte builder (handoff-eis). Contrast-afwijkingen van het ontwerp worden genoteerd, niet stil gefixt.
+
+## Jeffrey-stappen (na de bouw)
+
+Eindstand bij oplevering: `npm run typecheck -w apps/coach` 0 · `npm run typecheck -w apps/mobile` 0 ·
+`npm run build -w apps/coach` succes · `npm run lint -w apps/coach` schoon · `npm test` 30 groen ·
+`npm run test:rls` 54 groen (alles; geen DB-wijziging in deze branch) · `deno check` schoon op
+`prompt-preview`, `sessie-voorstellen` en `lau-reply`.
+
+**Geen migratie in deze branch** — `weekly_sessions` en de coach-RLS bestaan sinds fase 5. Er is dus
+niets te pushen; alleen de twee nieuwe functions moeten de deur uit.
+
+1. **De twee functions deployen** (twee losse commando's, volgorde maakt niet uit):
+
+   ```bash
+   supabase functions deploy prompt-preview
+   ```
+
+   ```bash
+   supabase functions deploy sessie-voorstellen
+   ```
+
+   Verwacht per commando: `Deployed Functions on project jzovciuubkwvbwxphamf: <naam>` en een
+   dashboard-link. Foutbetekenis: `Access token not provided` = eerst `supabase login` ·
+   `Cannot find project ref` = `supabase link --project-ref jzovciuubkwvbwxphamf` ·
+   een bundel-fout op `../../../packages/shared/...` = je draait het commando niet vanuit de
+   repo-root (de functions importeren de gedeelde types via een relatief pad).
+
+   Geen `config.toml`-blok nodig: beide functions worden door het dashboard met Laura's JWT
+   aangeroepen, dus de standaard `verify_jwt = true` is hier precies goed. Ze checken daarbovenop
+   zelf dat de klant van de ingelogde coach is (anders 403).
+
+   Secrets: `ANTHROPIC_API_KEY` staat er al sinds fase 3 en is het enige wat verplicht is.
+   `LAU_MODEL` (default `claude-sonnet-5`, gebruikt door `sessie-voorstellen`) en
+   `LAU_SUGGESTIE_MODEL` (default `claude-haiku-4-5`, gebruikt door `prompt-preview`) zijn optioneel
+   — zelfde namen als lau-reply/lau-ochtend, dus een modelwissel is één `supabase secrets set`.
+
+2. **Dashboard herstarten en inloggen**:
+
+   ```bash
+   npm run dev -w apps/coach
+   ```
+
+   → <http://localhost:3000>, inloggen als `laura@demo.lauinbalans.nl` / `demo-demo-2026`.
+   Herstarten is nodig omdat de dev-server nog op de oude build draait.
+
+3. **De hele flow doorlopen** (de visuele check die ik niet kan doen):
+   - **Klantenlijst** (§7): kop-teller "N actief · M wachten op jou", filterpills, eten-rail per rij,
+     inset clay-rand bij rijen die op Laura wachten.
+   - **Sanne openen** → **drie kolommen** (§8): transcript + antwoordbalk links, profiel-chips in het
+     midden (savestatus rechtsboven), handmaten/notities/Lau-gebruik rechts. Elke kolom scrollt apart.
+   - **"Wekelijks gesprek"** rechtsboven → §9-scherm.
+   - **Notitie typen** in de grote textarea (zonder notitie blijft de knop uit — dat is bedoeld) en een
+     paar **signaalchips** aanzetten.
+   - **"Voorstellen ophalen"** → knop leest "Lau denkt na…", daarna maximaal 3 kaarten met veldnaam,
+     nieuwe waarde en de oude doorgestreept. Foutbetekenis: "Beschikbaar na deploy van de nieuwe
+     functions" = stap 1 is (nog) niet gelukt · "De voorstellen ophalen lukte niet" = de function
+     draait maar geeft een fout — kijk in Supabase → Edge Functions → sessie-voorstellen → Logs ·
+     "Lau zag in deze notitie geen aanleiding" is géén fout, dat is een geldige uitkomst (bij twijfel:
+     de logregel `geen bruikbare voorstellen` in dezelfde logs vertelt of het model écht niets zag).
+   - **Toepassen/Overslaan** per kaart → de teller rechtsboven ("N van M toegepast") loopt mee.
+   - **"Ververs preview"** → witte bubbel in Newsreader met het gesimuleerde maandagochtendbericht.
+     Klap **"Bekijk de volledige prompt"** uit: dat is letterlijk de systemprompt die Lau in productie krijgt
+     (dezelfde `bouwPrompt` als lau-reply), dus het toegepaste voorstel hoort er in het profielblok in
+     te staan. Staat er wél een prompt maar geen bubbel, dan gaf het model niets bruikbaars terug —
+     de prompt is de kern, dat is geen storing. Toggle je daarna nog een voorstel, dan meldt de kaart
+     dat de preview verouderd is; verversen kost tokens, dus dat gebeurt alleen op de knop.
+   - **"Vastleggen en terug naar Sanne"** → label wordt "Opgeslagen — Lau is bijgesteld"; **tweede klik** gaat
+     terug naar het klantdetail. Check daar in kolom 2 dat de versiehistorie er een versie bij heeft
+     met de toegepaste wijziging erin.
+
+4. **PR openen** — de branch staat op origin, maar deze laatste commits nog niet:
+
+   ```bash
+   git push origin dashboard-v2
+   ```
+
+   Daarna: <https://github.com/JeffreyBouva/lau-in-balans/compare/fase-7-ai-limieten...dashboard-v2>
+   — is fase 7 al in `main` gemerged, gebruik dan
+   <https://github.com/JeffreyBouva/lau-in-balans/compare/main...dashboard-v2>.
