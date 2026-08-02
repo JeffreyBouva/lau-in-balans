@@ -17,7 +17,7 @@ const UNIEK = '23505';
 type VersieRij = {
   versie: number;
   created_at: string;
-  /** null = onboarding: de klant schrijft versie 1 zelf (policy klant_schrijft_versie_1). */
+  /** null = door de klant zelf geschreven: de onboarding of haar profielscherm. */
   author: string | null;
   profiel: AIProfile;
 };
@@ -41,7 +41,9 @@ type Stand = { clientId: string; versies: VersieRij[]; fout: string | null };
  * de ingelogde coach is de enige naam die we kunnen kennen.
  */
 function auteurLabel(author: string | null, coach: Coach | null): string {
-  if (author === null) return 'onboarding';
+  // author null was ooit alleen de onboarding; sinds fase 6 schrijft de klant ook vanaf
+  // haar profielscherm versies. Beide zijn "door de klant zelf" — vandaar het dubbellabel.
+  if (author === null) return 'klant/onboarding';
   if (coach && author === coach.id) return coach.naam;
   return 'andere coach';
 }

@@ -11,13 +11,31 @@ import { supabase } from '@/lib/supabase';
 import { tik } from '@/lib/haptics';
 import { useKlantData } from '@/lib/klantdata';
 import { useOpSlot } from '@/lib/hooks/useOpSlot';
+import { usePortiedoelen } from '@/lib/hooks/useProfiel';
 import { useSheets } from '@/lib/sheets';
 import { LauraKnop } from '@/components/LauraKnop';
 import { SlotKaart } from '@/components/SlotKaart';
 import { CodeSheet } from '@/components/CodeSheet';
+import { Tutorial, type TutorialStap } from '@/components/Tutorial';
 
 const WEEKDAG = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
 const GETAL = ['nul', 'één', 'twee', 'drie', 'vier', 'vijf', 'zes', 'zeven'];
+
+// Eerste-keer-uitleg (spec § 3): weekoverzicht · wat opvalt · Laura-knop en profiel.
+const UITLEG: TutorialStap[] = [
+  {
+    titel: 'Je week in één blik',
+    tekst: 'Bovenaan zie je op welke dagen jullie contact hadden. Regelmaat telt hier meer dan een perfecte week.',
+  },
+  {
+    titel: 'Wat opvalt',
+    tekst: 'De groene kaart vat je week samen: wat goed gaat, en waar een kleine bijstelling het meeste oplevert.',
+  },
+  {
+    titel: 'Laura en je profiel',
+    tekst: 'Rechtsboven haal je Laura erbij. Het poppetje ernaast opent je profiel — daar pas je je gegevens en doelen aan.',
+  },
+];
 
 const somPorties = (p: Porties) => p.eiwit + p.groente + p.koolhydraten + p.vet;
 const komma = (n: number) => n.toFixed(1).replace('.', ',');
@@ -41,6 +59,9 @@ export default function Vandaag() {
   }, []);
 
   const { berichten, openFlag, week, herlaad } = useKlantData();
+  // Dezelfde persoonlijke dagdoelen als op het Eten-scherm: wat de klant op haar profiel
+  // instelt, telt hier meteen mee in de gemiddelden en in "wat opvalt".
+  const doelen = usePortiedoelen();
   const { openLaura } = useSheets();
   // Drie standen in plaats van twee: zolang het oordeel laadt blijven de tier-gevoelige
   // posities leeg. Dat is de kleinste ingreep die béide flitsen voorkomt — geen slot dat
@@ -71,9 +92,12 @@ export default function Vandaag() {
   const dagenMetLog = week.filter((d) => somPorties(d.porties) > 0).length;
   const gemiddelden = HANDMATEN.map((h) => {
     const totaal = week.reduce((sum, d) => sum + d.porties[h.key], 0);
-    return { ...h, gem: dagenMetLog > 0 ? totaal / dagenMetLog : 0 };
+    // Persoonlijk doel uit het profiel; 0 of ontbrekend valt terug op het standaarddoel,
+    // zodat de verhoudingen hieronder nooit door nul delen.
+    const doel = doelen[h.key] || h.dagdoel;
+    return { ...h, doel, gem: dagenMetLog > 0 ? totaal / dagenMetLog : 0 };
   });
-  const sterkste = gemiddelden.reduce((best, h) => (h.gem / h.dagdoel > best.gem / best.dagdoel ? h : best));
+  const sterkste = gemiddelden.reduce((best, h) => (h.gem / h.doel > best.gem / best.doel ? h : best));
   const eiwit = gemiddelden.find((h) => h.key === 'eiwit')!;
   const heeftLogs = dagenMetLog > 0;
 
@@ -82,7 +106,7 @@ export default function Vandaag() {
     ? `${sterkste.naam} is deze week je sterkste punt.`
     : 'Nog geen eten gelogd deze week.';
   const opvaltRegel = heeftLogs
-    ? (eiwit.gem >= eiwit.dagdoel
+    ? (eiwit.gem >= eiwit.doel
         ? `Je eiwit zit op koers — dat merk je 's avonds aan minder trek.`
         : 'Bij het avondeten is eiwit het makkelijkst bij te sturen: kip, vis of kwark.')
     : 'Zodra je logt, zie je hier wat opvalt aan je week.';
@@ -92,120 +116,127 @@ export default function Vandaag() {
     : 'Nog niets gelogd deze week. Twee tikken op het Eten-scherm.';
 
   return (
-    <ScrollView
-      style={s.root}
-      contentContainerStyle={[s.inhoud, { paddingTop: insets.top + 20 }]}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Header */}
-      <View style={s.header}>
-        <View style={s.headerTekst}>
-          {weekNr != null && <Text style={text.eyebrow}>Week {weekNr}</Text>}
-          <Text style={s.hero}>{hero}</Text>
+    // De scroll zit in een schermvullende View: de tutorial-overlay is een absolute
+    // fill en hoort naast de scroll, niet erin (binnen de inhoud zou 'ie meescrollen).
+    <View style={s.root}>
+      <ScrollView
+        style={s.root}
+        contentContainerStyle={[s.inhoud, { paddingTop: insets.top + 20 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={s.header}>
+          <View style={s.headerTekst}>
+            {weekNr != null && <Text style={text.eyebrow}>Week {weekNr}</Text>}
+            <Text style={s.hero}>{hero}</Text>
+          </View>
+          {/* De knop ziet er in alle standen hetzelfde uit (niets te flitsen). Tijdens het
+              laden is de tik bewust een no-op: dan weten we nog niet of dit een free-klant
+              is, en Laura's inbox is voor klanten mét traject. */}
+          <View style={s.headerKnoppen}>
+            <LauraKnop
+              openFlag={openFlag}
+              label={opSlot ? 'Ik heb een code' : undefined}
+              onPress={slotLaden ? () => {} : opSlot ? () => setCodeSheet(true) : openLaura}
+            />
+            {/* Profiel: eigen gegevens, doelen, code verzilveren en uitloggen. */}
+            <Pressable
+              onPress={() => { tik(); router.push('/profiel'); }}
+              accessibilityRole="button"
+              accessibilityLabel="Profiel"
+              hitSlop={8}
+              style={({ pressed }) => [s.profielKnop, pressed && s.gedrukt]}
+            >
+              <Ionicons name="person-circle-outline" size={28} color={colors.muted} />
+            </Pressable>
+          </View>
         </View>
-        {/* De knop ziet er in alle standen hetzelfde uit (niets te flitsen). Tijdens het
-            laden is de tik bewust een no-op: dan weten we nog niet of dit een free-klant
-            is, en Laura's inbox is voor klanten mét traject. */}
-        <View style={s.headerKnoppen}>
-          <LauraKnop
-            openFlag={openFlag}
-            label={opSlot ? 'Ik heb een code' : undefined}
-            onPress={slotLaden ? () => {} : opSlot ? () => setCodeSheet(true) : openLaura}
+
+        {/* Contactkaart */}
+        {slotLaden ? null : opSlot ? (
+          <SlotKaart
+            titel="Contact met Lau en Laura"
+            uitleg="Zie hier hoe vaak jullie contact hadden en waar jullie samen aan werken."
+            onCode={() => setCodeSheet(true)}
           />
-          {/* Profiel: eigen gegevens, doelen, code verzilveren en uitloggen. */}
-          <Pressable
-            onPress={() => { tik(); router.push('/profiel'); }}
-            accessibilityRole="button"
-            accessibilityLabel="Profiel"
-            hitSlop={8}
-            style={({ pressed }) => [s.profielKnop, pressed && s.gedrukt]}
-          >
-            <Ionicons name="person-circle-outline" size={28} color={colors.muted} />
-          </Pressable>
-        </View>
-      </View>
-
-      {/* Contactkaart */}
-      {slotLaden ? null : opSlot ? (
-        <SlotKaart
-          titel="Contact met Lau en Laura"
-          uitleg="Zie hier hoe vaak jullie contact hadden en waar jullie samen aan werken."
-          onCode={() => setCodeSheet(true)}
-        />
-      ) : (
-        <View style={s.contactKaart}>
-          <Text style={s.kaartLabel}>Dagen dat we contact hadden</Text>
-          <View style={s.dagRij}>
-            {contactDagen.map((d) => (
-              <View key={d.datum} style={s.dagKolom}>
-                <View style={[s.blok, d.contact ? s.blokAan : s.blokUit]} />
-                <Text style={s.dagLetter}>{weekdagLetter(d.datum)}</Text>
-              </View>
-            ))}
-          </View>
-          <Text style={s.kaartOnder}>{contactZin}</Text>
-        </View>
-      )}
-
-      {/* Wat opvalt */}
-      <View style={s.opvaltKaart}>
-        <Text style={s.opvaltEyebrow}>Wat opvalt</Text>
-        <Text style={s.opvaltTitel}>{opvaltTitel}</Text>
-        <Text style={s.opvaltRegel}>{opvaltRegel}</Text>
-      </View>
-
-      {/* Eten-gemiddelden */}
-      <View style={s.etenKaart}>
-        <View style={s.etenKop}>
-          <Text style={text.eyebrow}>Eten bijhouden</Text>
-          <Pressable onPress={() => router.push('/(tabs)/eten')} style={s.openenKnop}>
-            <Text style={s.openenTekst}>Openen</Text>
-          </Pressable>
-        </View>
-        <View style={s.etenRijen}>
-          {gemiddelden.map((h) => (
-            <View key={h.key} style={s.etenRij}>
-              <View style={[s.marker, { backgroundColor: h.kleur }]} />
-              <Text style={s.etenNaam}>{h.naam} · {h.hand}</Text>
-              <Text style={s.etenGem}>{komma(h.gem)} van {h.dagdoel}</Text>
+        ) : (
+          <View style={s.contactKaart}>
+            <Text style={s.kaartLabel}>Dagen dat we contact hadden</Text>
+            <View style={s.dagRij}>
+              {contactDagen.map((d) => (
+                <View key={d.datum} style={s.dagKolom}>
+                  <View style={[s.blok, d.contact ? s.blokAan : s.blokUit]} />
+                  <Text style={s.dagLetter}>{weekdagLetter(d.datum)}</Text>
+                </View>
+              ))}
             </View>
-          ))}
-        </View>
-        <Text style={s.kaartOnder}>{etenOnder}</Text>
-      </View>
+            <Text style={s.kaartOnder}>{contactZin}</Text>
+          </View>
+        )}
 
-      {/* Waar we aan werken + afspraak — bij free samen één slot-kaart, het zijn allebei
-          dingen die uit het traject met Laura komen. */}
-      {slotLaden ? null : opSlot ? (
-        <SlotKaart
-          titel="Waar jullie aan werken"
-          uitleg="Werkpunten en je afspraken met Laura verschijnen hier zodra je een traject volgt."
-          onCode={() => setCodeSheet(true)}
-        />
-      ) : (
-        <>
-          <View style={s.werkGroep}>
-            <Text style={text.eyebrow}>Waar we aan werken</Text>
-            {WERKPUNTEN.map((w) => (
-              <View key={w.titel} style={s.werkKaart}>
-                <View style={[s.werkBol, { backgroundColor: w.kleur }]} />
-                <Text style={s.werkTitel}>{w.titel}</Text>
-                <Text style={s.werkStatus}>{w.status}</Text>
+        {/* Wat opvalt */}
+        <View style={s.opvaltKaart}>
+          <Text style={s.opvaltEyebrow}>Wat opvalt</Text>
+          <Text style={s.opvaltTitel}>{opvaltTitel}</Text>
+          <Text style={s.opvaltRegel}>{opvaltRegel}</Text>
+        </View>
+
+        {/* Eten-gemiddelden */}
+        <View style={s.etenKaart}>
+          <View style={s.etenKop}>
+            <Text style={text.eyebrow}>Eten bijhouden</Text>
+            <Pressable onPress={() => router.push('/(tabs)/eten')} style={s.openenKnop}>
+              <Text style={s.openenTekst}>Openen</Text>
+            </Pressable>
+          </View>
+          <View style={s.etenRijen}>
+            {gemiddelden.map((h) => (
+              <View key={h.key} style={s.etenRij}>
+                <View style={[s.marker, { backgroundColor: h.kleur }]} />
+                <Text style={s.etenNaam}>{h.naam} · {h.hand}</Text>
+                <Text style={s.etenGem}>{komma(h.gem)} van {h.doel}</Text>
               </View>
             ))}
           </View>
+          <Text style={s.kaartOnder}>{etenOnder}</Text>
+        </View>
 
-          {/* Afspraak-blok */}
-          <View style={s.afspraak}>
-            <View style={s.lauraAvatar}><Text style={s.lauraAvatarTekst}>La</Text></View>
-            <Text style={s.afspraakTekst}>Donderdag 20 aug · gesprek met Laura, 30 min.</Text>
-          </View>
-        </>
-      )}
+        {/* Waar we aan werken + afspraak — bij free samen één slot-kaart, het zijn allebei
+            dingen die uit het traject met Laura komen. */}
+        {slotLaden ? null : opSlot ? (
+          <SlotKaart
+            titel="Waar jullie aan werken"
+            uitleg="Werkpunten en je afspraken met Laura verschijnen hier zodra je een traject volgt."
+            onCode={() => setCodeSheet(true)}
+          />
+        ) : (
+          <>
+            <View style={s.werkGroep}>
+              <Text style={text.eyebrow}>Waar we aan werken</Text>
+              {WERKPUNTEN.map((w) => (
+                <View key={w.titel} style={s.werkKaart}>
+                  <View style={[s.werkBol, { backgroundColor: w.kleur }]} />
+                  <Text style={s.werkTitel}>{w.titel}</Text>
+                  <Text style={s.werkStatus}>{w.status}</Text>
+                </View>
+              ))}
+            </View>
 
-      {/* Buiten de slot-conditie: zo overleeft de sheet het omklappen naar coached. */}
-      <CodeSheet zichtbaar={codeSheet} onSluit={() => setCodeSheet(false)} />
-    </ScrollView>
+            {/* Afspraak-blok */}
+            <View style={s.afspraak}>
+              <View style={s.lauraAvatar}><Text style={s.lauraAvatarTekst}>La</Text></View>
+              <Text style={s.afspraakTekst}>Donderdag 20 aug · gesprek met Laura, 30 min.</Text>
+            </View>
+          </>
+        )}
+
+        {/* Buiten de slot-conditie: zo overleeft de sheet het omklappen naar coached. */}
+        <CodeSheet zichtbaar={codeSheet} onSluit={() => setCodeSheet(false)} />
+      </ScrollView>
+
+      {/* Als laatste kind: de eerste-keer-uitleg legt zich over het hele scherm. */}
+      <Tutorial scherm="vandaag" stappen={UITLEG} />
+    </View>
   );
 }
 

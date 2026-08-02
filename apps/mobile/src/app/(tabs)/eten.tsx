@@ -12,9 +12,26 @@ import { LauraKnop } from '@/components/LauraKnop';
 import { HandmaatStepper } from '@/components/HandmaatStepper';
 import { SlotBalk } from '@/components/SlotBalk';
 import { CodeSheet } from '@/components/CodeSheet';
+import { Tutorial, type TutorialStap } from '@/components/Tutorial';
 
 const WEEKDAG = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
 const GETAL = ['nul', 'één', 'twee', 'drie', 'vier', 'vijf', 'zes', 'zeven'];
+
+// Eerste-keer-uitleg (spec § 3): steppers en handmaten · weekstaafjes · geen calorieën.
+const UITLEG: TutorialStap[] = [
+  {
+    titel: 'Je hand is de maat',
+    tekst: 'Tik per soort erbij wat je op hebt: een handpalm eiwit, een vuist groente. Geen weegschaal nodig.',
+  },
+  {
+    titel: 'Je week in staafjes',
+    tekst: 'Onderaan zie je op welke dagen je iets hebt gelogd. Een gaatje is geen ramp — het gaat om het patroon.',
+  },
+  {
+    titel: 'Geen calorieën',
+    tekst: 'Je hoeft niets te tellen. Twee tikken na een maaltijd is genoeg, en Lau denkt met je mee.',
+  },
+];
 
 const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1);
 const weekdagLetter = (iso: string) => WEEKDAG[new Date(`${iso}T00:00:00`).getDay()];
@@ -58,86 +75,93 @@ export default function Eten() {
   const weekOnder = `${dagLabel} gelogd. Regelmaat is het punt, geen perfecte week.`;
 
   return (
-    <ScrollView
-      style={s.root}
-      contentContainerStyle={[s.inhoud, { paddingTop: insets.top + 20 }]}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Header */}
-      <View style={s.header}>
-        <View style={s.headerTekst}>
-          <Text style={text.eyebrow}>{vandaagLabel}</Text>
-          <Text style={s.titel}>Vandaag gegeten</Text>
+    // De scroll zit in een schermvullende View: de tutorial-overlay is een absolute
+    // fill en hoort naast de scroll, niet erin (binnen de inhoud zou 'ie meescrollen).
+    <View style={s.root}>
+      <ScrollView
+        style={s.root}
+        contentContainerStyle={[s.inhoud, { paddingTop: insets.top + 20 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={s.header}>
+          <View style={s.headerTekst}>
+            <Text style={text.eyebrow}>{vandaagLabel}</Text>
+            <Text style={s.titel}>Vandaag gegeten</Text>
+          </View>
+          {/* Tijdens het laden bewust een no-op: nog onbekend of dit een free-klant is. */}
+          <LauraKnop
+            openFlag={openFlag}
+            label={opSlot ? 'Ik heb een code' : undefined}
+            onPress={slotLaden ? () => {} : opSlot ? () => setCodeSheet(true) : openLaura}
+          />
         </View>
-        {/* Tijdens het laden bewust een no-op: nog onbekend of dit een free-klant is. */}
-        <LauraKnop
-          openFlag={openFlag}
-          label={opSlot ? 'Ik heb een code' : undefined}
-          onPress={slotLaden ? () => {} : opSlot ? () => setCodeSheet(true) : openLaura}
-        />
-      </View>
 
-      {/* Introregel */}
-      <Text style={s.intro}>
-        Geen calorieën — je eigen hand is de maat. Tik om een portie toe te voegen.
-      </Text>
+        {/* Introregel */}
+        <Text style={s.intro}>
+          Geen calorieën — je eigen hand is de maat. Tik om een portie toe te voegen.
+        </Text>
 
-      {/* Vier portiekaarten */}
-      {/* NB: maaltijden die via de log-sheet zijn vastgelegd, kun je hier niet
-          verminderen — alleen wat quick is toegevoegd (open-design-questions). */}
-      {HANDMATEN.map((h) => (
-        <Portiekaart
-          key={h.key}
-          handmaat={h}
-          waarde={dag[h.key]}
-          doel={doelen[h.key]}
-          minDisabled={quick[h.key] <= 0}
-          onMin={() => pasQuickAan(h.key, -1)}
-          onPlus={() => pasQuickAan(h.key, +1)}
-        />
-      ))}
+        {/* Vier portiekaarten */}
+        {/* NB: maaltijden die via de log-sheet zijn vastgelegd, kun je hier niet
+            verminderen — alleen wat quick is toegevoegd (open-design-questions). */}
+        {HANDMATEN.map((h) => (
+          <Portiekaart
+            key={h.key}
+            handmaat={h}
+            waarde={dag[h.key]}
+            doel={doelen[h.key]}
+            minDisabled={quick[h.key] <= 0}
+            onMin={() => pasQuickAan(h.key, -1)}
+            onPlus={() => pasQuickAan(h.key, +1)}
+          />
+        ))}
 
-      {/* "Lau kijkt mee"-kaart */}
-      <View style={s.lauKaart}>
-        <Text style={s.lauEyebrow}>Lau kijkt mee</Text>
-        <Text style={s.lauRegel}>{lauRegel}</Text>
-      </View>
+        {/* "Lau kijkt mee"-kaart */}
+        <View style={s.lauKaart}>
+          <Text style={s.lauEyebrow}>Lau kijkt mee</Text>
+          <Text style={s.lauRegel}>{lauRegel}</Text>
+        </View>
 
-      {/* Weekkaart */}
-      <View style={s.weekKaart}>
-        <Text style={text.eyebrow}>Deze week</Text>
-        <View style={s.weekRij}>
-          {weekBars.map((b) => (
-            <View key={b.datum} style={s.weekKolom}>
-              <View
-                style={[
-                  s.staaf,
-                  { height: b.gelogd ? 14 + b.waarde * 8 : 10 },
-                  b.gelogd ? s.staafAan : s.staafUit,
-                ]}
-              />
-              <Text style={s.weekLetter}>{weekdagLetter(b.datum)}</Text>
+        {/* Weekkaart */}
+        <View style={s.weekKaart}>
+          <Text style={text.eyebrow}>Deze week</Text>
+          <View style={s.weekRij}>
+            {weekBars.map((b) => (
+              <View key={b.datum} style={s.weekKolom}>
+                <View
+                  style={[
+                    s.staaf,
+                    { height: b.gelogd ? 14 + b.waarde * 8 : 10 },
+                    b.gelogd ? s.staafAan : s.staafUit,
+                  ]}
+                />
+                <Text style={s.weekLetter}>{weekdagLetter(b.datum)}</Text>
+              </View>
+            ))}
+          </View>
+          <Text style={s.kaartOnder}>{weekOnder}</Text>
+        </View>
+
+        {/* Uitleg-blok */}
+        <View style={s.uitleg}>
+          {HANDMATEN.map((h) => (
+            <View key={h.key} style={s.uitlegRij}>
+              <View style={[s.uitlegMarker, { backgroundColor: h.kleur }]} />
+              <Text style={s.uitlegTekst}>
+                <Text style={s.uitlegNaam}>{h.naam}</Text> · {h.hand} — {h.uitleg}
+              </Text>
             </View>
           ))}
         </View>
-        <Text style={s.kaartOnder}>{weekOnder}</Text>
-      </View>
 
-      {/* Uitleg-blok */}
-      <View style={s.uitleg}>
-        {HANDMATEN.map((h) => (
-          <View key={h.key} style={s.uitlegRij}>
-            <View style={[s.uitlegMarker, { backgroundColor: h.kleur }]} />
-            <Text style={s.uitlegTekst}>
-              <Text style={s.uitlegNaam}>{h.naam}</Text> · {h.hand} — {h.uitleg}
-            </Text>
-          </View>
-        ))}
-      </View>
+        {/* Buiten de slot-conditie: zo overleeft de sheet het omklappen naar coached. */}
+        <CodeSheet zichtbaar={codeSheet} onSluit={() => setCodeSheet(false)} />
+      </ScrollView>
 
-      {/* Buiten de slot-conditie: zo overleeft de sheet het omklappen naar coached. */}
-      <CodeSheet zichtbaar={codeSheet} onSluit={() => setCodeSheet(false)} />
-    </ScrollView>
+      {/* Als laatste kind: de eerste-keer-uitleg legt zich over het hele scherm. */}
+      <Tutorial scherm="eten" stappen={UITLEG} />
+    </View>
   );
 }
 

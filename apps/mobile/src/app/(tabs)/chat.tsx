@@ -15,6 +15,23 @@ import { SlotKaart } from '@/components/SlotKaart';
 import { CodeSheet } from '@/components/CodeSheet';
 import { Bericht } from '@/components/Bericht';
 import { TypIndicator } from '@/components/TypIndicator';
+import { Tutorial, type TutorialStap } from '@/components/Tutorial';
+
+// Eerste-keer-uitleg (spec § 3): wie Lau is · loggen vs. suggesties · Laura leest mee.
+const UITLEG: TutorialStap[] = [
+  {
+    titel: 'Dit is Lau',
+    tekst: 'Stel gerust je vraag over eten, honger of een lastige dag. Lau denkt met je mee, ook \'s avonds laat.',
+  },
+  {
+    titel: 'Loggen of vragen',
+    tekst: 'Met "Ik heb gegeten" leg je een maaltijd vast. De rondjes ernaast sturen meteen een vraag naar Lau.',
+  },
+  {
+    titel: 'Laura leest mee',
+    tekst: 'Lau geeft geen medisch advies. Laura kijkt mee in jullie gesprek en stelt Lau op jou af.',
+  },
+];
 
 // De log-actie ("Ik heb gegeten") opent de log-sheet en staat daarom apart, als knop.
 // De suggesties eronder sturen een bericht naar Lau en passen zich aan het dagdeel +
@@ -175,6 +192,12 @@ export default function Chat() {
 
       {/* Buiten de slot-conditie: zo overleeft de sheet het omklappen naar coached. */}
       <CodeSheet zichtbaar={codeSheet} onSluit={() => setCodeSheet(false)} />
+
+      {/* Als laatste kind: de eerste-keer-uitleg legt zich over het hele scherm. Op slot
+          (en zolang het oordeel laadt) valt er niets uit te leggen — dan monteren we 'm
+          niet, zodat de vlag ongebruikt blijft en de uitleg alsnog komt zodra de chat
+          openklapt. */}
+      {!opSlot && !slotLaden && <Tutorial scherm="chat" stappen={UITLEG} />}
     </View>
   );
 }
