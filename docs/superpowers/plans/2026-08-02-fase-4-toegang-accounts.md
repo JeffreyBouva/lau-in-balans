@@ -206,9 +206,10 @@ git commit -m "feat(db): fase 4 — tiers, invite-codes, app_config, registratie
 - Modify: `scripts/seed.mjs`
 
 De registratie-trigger maakt nu bij `admin.createUser` direct een clients-rij aan. De seed moet daarom:
-1. Coach-users aanmaken met `user_metadata: { rol: 'coach' }` (trigger slaat ze over).
+1. Coach-users aanmaken met `app_metadata: { rol: 'coach' }` (trigger slaat ze over).
 2. Klant-users aanmaken met `user_metadata: { naam }`.
-3. Clients-rijen **upserten** (niet inserten — de trigger was eerst) mét `tier: 'coached'`.
+3. De clients-rij die de trigger al maakte **wissen en opnieuw inserten** mét `tier: 'coached'`
+   (upserten kán niet: de seed backdate't `startdatum` en de clients-guard blokkeert dat op UPDATE).
 4. In `wisDemoData` ook `invite_codes` legen.
 
 - [ ] **Step 1: Lees `scripts/seed.mjs` en pas aan**
@@ -216,19 +217,26 @@ De registratie-trigger maakt nu bij `admin.createUser` direct een clients-rij aa
 Zoek de plek waar auth-users worden aangemaakt (`auth.admin.createUser`) en geef metadata mee:
 
 ```js
-// coaches: rol 'coach' zodat handle_new_user géén clients-rij aanmaakt
+// coaches: rol 'coach' in app_metadata zodat handle_new_user géén clients-rij aanmaakt.
+// Bewust app_metadata en niet user_metadata: alleen de service role kan die schrijven,
+// user_metadata is bij signUp door de gebruiker zelf te vullen.
 const { data: u } = await service.auth.admin.createUser({
   email, password: WACHTWOORD, email_confirm: true,
-  user_metadata: isCoach ? { rol: 'coach' } : { naam },
+  user_metadata: { naam },
+  ...(isCoach ? { app_metadata: { rol: 'coach' } } : {}),
 });
 ```
 
-Zoek de `clients`-insert en maak er een upsert met tier van:
+Zoek de `clients`-insert. De trigger is je vóór geweest en heeft al een rij gemaakt
+(`tier 'free'`, `coach_id null`). Upserten werkt hier níét: de seed zet een backdated
+`startdatum` en `clients_guard_update` weigert elke wijziging daarvan. Wis de rij dus
+eerst en insert daarna de demo-rij, nu mét `tier`:
 
 ```js
-await service.from('clients').upsert({
+await service.from('clients').delete().eq('id', userId);
+await service.from('clients').insert({
   id: userId, coach_id: coachId, naam, leeftijd, startdatum, status, tier: 'coached',
-}, { onConflict: 'id' });
+});
 ```
 
 Voeg in `wisDemoData` (die verwijdert clients vóór coaches) toe, vóór het verwijderen van clients:

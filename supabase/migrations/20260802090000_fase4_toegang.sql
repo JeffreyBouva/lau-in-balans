@@ -1,5 +1,8 @@
 -- Fase 4: tiers, invite-codes, app_config, registratie-trigger, verzilver-RPC.
 
+-- pgcrypto levert gen_random_bytes(): een CSPRNG voor de invite-codes.
+create extension if not exists pgcrypto with schema extensions;
+
 -- ── 1. clients: tier + coach optioneel ──
 alter table public.clients add column tier text not null default 'free'
   check (tier in ('free', 'coached'));
@@ -9,7 +12,9 @@ update public.clients set tier = 'coached';  -- bestaande (demo)klanten zijn coa
 -- Guard versoepelen: coach_id mag één transitie maken (NULL → coach, het verzilveren).
 -- Een al-gekoppelde coach blijft onwijzigbaar.
 create or replace function public.clients_guard_update()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql
+set search_path = ''
+as $$
 begin
   if new.id <> old.id
      or (old.coach_id is not null and new.coach_id is distinct from old.coach_id)
@@ -24,12 +29,18 @@ $$;
 -- ── 2. invite_codes: kaal, eenmalig, geen vervaldatum in v1 ──
 create table public.invite_codes (
   id uuid primary key default gen_random_uuid(),
-  code text not null unique,
+  code text not null unique check (code = upper(code) and length(code) = 6),
   coach_id uuid not null references public.coaches (id),
   created_at timestamptz not null default now(),
   used_by uuid references public.clients (id) on delete set null,
-  used_at timestamptz
+  used_at timestamptz,
+  -- used_by mag null wórden (klant verwijderd → FK set null), maar used_at blijft
+  -- staan: de code is en blijft verbrand.
+  check (used_by is null or used_at is not null)
 );
+-- Case-insensitief uniek: het verzilveren matcht op upper(code).
+create unique index invite_codes_code_upper_idx on public.invite_codes (upper(code));
+create index invite_codes_coach_idx on public.invite_codes (coach_id);
 alter table public.invite_codes enable row level security;
 -- Bewust GEEN policies voor authenticated: alles loopt via de RPC's.
 -- Coach-beheer-policies komen in fase 5 (dashboard).
@@ -45,16 +56,19 @@ create policy iedereen_leest_config on public.app_config
 insert into public.app_config (key, value) values
   ('sloten_actief', 'true'::jsonb),
   ('apple_login_actief', 'false'::jsonb);
+comment on table public.app_config is 'Publiek leesbaar (ook anon) — hier NOOIT gevoelige waarden in zetten.';
 
 -- ── 4. Registratie-trigger: elke nieuwe auth-user krijgt een clients-rij ──
--- Metadata-vlag rol='coach' (gezet door de seed) slaat coach-accounts over.
+-- Vlag rol='coach' in app_metadata (gezet door de seed) slaat coach-accounts over.
+-- Bewust app_metadata en niet user_metadata: alleen de service role kan die schrijven,
+-- terwijl user_metadata bij signUp door de gebruiker zelf te vullen is.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql security definer
 set search_path = ''
 as $$
 begin
-  if new.raw_user_meta_data->>'rol' = 'coach' then
+  if new.raw_app_meta_data->>'rol' = 'coach' then
     return new;
   end if;
   insert into public.clients (id, naam, tier)
@@ -74,6 +88,7 @@ $$;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+-- geen grants nodig: een 'returns trigger'-functie is niet via PostgREST aanroepbaar
 
 -- ── 5. RPC verzilver_code: atomair, lekt niet welke codes bestaan ──
 create or replace function public.verzilver_code(p_code text)
@@ -83,20 +98,31 @@ set search_path = ''
 as $$
 declare
   v_coach uuid;
+  v_tier text;
+  v_bestaande_coach uuid;
 begin
   if auth.uid() is null then
     return false;
   end if;
-  -- Al coached → weiger; de code blijft bruikbaar voor iemand anders.
-  if exists (select 1 from public.clients c where c.id = auth.uid() and c.tier = 'coached') then
+  -- Lock op de eigen klant-rij: serialiseert claims per gebruiker en geeft
+  -- tier + huidige coach in één probe. Geen rij (coach-login) → uniform false.
+  select c.tier, c.coach_id into v_tier, v_bestaande_coach
+    from public.clients c where c.id = auth.uid() for update;
+  if v_tier is null or v_tier = 'coached' then
     return false;
   end if;
-  -- Geen klant-account (bijv. coach-login in de app) → zelfde 'false' als elke andere
-  -- mislukking: geen oracle, en de FK op used_by kan nooit een rauwe error lekken.
-  if not exists (select 1 from public.clients c where c.id = auth.uid()) then
+  -- Coach van de code éérst lezen (zonder claim): een code van een andere coach
+  -- dan de bestaande koppeling zou anders pas ná de claim op de guard knallen.
+  select ic.coach_id into v_coach from public.invite_codes ic
+   where upper(ic.code) = upper(trim(p_code)) and ic.used_by is null and ic.used_at is null;
+  if v_coach is null then
     return false;
   end if;
-  -- Claim óók op used_at: een verwijderde klant (used_by → null via FK) mag z'n
+  if v_bestaande_coach is not null and v_bestaande_coach <> v_coach then
+    return false;
+  end if;
+  -- Claim (atomair; race met een andere claimer valt terug op false).
+  -- Ook op used_at: een verwijderde klant (used_by → null via FK) mag z'n
   -- verbrande code niet laten herrijzen.
   update public.invite_codes
      set used_by = auth.uid(), used_at = now()
@@ -106,10 +132,6 @@ begin
     return false;
   end if;
   update public.clients set tier = 'coached', coach_id = v_coach where id = auth.uid();
-  if not found then
-    -- Geen clients-rij (bijv. coach-account in de app): rollback, zodat de code niet verbrandt.
-    raise exception 'verzilveren vereist een klant-account';
-  end if;
   return true;
 end;
 $$;
@@ -126,21 +148,25 @@ as $$
 declare
   v_chars constant text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   v_code text;
+  v_bytes bytea;
   i int;
 begin
-  loop
+  -- 256 is deelbaar door 32 (lengte alfabet): modulo geeft geen bias.
+  for poging in 1..20 loop
+    v_bytes := extensions.gen_random_bytes(6);
     v_code := '';
     for i in 1..6 loop
-      v_code := v_code || substr(v_chars, 1 + floor(random() * 32)::int, 1);
+      v_code := v_code || substr(v_chars, 1 + (get_byte(v_bytes, i - 1) % length(v_chars)), 1);
     end loop;
     begin
       insert into public.invite_codes (code, coach_id) values (v_code, p_coach);
       return v_code;
     exception when unique_violation then
-      -- botsing (1 op ~1 miljard bij lege tabel): opnieuw
+      -- botsing: ~1 op 1 miljard per bestaande code — opnieuw proberen
       null;
     end;
   end loop;
+  raise exception 'geen vrije invite-code na 20 pogingen';
 end;
 $$;
 revoke execute on function public.maak_invite_code(uuid) from public, anon, authenticated;
