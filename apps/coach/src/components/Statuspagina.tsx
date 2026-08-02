@@ -12,7 +12,7 @@ export function Statuspagina({ children, rol }: { children: ReactNode; rol?: 'al
       </p>
       <Link
         href="/"
-        className="mt-4 inline-block text-sm text-sage transition-colors hover:text-sage-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
+        className="mt-4 inline-block text-sm text-sage-deep transition-colors hover:text-sage-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
       >
         ← Klanten
       </Link>

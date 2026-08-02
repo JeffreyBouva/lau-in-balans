@@ -17,7 +17,7 @@ import { useKlantContext } from '@/lib/hooks/useKlantContext';
 
 const veld =
   'w-full resize-y rounded-input border border-hairline bg-surface px-3.5 py-2.5 text-sm ' +
-  'text-ink placeholder:text-muted focus:border-sage focus:outline-2 focus:outline-offset-0 ' +
+  'text-ink placeholder:text-body focus:border-sage focus:outline-2 focus:outline-offset-0 ' +
   'focus:outline-sage/40';
 
 export default function KlantDetailPagina() {
@@ -179,7 +179,7 @@ export default function KlantDetailPagina() {
 
         <aside
           aria-label={`Context van ${klant.naam}`}
-          className="hidden w-80 shrink-0 flex-col gap-5 lg:flex"
+          className="hidden w-80 shrink-0 flex-col gap-5 lg:flex lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto"
         >
           {context.fout && (
             <div role="alert" className="rounded-card border border-clay-border bg-clay-soft p-4">

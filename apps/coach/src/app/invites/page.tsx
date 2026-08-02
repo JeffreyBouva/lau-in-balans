@@ -50,7 +50,7 @@ export default function InvitesPagina() {
     <main className="mx-auto w-full max-w-3xl px-6 py-12">
       <Link
         href="/"
-        className="text-sm text-sage transition-colors hover:text-sage-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
+        className="text-sm text-sage-deep transition-colors hover:text-sage-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
       >
         ← Klanten
       </Link>
@@ -147,7 +147,7 @@ export default function InvitesPagina() {
                       <Knop
                         variant="secundair"
                         onClick={() => (bevestigd ? bevestigIntrekken(rij) : setBevestigt(rij.id))}
-                        disabled={bezigeCode !== null}
+                        disabled={bezigeCode !== null && bezigeCode !== rij.id} aria-busy={bezigeCode === rij.id}
                       >
                         {werkt ? 'Bezig…' : bevestigd ? 'Ja, intrekken' : 'Intrekken'}
                       </Knop>

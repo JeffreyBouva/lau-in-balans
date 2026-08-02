@@ -12,7 +12,7 @@ import { useProfielVersies } from '@/lib/hooks/useProfielVersies';
 
 const veldBasis =
   'w-full rounded-input border border-hairline bg-surface px-3.5 py-2.5 text-sm ' +
-  'text-ink placeholder:text-muted focus:border-sage focus:outline-2 focus:outline-offset-0 ' +
+  'text-ink placeholder:text-body focus:border-sage focus:outline-2 focus:outline-offset-0 ' +
   'focus:outline-sage/40';
 const veld = `${veldBasis} resize-y`;
 

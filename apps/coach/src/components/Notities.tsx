@@ -6,7 +6,7 @@ import type { Notitie } from '@/lib/hooks/useKlantContext';
 
 const veld =
   'w-full resize-y rounded-input border border-hairline bg-surface px-3 py-2 text-sm ' +
-  'text-ink placeholder:text-muted focus:border-sage focus:outline-2 focus:outline-offset-0 ' +
+  'text-ink placeholder:text-body focus:border-sage focus:outline-2 focus:outline-offset-0 ' +
   'focus:outline-sage/40';
 
 /*

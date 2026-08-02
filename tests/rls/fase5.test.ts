@@ -169,9 +169,11 @@ afterAll(async () => {
 describe('maak_eigen_invite_code', () => {
   it('coach maakt een code voor zichzelf: 6 tekens uit het juiste alfabet', async () => {
     const { data, error } = await coachA.rpc('maak_eigen_invite_code');
+    // Administratie vóór de asserts: een falende expect mag geen wees-code achterlaten
+    // (die zou de coach-cleanup in afterAll blokkeren — invite_codes.coach_id cascadeert niet).
+    if (typeof data === 'string') gemaakteCodes.push(data);
     expect(error).toBeNull();
     expect(typeof data).toBe('string');
-    gemaakteCodes.push(data as string);
     expect(data as string).toMatch(ALFABET);
 
     // De rij hangt aan coach A zelf (de JWT bepaalt de eigenaar) en is nog vrij.

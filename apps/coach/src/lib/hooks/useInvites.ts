@@ -35,7 +35,7 @@ function ontbreektNog(error: { code?: string; message?: string } | null): boolea
   if (!error) return false;
   if (['PGRST202', '42883', '42P01', '42501'].includes(error.code ?? '')) return true;
   const m = (error.message ?? '').toLowerCase();
-  return m.includes('does not exist') || m.includes('schema cache');
+  return m.includes('schema cache'); // bewust smal: 'does not exist' matcht ook onverwante schemafouten
 }
 
 /**
@@ -108,6 +108,7 @@ export function useInvites() {
         setCodes(rijen);
         // Pas wissen als er een verse stand tegenover staat.
         setFout(null);
+        setNogNiet(false); // een geslaagde laadbeurt bewijst dat de migratie er is
       } catch (e) {
         console.error('[invites] laden mislukt:', e);
         if (!actueel) return;

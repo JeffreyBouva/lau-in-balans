@@ -6,7 +6,7 @@ import { useCoach } from '@/lib/coach';
 
 const veld =
   'w-full rounded-input border border-hairline bg-surface px-3.5 py-2.5 text-base ' +
-  'text-ink placeholder:text-muted focus:border-sage focus:outline-2 focus:outline-offset-0 ' +
+  'text-ink placeholder:text-body focus:border-sage focus:outline-2 focus:outline-offset-0 ' +
   'focus:outline-sage/40';
 
 export default function LoginPagina() {

@@ -37,13 +37,13 @@ type Stand = { clientId: string; versies: VersieRij[]; fout: string | null };
 /**
  * Wie schreef deze versie? De coaches-RLS geeft een coach álléén haar eigen rij
  * (coach_leest_zichzelf) plus die van klanten, dus de naam van een ándere auteur is
- * per definitie niet op te halen: die versie heet "systeem". Geen extra query dus —
+ * per definitie niet op te halen: die versie heet "andere coach". Geen extra query dus —
  * de ingelogde coach is de enige naam die we kunnen kennen.
  */
 function auteurLabel(author: string | null, coach: Coach | null): string {
   if (author === null) return 'onboarding';
   if (coach && author === coach.id) return coach.naam;
-  return 'systeem';
+  return 'andere coach';
 }
 
 /**

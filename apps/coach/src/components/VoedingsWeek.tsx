@@ -38,7 +38,7 @@ export function VoedingsWeek({
           <li key={dag.datum} className="flex flex-1 flex-col items-center gap-1.5">
             <span className="flex h-16 w-full items-end" aria-hidden="true">
               <span
-                className={`w-full rounded-t ${dag.totaal > 0 ? 'bg-sage' : 'bg-neutral-soft'}`}
+                className={`w-full rounded-t ${dag.gelogd ? 'bg-sage' : 'bg-neutral-soft'}`}
                 style={{
                   height:
                     dag.totaal > 0

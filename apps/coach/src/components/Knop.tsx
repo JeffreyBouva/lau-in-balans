@@ -12,7 +12,7 @@ const basis =
   'focus-visible:outline-sage disabled:cursor-not-allowed disabled:opacity-60';
 
 const varianten = {
-  primair: 'bg-sage text-white hover:bg-sage-hover disabled:hover:bg-sage',
+  primair: 'bg-sage-deep text-white hover:bg-sage disabled:hover:bg-sage-deep',
   secundair:
     'border border-hairline bg-surface text-ink hover:border-hairline-hover disabled:hover:border-hairline',
 } as const;
