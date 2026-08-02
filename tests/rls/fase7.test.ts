@@ -199,10 +199,13 @@ beforeAll(async () => {
   // Twee ai_usage-rijen in de lopende maand en één ruim daarvóór: die derde pint dat de
   // RPC op de maandgrens telt en niet gewoon alles. 45 dagen terug ligt altijd vóór de
   // eerste van deze maand (de langste maand is 31 dagen).
+  // LET OP: created_at op ÁLLE rijen — PostgREST vult bij een batch-insert ontbrekende
+  // kolommen met expliciet null (de DB-default geldt dan niet) → not-null-violation.
+  const nu = new Date().toISOString();
   const vorigeMaand = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString();
   const { error: usageFout } = await service.from('ai_usage').insert([
-    { client_id: coachedId, model: 'claude-sonnet-5', input_tokens: 120, output_tokens: 45 },
-    { client_id: coachedId, model: 'claude-sonnet-5', input_tokens: 200, output_tokens: 60 },
+    { client_id: coachedId, model: 'claude-sonnet-5', input_tokens: 120, output_tokens: 45, created_at: nu },
+    { client_id: coachedId, model: 'claude-sonnet-5', input_tokens: 200, output_tokens: 60, created_at: nu },
     {
       client_id: coachedId,
       model: 'claude-sonnet-5',
