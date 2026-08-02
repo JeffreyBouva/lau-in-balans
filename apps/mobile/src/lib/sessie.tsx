@@ -9,7 +9,10 @@ type SessieContext = {
   heeftProfiel: boolean | null;
   herbepaalProfiel: () => Promise<void>;
   markProfielAangemaakt: () => void;
+  tier: 'free' | 'coached' | null;
+  herlaadTier: () => Promise<void>;
   login: (email: string, wachtwoord: string) => Promise<{ error: string | null }>;
+  registreer: (email: string, wachtwoord: string, naam: string) => Promise<{ error: string | null }>;
   logout: () => Promise<void>;
 };
 
@@ -19,6 +22,7 @@ export function SessieProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [laden, setLaden] = useState(true);
   const [heeftProfiel, setHeeftProfiel] = useState<boolean | null>(null);
+  const [tier, setTier] = useState<'free' | 'coached' | null>(null);
   const clientId = session?.user.id ?? null;
 
   useEffect(() => {
@@ -44,9 +48,29 @@ export function SessieProvider({ children }: { children: ReactNode }) {
     herbepaalProfiel();
   }, [clientId, herbepaalProfiel]);
 
+  // tier ('free' | 'coached') bepaalt wat er open staat; komt uit dezelfde bron als de
+  // server-side checks (RPC mijn_tier), zodat app en backend niet uit elkaar lopen.
+  const herlaadTier = useCallback(async () => {
+    const { data } = await supabase.rpc('mijn_tier');
+    setTier(data === 'coached' ? 'coached' : 'free');
+  }, []);
+
+  useEffect(() => {
+    if (!clientId) { setTier(null); return; }
+    herlaadTier();
+  }, [clientId, herlaadTier]);
+
   async function login(email: string, wachtwoord: string) {
     const { error } = await supabase.auth.signInWithPassword({ email, password: wachtwoord });
     return { error: error ? 'Inloggen lukte niet. Controleer je e-mail en wachtwoord.' : null };
+  }
+  async function registreer(email: string, wachtwoord: string, naam: string) {
+    const { error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password: wachtwoord,
+      options: { data: { naam: naam.trim() } },
+    });
+    return { error: error ? 'Registreren lukte niet. Controleer je gegevens of probeer een ander e-mailadres.' : null };
   }
   async function logout() {
     await supabase.auth.signOut();
@@ -54,7 +78,10 @@ export function SessieProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider
-      value={{ session, clientId, laden, heeftProfiel, herbepaalProfiel, markProfielAangemaakt, login, logout }}
+      value={{
+        session, clientId, laden, heeftProfiel, herbepaalProfiel, markProfielAangemaakt,
+        tier, herlaadTier, login, registreer, logout,
+      }}
     >
       {children}
     </Ctx.Provider>
