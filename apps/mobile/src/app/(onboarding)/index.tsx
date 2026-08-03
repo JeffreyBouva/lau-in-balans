@@ -13,12 +13,16 @@ import { netteVoornaam } from '@/lib/naam';
 import { PrimaireKnop } from '@/components/PrimaireKnop';
 import { Chip } from '@/components/Chip';
 import { VoortgangsBalk } from '@/components/VoortgangsBalk';
+import { tik } from '@/lib/haptics';
+import { PORTIEDOEL_MIN, PORTIEDOEL_MAX } from '@/lib/portiesuggestie';
 import {
-  legeOnboarding, naarProfiel, DOEL_OPTIES, WEEKVORM_OPTIES, VOORKEUR_OPTIES, BEPERKING_OPTIES,
+  legeOnboarding, naarProfiel, metKeuze, metDoelStap,
+  DOEL_OPTIES, WEEKVORM_OPTIES, VOORKEUR_OPTIES, BEPERKING_OPTIES,
+  BOUW_OPTIES, MAALTIJD_OPTIES, ACTIVITEIT_OPTIES,
   type OnboardingState,
 } from '@/state/onboarding';
 
-const AANTAL_STAPPEN = 8;
+const AANTAL_STAPPEN = 9;
 
 type MultiVeld = 'doelen' | 'weekvorm' | 'voorkeuren' | 'beperkingen';
 
@@ -28,7 +32,7 @@ const VEILIGHEID_OPTIES: { label: string; waarde: Veiligheidsvlag }[] = [
   { label: 'Ja, daar wil ik voorzichtig mee zijn', waarde: 'voorzichtig' },
 ];
 
-const CTAS = ['Laten we beginnen', 'Verder', 'Verder', 'Verder', 'Verder', 'Duidelijk', 'Verder', 'Naar Lau.ai'];
+const CTAS = ['Laten we beginnen', 'Verder', 'Verder', 'Verder', 'Verder', 'Duidelijk', 'Dit is mijn start', 'Verder', 'Naar Lau.ai'];
 
 export default function Onboarding() {
   const insets = useSafeAreaInsets();
@@ -87,6 +91,28 @@ export default function Onboarding() {
       {opties.map((o) => (
         <Chip key={o} label={o} actief={state[veld].includes(o)} onPress={() => toggle(veld, o)} />
       ))}
+    </View>
+  );
+
+  /** Zelfde chips, maar één antwoord tegelijk (dagdoelen-stap). */
+  const keuzeGroep = <T extends string | number>(
+    vraag: string,
+    opties: { label: string; waarde: T }[],
+    huidig: T,
+    kies: (waarde: T) => void,
+  ) => (
+    <View style={s.keuzeBlok}>
+      <Text style={s.veldLabel}>{vraag}</Text>
+      <View style={s.chipRij}>
+        {opties.map((o) => (
+          <Chip
+            key={String(o.waarde)}
+            label={o.label}
+            actief={huidig === o.waarde}
+            onPress={() => { tik(); kies(o.waarde); }}
+          />
+        ))}
+      </View>
     </View>
   );
 
@@ -166,12 +192,12 @@ export default function Onboarding() {
         </>
       ),
     },
-    // 5 — handmaten-uitleg
+    // 5 — handmaten-uitleg ("zo werkt het")
     {
       body: (
         <>
-          <Text style={s.titel}>Zo houden we je eten bij.</Text>
-          <Text style={s.subtitel}>Geen calorieën, geen weegschaal in de keuken. We werken met je eigen hand als maat — dat is altijd bij je en het schaalt mee met jouw lichaam.</Text>
+          <Text style={s.titel}>Zo werkt het.</Text>
+          <Text style={s.subtitel}>Geen calorieën, geen weegschaal in de keuken. Je eigen hand is de maat. Die heb je altijd bij je, en hij is precies zo groot als jij: een grotere hand geeft vanzelf een grotere portie. Daarom hoef ik niets over je gewicht te weten.</Text>
           <View style={{ gap: 10 }}>
             {HANDMATEN.map((h) => (
               <View key={h.key} style={s.handKaart}>
@@ -187,7 +213,41 @@ export default function Onboarding() {
         </>
       ),
     },
-    // 6 — veiligheidsvraag (single-select, overslaanbaar)
+    // 6 — dagdoelen: drie keuzes → live voorstel, dat de klant zelf mag bijdraaien
+    {
+      body: (
+        <>
+          <Text style={s.titel}>Jouw dagdoelen.</Text>
+          <Text style={s.subtitel}>De maat is bij iedereen de eigen hand. Hoevéél handen per dag verschilt wel. Drie vragen, dan doe ik een voorstel — en jij hebt het laatste woord.</Text>
+
+          {keuzeGroep('Ik ben', BOUW_OPTIES, state.bouw, (bouw) => setState((v) => metKeuze(v, { bouw })))}
+          {keuzeGroep('Maaltijden per dag', MAALTIJD_OPTIES, state.maaltijden, (maaltijden) => setState((v) => metKeuze(v, { maaltijden })))}
+          {keuzeGroep('Hoe actief is je dag?', ACTIVITEIT_OPTIES, state.activiteit, (activiteit) => setState((v) => metKeuze(v, { activiteit })))}
+
+          <View style={s.doelKaart}>
+            {/* Zodra de klant zelf draait, is het niet langer "mijn" voorstel. */}
+            <Text style={s.eyebrow}>{state.aangeraakt.length ? 'Jouw doelen per dag' : 'Mijn voorstel per dag'}</Text>
+            {HANDMATEN.map((h) => (
+              <View key={h.key} style={s.doelRij}>
+                <View style={[s.marker, { backgroundColor: h.kleur }]} />
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={s.handNaam}>{h.naam}</Text>
+                  <Text style={s.handUitleg}>{h.hand}</Text>
+                </View>
+                <DagdoelStepper
+                  naam={h.naam}
+                  waarde={state.portiedoelen[h.key]}
+                  onMin={() => setState((v) => metDoelStap(v, h.key, -1))}
+                  onPlus={() => setState((v) => metDoelStap(v, h.key, +1))}
+                />
+              </View>
+            ))}
+          </View>
+          <Text style={s.voetnoot}>Dit is een startpunt. Je kunt het altijd aanpassen in je profiel.</Text>
+        </>
+      ),
+    },
+    // 7 — veiligheidsvraag (single-select, overslaanbaar)
     {
       body: (
         <>
@@ -210,13 +270,14 @@ export default function Onboarding() {
           <View style={s.sageKaart}>
             <Text style={s.sageKaartTekst}>Wat je hier zegt, bepaalt hoe ik met je praat — niet of je welkom bent. Bij zwaardere klachten brengt Laura je in contact met een behandelaar.</Text>
           </View>
-          <Pressable onPress={() => setStap(7)} style={s.skip}>
+          {/* Overslaan = gewoon door; veiligheid blijft null → 'overgeslagen'. */}
+          <Pressable onPress={volgende} style={s.skip}>
             <Text style={s.skipTekst}>Sla deze vraag over</Text>
           </Pressable>
         </>
       ),
     },
-    // 7 — afsluiting
+    // 8 — afsluiting
     {
       body: (
         <>
@@ -229,14 +290,15 @@ export default function Onboarding() {
             <Text style={s.eyebrow}>Je eerste week</Text>
             <Text style={s.weekRegel}>Elke ochtend een kort bericht van mij. Reageer wanneer het jou past.</Text>
             <Text style={s.weekRegel}>Log je maaltijden op handmaten — twee tikken, wanneer je eraan denkt.</Text>
-            <Text style={s.weekRegel}>Donderdag 20 aug · eerste gesprek met Laura, 30 minuten.</Text>
+            <Text style={s.weekRegel}>Laura neemt contact op om je eerste gesprek van 30 minuten in te plannen.</Text>
           </View>
         </>
       ),
     },
   ];
 
-  const label = stap === AANTAL_STAPPEN - 1 ? 'Klaar' : `Stap ${stap + 1} van 7`;
+  // De afsluiting telt niet mee als "stap" — vandaar AANTAL_STAPPEN − 1.
+  const label = stap === AANTAL_STAPPEN - 1 ? 'Klaar' : `Stap ${stap + 1} van ${AANTAL_STAPPEN - 1}`;
   const ruimGap = stap === 0 || stap === AANTAL_STAPPEN - 1;
 
   return (
@@ -282,6 +344,44 @@ export default function Onboarding() {
   );
 }
 
+/**
+ * Mini-stepper voor één dagdoel (1..12). Bewust een eigen, lokale component: de
+ * HandmaatStepper op Eten toont "gelogd / doel" en heeft geen plafond, en hier is
+ * het getal zélf het doel. Ondergrens is 1 — een doel van 0 is geen doel.
+ */
+function DagdoelStepper({ naam, waarde, onMin, onPlus }: {
+  naam: string;
+  waarde: number;
+  onMin: () => void;
+  onPlus: () => void;
+}) {
+  const minUit = waarde <= PORTIEDOEL_MIN;
+  const plusUit = waarde >= PORTIEDOEL_MAX;
+  return (
+    <View style={s.stepperRij}>
+      <Pressable
+        onPress={() => { tik(); onMin(); }}
+        disabled={minUit}
+        accessibilityRole="button"
+        accessibilityLabel={`${naam}: doel omlaag`}
+        style={({ pressed }) => [s.stepKnop, s.stepMin, minUit && s.stepUit, pressed && s.gedrukt]}
+      >
+        <Text style={[s.stepTeken, { color: minUit ? colors.muted : colors.ink }]}>−</Text>
+      </Pressable>
+      <Text style={s.stepWaarde} accessibilityLabel={`${naam}: ${waarde} per dag`}>{waarde}</Text>
+      <Pressable
+        onPress={() => { tik(); onPlus(); }}
+        disabled={plusUit}
+        accessibilityRole="button"
+        accessibilityLabel={`${naam}: doel omhoog`}
+        style={({ pressed }) => [s.stepKnop, s.stepPlus, plusUit && s.stepUit, pressed && s.gedrukt]}
+      >
+        <Text style={[s.stepTeken, { color: colors.bgSurface }]}>+</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgApp },
 
@@ -323,7 +423,20 @@ const s = StyleSheet.create({
   handNaam: { fontFamily: fontFamily.sans, fontSize: 15, color: colors.ink },
   handUitleg: { fontFamily: fontFamily.sans, fontSize: 13, color: colors.muted },
 
-  // veiligheids-kaarten (stap 6, single-select)
+  // dagdoelen (stap 6)
+  keuzeBlok: { gap: 8 },
+  doelKaart: { padding: 18, backgroundColor: colors.bgSurface, borderWidth: 1, borderColor: colors.hairlineSoft, borderRadius: radii.cardLg, gap: 12, marginTop: 2 },
+  doelRij: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  stepperRij: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  stepKnop: { width: 34, height: 34, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
+  stepMin: { backgroundColor: colors.bgSurface, borderWidth: 1, borderColor: colors.hairline },
+  stepPlus: { backgroundColor: colors.sage },
+  stepUit: { opacity: 0.4 },
+  stepTeken: { fontFamily: fontFamily.sans, fontSize: 20, lineHeight: 22 },
+  stepWaarde: { minWidth: 30, textAlign: 'center', fontFamily: fontFamily.sansMedium, fontSize: 16, color: colors.ink },
+  gedrukt: { opacity: 0.55, transform: [{ scale: 0.92 }] },
+
+  // veiligheids-kaarten (stap 7, single-select)
   veilKaart: { paddingVertical: 16, paddingHorizontal: 18, borderRadius: radii.card, borderWidth: 1 },
   veilUit: { backgroundColor: colors.bgSurface, borderColor: colors.hairlineSoft },
   veilAan: { backgroundColor: colors.sageSoft, borderColor: colors.sage },
