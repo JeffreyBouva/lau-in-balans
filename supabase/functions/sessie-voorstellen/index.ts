@@ -8,7 +8,7 @@
 // De caller is een COACH met een gewone JWT. `verify_jwt = false` in config.toml (net als
 // lau-reply): platform-verificatie blokkeert de CORS-preflight, want die OPTIONS-request
 // draagt geen auth-header. De poort staat hieronder — getUser() op de JWT plus de check
-// dat de klant van déze coach is.
+// dat de klant van déze coach is (of dat de beller de admin is: die ziet elke klant).
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import Anthropic from 'npm:@anthropic-ai/sdk';
 import { cors } from '../_shared/cors.ts';
@@ -170,10 +170,24 @@ Deno.serve(async (req) => {
     auth: { persistSession: false },
   });
 
-  // 2. Klant van déze coach? Geen rij = 403 — dat dekt zowel een klant die hier belt als
-  //    de klant van een andere coach.
-  const { data: klant, error: klantFout } = await db.from('clients')
-    .select('id').eq('id', clientId).eq('coach_id', coachId).maybeSingle();
+  // 2a. Is de beller überhaupt een coach, en zo ja: is ze de admin? Laura is de eigenaar
+  //     van het product en ziet elke klant (coaches.is_admin, zie de admin-migratie);
+  //     een gewone coach blijft bij haar eigen klanten. Geen coaches-rij = geen coach —
+  //     een klant die hier belt strandt hier, ongeacht wat er in de body staat.
+  const { data: coachRij, error: coachFout } = await db.from('coaches')
+    .select('is_admin').eq('id', coachId).maybeSingle();
+  if (coachFout) {
+    console.error('sessie-voorstellen: coach laden mislukt:', coachFout.message);
+    return new Response('tijdelijk niet beschikbaar', { status: 503, headers: cors });
+  }
+  if (!coachRij) return new Response('geen toegang', { status: 403, headers: cors });
+  const isAdmin = (coachRij as { is_admin?: boolean | null }).is_admin === true;
+
+  // 2b. Bestaat de klant, en — voor een gewone coach — is het háár klant? Geen rij = 403,
+  //     ongeacht welke van de twee het was. De admin checkt alleen dát de klant bestaat.
+  let klantQuery = db.from('clients').select('id').eq('id', clientId);
+  if (!isAdmin) klantQuery = klantQuery.eq('coach_id', coachId);
+  const { data: klant, error: klantFout } = await klantQuery.maybeSingle();
   if (klantFout) {
     console.error('sessie-voorstellen: klant laden mislukt:', klantFout.message);
     return new Response('tijdelijk niet beschikbaar', { status: 503, headers: cors });

@@ -92,8 +92,12 @@ const beaId = await maakUser('bea', 'Bea', { coach: true }); // tweede coach: al
 const { error: ccErr } = await db.from('clients').delete().in('id', [lauraId, beaId]);
 if (ccErr) throw new Error(`coach-clients-rijen wissen: ${ccErr.message}`);
 await invoeg('coaches', [
-  { id: lauraId, naam: 'Laura' },
-  { id: beaId, naam: 'Bea' },
+  // Laura is de producteigenaar: is_admin geeft haar via is_admin()/is_coach_of toegang
+  // tot élke klant, ook die van een andere coach.
+  { id: lauraId, naam: 'Laura', is_admin: true },
+  // Bea expliciet NIET: zij is de RLS-isolatie-fixture (rls.test.ts pint dat zij geen
+  // enkele klant van Laura ziet). Een admin-Bea zou die test betekenisloos maken.
+  { id: beaId, naam: 'Bea', is_admin: false },
 ]);
 
 // ── Klanten (handoff-klantenlijst; week N → startdatum) ──

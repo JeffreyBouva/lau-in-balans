@@ -19,6 +19,8 @@ let sanneId: string;
 let irisId: string;
 let lauraCoachId: string;
 let beaCoachId: string;
+/** De zes seed-klanten van Laura — zie de admin-noot bij "coach-toegang (Laura)". */
+let demoKlantIds: string[];
 
 async function ingelogd(email: string): Promise<SupabaseClient> {
   const client = createClient(url, anonKey, { auth: { persistSession: false } });
@@ -41,7 +43,7 @@ beforeAll(async () => {
   anonKey = env.anonKey;
   service = createClient(url, env.serviceKey, { auth: { persistSession: false } });
 
-  const { data: klanten, error: kErr } = await service.from('clients').select('id, naam');
+  const { data: klanten, error: kErr } = await service.from('clients').select('id, naam, coach_id');
   if (kErr) throw kErr;
   sanneId = klanten!.find((c) => c.naam === 'Sanne Vermeer')!.id;
   irisId = klanten!.find((c) => c.naam === 'Iris de Wit')!.id;
@@ -50,6 +52,8 @@ beforeAll(async () => {
   if (cErr) throw cErr;
   lauraCoachId = coaches!.find((c) => c.naam === 'Laura')!.id;
   beaCoachId = coaches!.find((c) => c.naam === 'Bea')!.id;
+
+  demoKlantIds = klanten!.filter((c) => c.coach_id === lauraCoachId).map((c) => c.id);
 });
 
 describe('klant-isolatie (Sanne)', () => {
@@ -124,10 +128,17 @@ describe('klant corrigeert eigen voedingslog', () => {
 });
 
 describe('coach-toegang (Laura)', () => {
-  it('ziet alle zes klanten', async () => {
+  it('ziet al haar zes klanten', async () => {
     const laura = await ingelogd('laura');
     const { data } = await laura.from('clients').select('id');
-    expect(data).toHaveLength(6);
+    const zichtbaar = new Set((data ?? []).map((r) => r.id));
+
+    // Bewust geen exacte telling meer: sinds de admin-migratie is Laura super admin en
+    // ziet ze óók de wegwerp-klanten van de suites die parallel draaien (fase 4-7, admin).
+    // Wat deze test moet pinnen is dat ze haar eigen zes volledig ziet — de isolatiekant
+    // staat hieronder bij Bea, en de admin-kant in admin.test.ts.
+    expect(demoKlantIds).toHaveLength(6);
+    for (const id of demoKlantIds) expect(zichtbaar.has(id)).toBe(true);
   });
 
   it('leest Sannes berichten en profiel', async () => {
