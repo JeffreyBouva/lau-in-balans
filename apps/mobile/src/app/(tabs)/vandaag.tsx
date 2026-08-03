@@ -8,6 +8,8 @@ import {
 import { colors, radii, fontFamily, text } from '@/theme/tokens';
 import { supabase } from '@/lib/supabase';
 import { netteVoornaam } from '@/lib/naam';
+import { heroZin } from '@/lib/hero';
+import { useSessie } from '@/lib/sessie';
 import { useKlantData } from '@/lib/klantdata';
 import { useOpSlot } from '@/lib/hooks/useOpSlot';
 import { usePortiedoelen } from '@/lib/hooks/useProfiel';
@@ -50,13 +52,6 @@ const komma = (n: number) => n.toFixed(1).replace('.', ',');
 const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1);
 const weekdagLetter = (iso: string) => WEEKDAG[new Date(`${iso}T00:00:00`).getDay()];
 
-// Statische werkpunten (handoff § 4 demo). Fase 3 leidt dit af uit profiel + logs.
-const WERKPUNTEN = [
-  { titel: 'Eerst je eigen bord, dan de bedtijdronde', status: '4 van 7', kleur: colors.sage },
-  { titel: 'Elke maaltijd een handpalm eiwit', status: '2,1 gem.', kleur: colors.sage },
-  { titel: 'Donderdagavond een plan', status: 'nieuw', kleur: colors.hairlineHover },
-];
-
 export default function Vandaag() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -66,7 +61,7 @@ export default function Vandaag() {
     supabase.from('clients').select('startdatum, naam').single().then(({ data }) => setKlant(data as any));
   }, []);
 
-  const { berichten, openFlag, week, herlaad } = useKlantData();
+  const { berichten, openFlag, dag, week, herlaad } = useKlantData();
   // Dezelfde persoonlijke dagdoelen als op het Eten-scherm: wat de klant op haar profiel
   // instelt, telt hier meteen mee in de gemiddelden en in "wat opvalt".
   const doelen = usePortiedoelen();
@@ -75,6 +70,9 @@ export default function Vandaag() {
   // posities leeg. Dat is de kleinste ingreep die béide flitsen voorkomt — geen slot dat
   // een coached klant even ziet, en geen coach-blok dat een free klant even ziet.
   const { opSlot, laden: slotLaden } = useOpSlot();
+  // Het tier los van useOpSlot: de hero en de week-eyebrow hangen aan "heb je een traject",
+  // niet aan "staan de sloten aan" (ops kan die uitzetten zonder dat free een traject krijgt).
+  const { tier, tierLaden } = useSessie();
   // De Laura-sheet is coach-contact; bij free opent de knop de code-sheet in plaats daarvan.
   const [codeSheet, setCodeSheet] = useState(false);
 
@@ -89,7 +87,6 @@ export default function Vandaag() {
   // Header. De naam uit de database kan in kleine letters staan (Google-login); we
   // poetsen 'm bij weergave op — de opgeslagen waarde laten we met rust.
   const voornaam = netteVoornaam(klant?.naam);
-  const hero = voornaam ? `Je vindt je ritme, ${voornaam}.` : 'Je vindt je ritme.';
   const weekNr = klant ? weekNummer(klant.startdatum, vandaagISO()) : null;
 
   // Contact: per dag (dezelfde 7-dagen-as als de weeklogs) is er contact als een
@@ -129,6 +126,18 @@ export default function Vandaag() {
     ? `Gemiddelde handmaten per dag deze week. ${sterkste.naam} is je sterkste punt.`
     : 'Nog niets gelogd deze week. Twee tikken op het Eten-scherm.';
 
+  // Hero-regel (feedback § 4). Stond vast op "Je vindt je ritme"; die zin klopte alleen bij
+  // toeval. Nu kiest lib/hero.ts er één op de echte stand: week in het traject, dagen met
+  // een log, dagen met contact, en of er vandaag al iets is bijgehouden.
+  const hero = heroZin({
+    voornaam,
+    weekNr,
+    dagenGelogd: dagenMetLog,
+    contactDagen: aantalContact,
+    gelogdVandaag: somPorties(dag) > 0,
+    tier,
+  });
+
   return (
     // De scroll zit in een schermvullende View: de tutorial-overlay is een absolute
     // fill en hoort naast de scroll, niet erin (binnen de inhoud zou 'ie meescrollen).
@@ -148,7 +157,12 @@ export default function Vandaag() {
           knoppenDoel={DOEL_KNOPPEN}
         >
           <View style={s.headerTekst}>
-            {weekNr != null && <Text style={text.eyebrow}>Week {weekNr}</Text>}
+            {/* "Week N" hoort bij het traject: free heeft er geen, dus geen eyebrow. Zolang
+                het tier-oordeel laadt tonen we 'm ook niet — anders flitst 'ie langs bij
+                precies de klant voor wie hij niet bedoeld is. */}
+            {!tierLaden && tier !== 'free' && weekNr != null && (
+              <Text style={text.eyebrow}>Week {weekNr}</Text>
+            )}
             <Text style={s.hero}>{hero}</Text>
           </View>
         </SchermKop>
@@ -157,7 +171,7 @@ export default function Vandaag() {
         {slotLaden ? null : opSlot ? (
           <SlotKaart
             titel="Contact met Lau.ai en Laura"
-            uitleg="Zie hier hoe vaak jullie contact hadden en waar jullie samen aan werken."
+            uitleg="Zie hier op welke dagen jullie contact hadden — en hoe je week eruitziet."
             onCode={() => setCodeSheet(true)}
           />
         ) : (
@@ -202,34 +216,13 @@ export default function Vandaag() {
           <Text style={s.kaartOnder}>{etenOnder}</Text>
         </View>
 
-        {/* Waar we aan werken + afspraak — bij free samen één slot-kaart, het zijn allebei
-            dingen die uit het traject met Laura komen. */}
-        {slotLaden ? null : opSlot ? (
-          <SlotKaart
-            titel="Waar jullie aan werken"
-            uitleg="Werkpunten en je afspraken met Laura verschijnen hier zodra je een traject volgt."
-            onCode={() => setCodeSheet(true)}
-          />
-        ) : (
-          <>
-            <View style={s.werkGroep}>
-              <Text style={text.eyebrow}>Waar we aan werken</Text>
-              {WERKPUNTEN.map((w) => (
-                <View key={w.titel} style={s.werkKaart}>
-                  <View style={[s.werkBol, { backgroundColor: w.kleur }]} />
-                  <Text style={s.werkTitel}>{w.titel}</Text>
-                  <Text style={s.werkStatus}>{w.status}</Text>
-                </View>
-              ))}
-            </View>
-
-            {/* Afspraak-blok */}
-            <View style={s.afspraak}>
-              <View style={s.lauraAvatar}><Text style={s.lauraAvatarTekst}>La</Text></View>
-              <Text style={s.afspraakTekst}>Donderdag 20 aug · gesprek met Laura, 30 min.</Text>
-            </View>
-          </>
-        )}
+        {/* Hier stonden "Waar we aan werken" en het afspraak-blok. Beide waren verzonnen —
+            drie vaste werkpunten en een vaste datum ("donderdag 20 aug") — en er is geen
+            databron die ze kan vullen (feedback § 2, aanname F5). Liever weg dan nep.
+            Ze komen terug zodra het wekelijks gesprek ze vult (weekly_sessions.voorstellen
+            is de échte bron voor werkpunten) en er echte agenda-data is voor de afspraak.
+            De slot-kaart die hier voor free stond, is mee verdwenen: die beloofde inhoud
+            die een coached klant nu ook niet krijgt. */}
 
         {/* Buiten de slot-conditie: zo overleeft de sheet het omklappen naar coached. */}
         <CodeSheet zichtbaar={codeSheet} onSluit={() => setCodeSheet(false)} />
@@ -276,17 +269,4 @@ const s = StyleSheet.create({
   marker: { width: 12, height: 12, borderRadius: radii.marker },
   etenNaam: { flex: 1, fontFamily: fontFamily.sans, fontSize: 14.5, color: colors.body },
   etenGem: { fontFamily: fontFamily.sans, fontSize: 14, color: colors.ink },
-
-  // waar we aan werken
-  werkGroep: { gap: 10 },
-  werkKaart: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.bgSurface, borderWidth: 1, borderColor: colors.hairlineSoft, borderRadius: radii.card, paddingVertical: 16, paddingHorizontal: 18 },
-  werkBol: { width: 10, height: 10, borderRadius: radii.pill },
-  werkTitel: { flex: 1, fontFamily: fontFamily.sans, fontSize: 14, color: colors.body },
-  werkStatus: { fontFamily: fontFamily.sans, fontSize: 13, color: colors.muted },
-
-  // afspraak
-  afspraak: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.dashed, borderRadius: radii.cardLg, padding: 18 },
-  lauraAvatar: { width: 38, height: 38, borderRadius: radii.pill, backgroundColor: colors.lauraAvatarBg, alignItems: 'center', justifyContent: 'center' },
-  lauraAvatarTekst: { fontFamily: fontFamily.serif, fontSize: 15, color: colors.lauraAvatarInk },
-  afspraakTekst: { flex: 1, fontFamily: fontFamily.sans, fontSize: 14, color: colors.body },
 });

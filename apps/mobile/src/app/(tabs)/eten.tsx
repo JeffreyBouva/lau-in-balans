@@ -45,6 +45,8 @@ const UITLEG: TutorialStap[] = [
 
 const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1);
 const weekdagLetter = (iso: string) => WEEKDAG[new Date(`${iso}T00:00:00`).getDay()];
+/** "1 handpalm" / "3 handpalmen" — het eiwitdoel is persoonlijk, dus ook 1 moet lopen. */
+const handpalmen = (n: number) => `${n} ${n === 1 ? 'handpalm' : 'handpalmen'}`;
 
 export default function Eten() {
   const insets = useSafeAreaInsets();
@@ -72,10 +74,16 @@ export default function Eten() {
   });
 
   // "Lau kijkt mee": statische regel op de stand van vandaag. fase 3: AI-verrijkt.
+  // De 3 stond hier hardcoded (feedback § 2) — het is nu het eigen eiwitdoel uit het
+  // profiel. Doel 0 betekent "dit houd ik bewust niet bij": dan geen getallen, want
+  // "0 van 0" is geen zin die iemand verder helpt.
+  const eiwitDoel = doelen.eiwit;
   const lauRegel =
-    dag.eiwit >= 3
-      ? "Drie handpalmen eiwit — dat is je doel. Dit zijn de dagen dat je 's avonds minder trek hebt."
-      : `Je zit op ${dag.eiwit} van 3 handpalmen eiwit. Bij het avondeten is dat het makkelijkst bij te sturen: kip, vis of kwark als toetje.`;
+    eiwitDoel <= 0
+      ? 'Je houdt bij wat er op je bord ligt — precies zoveel als jij nuttig vindt. Vraag het Lau.ai gerust als je twijfelt.'
+      : dag.eiwit >= eiwitDoel
+        ? `Je doel van ${handpalmen(eiwitDoel)} eiwit is binnen. Dit zijn de dagen dat je 's avonds minder trek hebt.`
+        : `Je zit op ${dag.eiwit} van ${handpalmen(eiwitDoel)} eiwit. Bij het avondeten is dat het makkelijkst bij te sturen: kip, vis of kwark als toetje.`;
 
   // Weekstaafjes: "waarde" = aantal gelogde handmaten die dag (0–4). Een dag telt als
   // gelogd zodra er iets in staat. Hoogte = 14 + waarde × 8 px, of 10px bij niets.
