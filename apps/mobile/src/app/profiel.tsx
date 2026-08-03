@@ -54,7 +54,7 @@ function bouwWijziging(oud: KlantProfiel, nieuw: KlantProfiel): KlantProfielWijz
 export default function Profiel() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { session, tier, tierLaden, logout } = useSessie();
+  const { session, clientId, tier, tierLaden, logout } = useSessie();
   const { profiel, laden, fout, herlaad, slaOp } = useMijnProfiel();
 
   // Bewerkbare kopie; wordt (her)gevuld zodra het profiel binnen is of net opgeslagen werd.
@@ -140,7 +140,9 @@ export default function Profiel() {
 
   async function herhaalUitleg() {
     tik();
-    await resetTutorials();
+    // De vlaggen staan per klant (F3); zonder klant valt er niets terug te zetten en
+    // stuurt de gate je zo meteen toch naar het inlogscherm.
+    if (clientId) await resetTutorials(clientId);
     // Terug naar Vandaag (spec § 2): de uitleg die daar meteen verschijnt ís de
     // bevestiging — een melding op dit scherm zou je die eerste stap laten missen.
     router.replace('/(tabs)/vandaag');

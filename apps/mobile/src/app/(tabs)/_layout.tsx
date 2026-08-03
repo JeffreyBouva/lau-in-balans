@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, radii, fontFamily, shadow } from '@/theme/tokens';
 import { SheetsProvider } from '@/lib/sheets';
 import { KlantDataProvider } from '@/lib/klantdata';
+import { TutorialDoelenProvider } from '@/lib/tutorialdoelen';
 import { useSessie } from '@/lib/sessie';
 
 type IonName = keyof typeof Ionicons.glyphMap;
@@ -61,13 +62,17 @@ export default function TabsLayout() {
   if (!clientId) return null;
   return (
     <KlantDataProvider clientId={clientId}>
-      <SheetsProvider>
-        <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>
-          <Tabs.Screen name="vandaag" />
-          <Tabs.Screen name="chat" />
-          <Tabs.Screen name="eten" />
-        </Tabs>
-      </SheetsProvider>
+      {/* De tutorial-doelen wonen hier: de drie tabs blijven gemonteerd en delen één
+          registry, elk met eigen sleutels ('vandaag.…', 'chat.…', 'eten.…'). */}
+      <TutorialDoelenProvider>
+        <SheetsProvider>
+          <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>
+            <Tabs.Screen name="vandaag" />
+            <Tabs.Screen name="chat" />
+            <Tabs.Screen name="eten" />
+          </Tabs>
+        </SheetsProvider>
+      </TutorialDoelenProvider>
     </KlantDataProvider>
   );
 }

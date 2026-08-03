@@ -8,6 +8,7 @@ import { useKlantData } from '@/lib/klantdata';
 import { usePortiedoelen } from '@/lib/hooks/useProfiel';
 import { useOpSlot } from '@/lib/hooks/useOpSlot';
 import { useSheets } from '@/lib/sheets';
+import { useTutorialDoel } from '@/lib/tutorialdoelen';
 import { SchermKop } from '@/components/SchermKop';
 import { HandmaatStepper } from '@/components/HandmaatStepper';
 import { SlotBalk } from '@/components/SlotBalk';
@@ -17,15 +18,24 @@ import { Tutorial, type TutorialStap } from '@/components/Tutorial';
 const WEEKDAG = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
 const GETAL = ['nul', 'één', 'twee', 'drie', 'vier', 'vijf', 'zes', 'zeven'];
 
+// Sleutels van de elementen die de uitleg uitlicht (zie lib/tutorialdoelen.tsx).
+const DOEL_PORTIE = 'eten.portie';
+const DOEL_WEEK = 'eten.week';
+
 // Eerste-keer-uitleg (spec § 3): steppers en handmaten · weekstaafjes · geen calorieën.
+// De weekkaart staat onder de vouw: is 'ie niet in beeld, dan meet de tutorial 'm niet en
+// valt stap 2 vanzelf terug op de kaart zonder spotlight. Stap 3 gaat nergens over aan te
+// wijzen en houdt bewust geen doel.
 const UITLEG: TutorialStap[] = [
   {
     titel: 'Je hand is de maat',
     tekst: 'Tik per soort erbij wat je op hebt: een handpalm eiwit, een vuist groente. Geen weegschaal nodig.',
+    doel: DOEL_PORTIE,
   },
   {
     titel: 'Je week in staafjes',
     tekst: 'Onderaan zie je op welke dagen je iets hebt gelogd. Een gaatje is geen ramp — het gaat om het patroon.',
+    doel: DOEL_WEEK,
   },
   {
     titel: 'Geen calorieën',
@@ -46,6 +56,10 @@ export default function Eten() {
   // het oordeel laadt is opSlot false en gedraagt de knop zich als vanouds.
   const { opSlot, laden: slotLaden } = useOpSlot();
   const [codeSheet, setCodeSheet] = useState(false);
+
+  // De weekkaart als uit te lichten element; de eerste portiekaart regelt dat zelf (de
+  // hook hoort bij de kaart die 'm rendert).
+  const weekDoel = useTutorialDoel(DOEL_WEEK);
 
   // Dagstand + weekstaafjes verversen na terugkeer (bijv. na een log-save in de sheet).
   useFocusEffect(useCallback(() => { herlaad(); }, [herlaad]));
@@ -105,7 +119,7 @@ export default function Eten() {
             verminderen — alleen wat quick is toegevoegd (open-design-questions).
             Doel 0 zou "3 / 0" en een lege balk geven; dan de standaard tonen — zelfde
             terugval als op Vandaag. */}
-        {HANDMATEN.map((h) => (
+        {HANDMATEN.map((h, i) => (
           <Portiekaart
             key={h.key}
             handmaat={h}
@@ -114,6 +128,8 @@ export default function Eten() {
             minDisabled={quick[h.key] <= 0}
             onMin={() => pasQuickAan(h.key, -1)}
             onPlus={() => pasQuickAan(h.key, +1)}
+            // Alleen de eerste kaart wordt uitgelicht: één voorbeeld zegt genoeg.
+            tutorialDoel={i === 0 ? DOEL_PORTIE : undefined}
           />
         ))}
 
@@ -124,7 +140,7 @@ export default function Eten() {
         </View>
 
         {/* Weekkaart */}
-        <View style={s.weekKaart}>
+        <View style={s.weekKaart} {...weekDoel}>
           <Text style={text.eyebrow}>Deze week</Text>
           <View style={s.weekRij}>
             {weekBars.map((b) => (
@@ -173,6 +189,7 @@ function Portiekaart({
   minDisabled,
   onMin,
   onPlus,
+  tutorialDoel,
 }: {
   handmaat: Handmaat;
   waarde: number;
@@ -180,9 +197,12 @@ function Portiekaart({
   minDisabled: boolean;
   onMin: () => void;
   onPlus: () => void;
+  /** Sleutel waarmee de eerste-keer-uitleg deze kaart kan uitlichten. */
+  tutorialDoel?: string;
 }) {
+  const doelRegistratie = useTutorialDoel(tutorialDoel);
   return (
-    <View style={s.kaart}>
+    <View style={s.kaart} {...doelRegistratie}>
       <View style={s.kaartRij}>
         <View style={[s.kaartMarker, { backgroundColor: handmaat.kleur }]} />
         <View style={s.kaartTekst}>

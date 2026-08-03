@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radii } from '@/theme/tokens';
 import { tik } from '@/lib/haptics';
+import { useTutorialDoel } from '@/lib/tutorialdoelen';
 import { LauraKnop } from '@/components/LauraKnop';
 
 /**
@@ -27,6 +28,8 @@ export function SchermKop({
   toonLaura = true,
   uitlijning = 'boven',
   style,
+  knoppenDoel,
+  lauraDoel,
 }: {
   /** De scherm-eigen linkerkant. */
   children: ReactNode;
@@ -40,13 +43,25 @@ export function SchermKop({
   uitlijning?: 'boven' | 'midden';
   /** Scherm-eigen chroom om de kop heen (Chat heeft padding + onderrand). */
   style?: StyleProp<ViewStyle>;
+  /** Sleutel waarmee de tutorial de hele knoppenrij (Laura + profiel) kan uitlichten. */
+  knoppenDoel?: string;
+  /** Sleutel voor alléén de Laura-knop. Staat die uit, dan meet er niets → geen spotlight. */
+  lauraDoel?: string;
 }) {
   const router = useRouter();
+  const knoppen = useTutorialDoel(knoppenDoel);
+  const laura = useTutorialDoel(lauraDoel);
   return (
     <View style={[s.kop, uitlijning === 'midden' ? s.midden : s.boven, style]}>
       <View style={s.links}>{children}</View>
-      <View style={s.knoppen}>
-        {toonLaura && <LauraKnop openFlag={openFlag} label={lauraLabel} onPress={onLaura} />}
+      <View style={s.knoppen} {...knoppen}>
+        {toonLaura && (
+          // Het extra vlak is puur meetwerk voor de tutorial (het krimpt om de knop heen
+          // en verandert niets aan de rij).
+          <View {...laura}>
+            <LauraKnop openFlag={openFlag} label={lauraLabel} onPress={onLaura} />
+          </View>
+        )}
         {/* Profiel: eigen gegevens, doelen, code verzilveren en uitloggen. */}
         <Pressable
           onPress={() => { tik(); router.push('/profiel'); }}

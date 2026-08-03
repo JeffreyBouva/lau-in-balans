@@ -12,6 +12,7 @@ import { useKlantData } from '@/lib/klantdata';
 import { useOpSlot } from '@/lib/hooks/useOpSlot';
 import { usePortiedoelen } from '@/lib/hooks/useProfiel';
 import { useSheets } from '@/lib/sheets';
+import { useTutorialDoel } from '@/lib/tutorialdoelen';
 import { SchermKop } from '@/components/SchermKop';
 import { SlotKaart } from '@/components/SlotKaart';
 import { CodeSheet } from '@/components/CodeSheet';
@@ -20,19 +21,27 @@ import { Tutorial, type TutorialStap } from '@/components/Tutorial';
 const WEEKDAG = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
 const GETAL = ['nul', 'één', 'twee', 'drie', 'vier', 'vijf', 'zes', 'zeven'];
 
+// Sleutels van de elementen die de uitleg uitlicht (zie lib/tutorialdoelen.tsx).
+const DOEL_CONTACT = 'vandaag.contact';
+const DOEL_OPVALT = 'vandaag.opvalt';
+const DOEL_KNOPPEN = 'vandaag.knoppen';
+
 // Eerste-keer-uitleg (spec § 3): weekoverzicht · wat opvalt · Laura-knop en profiel.
 const UITLEG: TutorialStap[] = [
   {
     titel: 'Je week in één blik',
     tekst: 'Bovenaan zie je op welke dagen jullie contact hadden. Regelmaat telt hier meer dan een perfecte week.',
+    doel: DOEL_CONTACT,
   },
   {
     titel: 'Wat opvalt',
     tekst: 'De groene kaart vat je week samen: wat goed gaat, en waar een kleine bijstelling het meeste oplevert.',
+    doel: DOEL_OPVALT,
   },
   {
     titel: 'Laura en je profiel',
     tekst: 'Rechtsboven haal je Laura erbij. Het poppetje ernaast opent je profiel — daar pas je je gegevens en doelen aan.',
+    doel: DOEL_KNOPPEN,
   },
 ];
 
@@ -68,6 +77,11 @@ export default function Vandaag() {
   const { opSlot, laden: slotLaden } = useOpSlot();
   // De Laura-sheet is coach-contact; bij free opent de knop de code-sheet in plaats daarvan.
   const [codeSheet, setCodeSheet] = useState(false);
+
+  // Uit te lichten elementen voor de eerste-keer-uitleg. Op slot staat er een SlotKaart in
+  // plaats van de contactkaart; dan meet stap 1 niets en valt de uitleg terug op de kaart.
+  const contactDoel = useTutorialDoel(DOEL_CONTACT);
+  const opvaltDoel = useTutorialDoel(DOEL_OPVALT);
 
   // Week-gemiddelden verversen na terugkeer (bijv. na een log-save in de sheet).
   useFocusEffect(useCallback(() => { herlaad(); }, [herlaad]));
@@ -131,6 +145,7 @@ export default function Vandaag() {
           openFlag={openFlag}
           lauraLabel={opSlot ? 'Ik heb een code' : undefined}
           onLaura={slotLaden ? () => {} : opSlot ? () => setCodeSheet(true) : openLaura}
+          knoppenDoel={DOEL_KNOPPEN}
         >
           <View style={s.headerTekst}>
             {weekNr != null && <Text style={text.eyebrow}>Week {weekNr}</Text>}
@@ -146,7 +161,7 @@ export default function Vandaag() {
             onCode={() => setCodeSheet(true)}
           />
         ) : (
-          <View style={s.contactKaart}>
+          <View style={s.contactKaart} {...contactDoel}>
             <Text style={s.kaartLabel}>Dagen dat we contact hadden</Text>
             <View style={s.dagRij}>
               {contactDagen.map((d) => (
@@ -161,7 +176,7 @@ export default function Vandaag() {
         )}
 
         {/* Wat opvalt */}
-        <View style={s.opvaltKaart}>
+        <View style={s.opvaltKaart} {...opvaltDoel}>
           <Text style={s.opvaltEyebrow}>Wat opvalt</Text>
           <Text style={s.opvaltTitel}>{opvaltTitel}</Text>
           <Text style={s.opvaltRegel}>{opvaltRegel}</Text>

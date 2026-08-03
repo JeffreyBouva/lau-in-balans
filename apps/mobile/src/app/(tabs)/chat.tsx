@@ -10,6 +10,7 @@ import { useOpSlot } from '@/lib/hooks/useOpSlot';
 import { useSheets } from '@/lib/sheets';
 import { chatSuggesties } from '@/lib/suggesties';
 import { tik, stoot } from '@/lib/haptics';
+import { useTutorialDoel } from '@/lib/tutorialdoelen';
 import { SchermKop } from '@/components/SchermKop';
 import { SlotKaart } from '@/components/SlotKaart';
 import { CodeSheet } from '@/components/CodeSheet';
@@ -17,19 +18,29 @@ import { Bericht } from '@/components/Bericht';
 import { TypIndicator } from '@/components/TypIndicator';
 import { Tutorial, type TutorialStap } from '@/components/Tutorial';
 
+// Sleutels van de elementen die de uitleg uitlicht (zie lib/tutorialdoelen.tsx).
+// Stap 1 wijst de Lau.ai-kop aan en niet de hele berichtenlijst: die vult bijna het scherm,
+// en dan zou er geen plek meer zijn voor de kaart naast het gat.
+const DOEL_KOP = 'chat.kop';
+const DOEL_ACTIES = 'chat.acties';
+const DOEL_LAURA = 'chat.laura';
+
 // Eerste-keer-uitleg (spec § 3): wie Lau.ai is · loggen vs. suggesties · Laura leest mee.
 const UITLEG: TutorialStap[] = [
   {
     titel: 'Dit is Lau.ai',
     tekst: 'Stel gerust je vraag over eten, honger of een lastige dag. Lau.ai denkt met je mee, ook \'s avonds laat.',
+    doel: DOEL_KOP,
   },
   {
     titel: 'Loggen of vragen',
     tekst: 'Met "Ik heb gegeten" leg je een maaltijd vast. De rondjes ernaast sturen meteen een vraag naar Lau.ai.',
+    doel: DOEL_ACTIES,
   },
   {
     titel: 'Laura leest mee',
     tekst: 'Lau.ai geeft geen medisch advies. Laura kijkt mee in jullie gesprek en stelt Lau.ai op jou af.',
+    doel: DOEL_LAURA,
   },
 ];
 
@@ -48,6 +59,10 @@ export default function Chat() {
   const { opSlot, laden: slotLaden } = useOpSlot();
   const toonSlot = opSlot && !slotLaden;
   const [codeSheet, setCodeSheet] = useState(false);
+
+  // Uit te lichten elementen voor de eerste-keer-uitleg (de Laura-knop zit in SchermKop).
+  const kopDoel = useTutorialDoel(DOEL_KOP);
+  const actieDoel = useTutorialDoel(DOEL_ACTIES);
 
   // Klant (voor het weeknummer in de header).
   const [klant, setKlant] = useState<{ startdatum: string } | null>(null);
@@ -103,8 +118,9 @@ export default function Chat() {
         openFlag={openFlag}
         onLaura={openLaura}
         toonLaura={!toonSlot && !slotLaden}
+        lauraDoel={DOEL_LAURA}
       >
-        <View style={s.headerLinks}>
+        <View style={s.headerLinks} {...kopDoel}>
           <View style={s.avatar}>
             <Text style={s.avatarL}>L</Text>
           </View>
@@ -174,28 +190,33 @@ export default function Chat() {
               naar de log-sheet, en loggen is geen AI-actie — dat moet gewoon door bij een
               bereikte maandlimiet. Alleen de suggestie-chips (en hun scheiding) gaan weg:
               elke chip zou een gesprek starten dat Lau toch niet beantwoordt. */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={s.quickRij}
-            contentContainerStyle={s.quickInhoud}
-          >
-            <Pressable style={({ pressed }) => [s.actieKnop, pressed && s.gedrukt]} onPress={openLog} accessibilityRole="button">
-              <Ionicons name="add" size={18} color={colors.bgSurface} />
-              <Text style={s.actieTekst}>Ik heb gegeten</Text>
-            </Pressable>
-            {!limietBereikt && <View style={s.scheiding} />}
-            {!limietBereikt && suggesties.map((q) => (
-              <Pressable
-                key={q}
-                style={({ pressed }) => [s.suggestie, pressed && s.gedrukt]}
-                onPress={() => { tik(); verstuur(q); }}
-                accessibilityRole="button"
-              >
-                <Text style={s.suggestieTekst}>{q}</Text>
+          {/* Het meetvlak eromheen is voor de tutorial: een ScrollView meet zichzelf niet
+              betrouwbaar, een gewone View wel. Het krijgt geen eigen stijl en verandert
+              dus niets aan de rij. */}
+          <View {...actieDoel}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={s.quickRij}
+              contentContainerStyle={s.quickInhoud}
+            >
+              <Pressable style={({ pressed }) => [s.actieKnop, pressed && s.gedrukt]} onPress={openLog} accessibilityRole="button">
+                <Ionicons name="add" size={18} color={colors.bgSurface} />
+                <Text style={s.actieTekst}>Ik heb gegeten</Text>
               </Pressable>
-            ))}
-          </ScrollView>
+              {!limietBereikt && <View style={s.scheiding} />}
+              {!limietBereikt && suggesties.map((q) => (
+                <Pressable
+                  key={q}
+                  style={({ pressed }) => [s.suggestie, pressed && s.gedrukt]}
+                  onPress={() => { tik(); verstuur(q); }}
+                  accessibilityRole="button"
+                >
+                  <Text style={s.suggestieTekst}>{q}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
 
           {/* Composer (zit boven de tabbar; bottom-padding houdt 'm er vrij van).
               Bij de maandlimiet uit: eerlijker dan een bericht laten sturen waar geen
