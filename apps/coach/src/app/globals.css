@@ -25,14 +25,25 @@
   --color-table-row: #f1eee7;
   --color-table-head: #ede8de;
 
-  /* tekst */
+  /*
+   * tekst — drie leesbare niveaus. Het ontwerp tekent er vijf (ink → body → body-soft →
+   * muted → muted-softer), maar alleen de bovenste drie halen WCAG AA: op wit is
+   * body-soft 4,97:1, muted 3,29:1 en muted-softer 2,50:1. Tekst die informatie draagt
+   * gebruikt daarom ink / body / body-soft; de hiërarchie eronder loopt via grootte,
+   * hoofdletters en tracking (11px uppercase eyebrow < 12px label < 13,5px lopende tekst).
+   *
+   * Achtergrond bepaalt welk niveau nog mag: body-soft haalt het op wit (4,97) en op
+   * surface-sunken (4,73), maar níét op cream (4,49) of de neutral-vlakken (4,18–4,29).
+   * Daar is body het zachtste dat AA haalt.
+   */
   --color-ink: #262a24;
   --color-body: #5e6259;
-  /* text/body-soft — teller onder de dashboardkop en "Laatste in de chat" (§7). */
+  /* text/body-soft — teller onder de dashboardkop en "Laatste in de chat" (§7), plus de
+     kleinste labels op wit die het ontwerp in muted-softer zet. */
   --color-body-soft: #6e7168;
+  /* text/muted en text/muted-softer staan hier omdat dit bestand de spiegel van
+     tokens.ts is; als tékstkleur halen ze AA niet en gebruikt het dashboard ze niet. */
   --color-muted: #8c8f84;
-  /* text/muted-softer — kleinste labels: tabelkop, "week N", "N/7", voetnoot (§7).
-     contrast-opvolgpunt: 2,5:1 op wit — het ontwerp schrijft deze kleur voor. */
   --color-muted-softer: #a3a59a;
 
   /* sage — primair accent, klant & voortgang */
@@ -44,7 +55,9 @@
   --color-sage-soft: #e7eee3;
   --color-sage-soft-border: #cfe0c8;
   --color-sage-ink: #37452f;
-  /* accent/sage-mid — uppercase-eyebrow op sage-soft (log-bubbel §8). */
+  /* accent/sage-mid — het ontwerp zet hier de uppercase-eyebrow op sage-soft mee
+     (log-bubbel §8, prompt-preview §9), maar dat is 3,2:1; die eyebrows staan nu in
+     sage-deep (5,3:1). Blijft in de spiegel staan als palet-token. */
   --color-sage-mid: #6d8a68;
   /* accent/sage-tint — vlak van een toegepaste voorstelkaart (§9). */
   --color-sage-tint: #fbfdfa;

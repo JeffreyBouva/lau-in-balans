@@ -58,15 +58,15 @@ export function HandmatenKaart({
       aria-labelledby="handmaten-kop"
       className="flex flex-col gap-3 rounded-input border border-hairline-soft bg-surface px-[17px] py-[15px]"
     >
-      {/* contrast-opvolgpunt: #8C8F84 op wit ≈ 3,3:1 bij 12px — ontwerpwaarde. */}
-      <h2 id="handmaten-kop" className="text-xs text-muted">
+      <h2 id="handmaten-kop" className="text-xs text-body">
         Handmaten · gemiddeld per dag
       </h2>
 
       {regels}
 
-      {/* contrast-opvolgpunt: #A3A59A op wit ≈ 2,5:1 bij 11,5px — ontwerpwaarde. */}
-      <p className="text-[11.5px] leading-[1.5] text-muted-softer">
+      {/* De kaart is wit, dus de voetnoot mag in body-soft (4,97:1) blijven staan: zachter
+          dan de kop en de regels erboven, en toch leesbaar. */}
+      <p className="text-[11.5px] leading-[1.5] text-body-soft">
         {voetnoot(gemiddelden, dagenMetLog)}
       </p>
     </section>

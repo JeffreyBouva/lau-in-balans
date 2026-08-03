@@ -26,7 +26,12 @@ import { initialen, voornaam as eersteNaam } from '@/lib/naam';
  * inhoudshoogte en scrollt de pagina als geheel.
  */
 const KOLOM = 'flex flex-col border-hairline-soft min-[1200px]:min-h-0 min-[1200px]:overflow-hidden';
-const EYEBROW = 'text-[11px] tracking-[0.12em] text-muted-softer uppercase';
+/*
+ * De drie kolommen hebben geen eigen vlak: ze staan op cream (§8 in de handoff-prototype
+ * ook). Daar haalt body-soft net geen AA (4,49:1), dus staan de eyebrows en de kleine
+ * labels van dit scherm in body (5,63:1) waar §7 en §9 met body-soft toekunnen.
+ */
+const EYEBROW = 'text-[11px] tracking-[0.12em] text-body uppercase';
 
 export default function KlantDetailPagina() {
   // Client-side route (A2): het id komt uit de URL, niet uit server-params.
@@ -114,13 +119,14 @@ export default function KlantDetailPagina() {
 
         <div className="flex min-w-0 flex-col gap-[3px]">
           <h1 className="truncate font-serif text-[21px] text-ink">{klant.naam}</h1>
-          {/* contrast-opvolgpunt: #8C8F84 op wit ≈ 3,3:1 bij 12px — ontwerpwaarde. */}
-          <p className="truncate text-xs text-muted">{meta.join(' · ')}</p>
+          <p className="truncate text-xs text-body">{meta.join(' · ')}</p>
         </div>
 
         <Link
           href={`/klant/${clientId}/gesprek`}
-          className="ml-auto flex-none rounded-full bg-sage px-[18px] py-[11px] text-[13px] text-white transition-colors duration-150 hover:bg-sage-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
+          // Wit op sage is 4,39:1; sage-deep haalt 6,28:1 en de hover (sage-hover) 5,44:1 —
+          // de pil wordt op hover nog steeds lichter, precies zoals het ontwerp doet.
+          className="ml-auto flex-none rounded-full bg-sage-deep px-[18px] py-[11px] text-[13px] text-white transition-colors duration-150 hover:bg-sage-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage"
         >
           Wekelijks gesprek
         </Link>
@@ -136,8 +142,7 @@ export default function KlantDetailPagina() {
         >
           <div className="flex items-center justify-between gap-3 px-6 pt-4 pb-3">
             <h2 className={EYEBROW}>Meelezen · deze week</h2>
-            {/* contrast-opvolgpunt: #A3A59A op wit ≈ 2,5:1 bij 12px — ontwerpwaarde. */}
-            <p className="text-xs text-muted-softer">Lau coacht dagelijks</p>
+            <p className="text-xs text-body">Lau coacht dagelijks</p>
           </div>
 
           {/* flex-auto onder 1200px (de kolom heeft dan geen vaste hoogte, en een
@@ -164,7 +169,7 @@ export default function KlantDetailPagina() {
             {chat.laden && <Skelet />}
 
             {!chat.laden && !chat.fout && berichten.length === 0 && (
-              <p className="rounded-input border border-dashed border-hairline px-5 py-10 text-center text-[13px] text-muted">
+              <p className="rounded-input border border-dashed border-hairline px-5 py-10 text-center text-[13px] text-body">
                 Nog geen berichten.
               </p>
             )}
@@ -181,7 +186,7 @@ export default function KlantDetailPagina() {
                       {/* Niet in §8 getekend, wél in de klant-chat: zonder dagscheiding
                           leest een week transcript als één lange dag. */}
                       {nieuweDag && (
-                        <li className="mt-2 flex items-center gap-3 text-[11px] text-muted-softer first:mt-0">
+                        <li className="mt-2 flex items-center gap-3 text-[11px] text-body first:mt-0">
                           <span className="h-px flex-1 bg-hairline-soft" aria-hidden="true" />
                           {dagLabel(bericht.created_at, nu)}
                           <span className="h-px flex-1 bg-hairline-soft" aria-hidden="true" />

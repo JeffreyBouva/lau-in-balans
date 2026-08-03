@@ -14,8 +14,9 @@ import type { useKlantContext } from '@/lib/hooks/useKlantContext';
 export function EtenNotitiesKolom({ context }: { context: ReturnType<typeof useKlantContext> }) {
   return (
     <>
-      {/* contrast-opvolgpunt: #A3A59A op wit ≈ 2,5:1 — ontwerpwaarde voor de eyebrow. */}
-      <h2 className="px-6 pt-4 pb-3 text-[11px] tracking-[0.12em] text-muted-softer uppercase">
+      {/* Zelfde eyebrow als de andere twee kolommen — op cream, dus body (zie EYEBROW in
+          klant/[id]/page.tsx). */}
+      <h2 className="px-6 pt-4 pb-3 text-[11px] tracking-[0.12em] text-body uppercase">
         Eten &amp; notities
       </h2>
 

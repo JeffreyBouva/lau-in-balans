@@ -20,8 +20,10 @@ import { voornaam as eersteNaam } from '@/lib/naam';
 
 /* Kaartvorm uit §9: wit, rand, radius 20, padding 24. */
 const KAART = 'flex flex-col gap-[18px] rounded-card-lg border border-hairline-soft bg-surface p-6';
-/* contrast-opvolgpunt: #A3A59A op wit ≈ 2,5:1 bij 11px — ontwerpwaarde voor de eyebrow. */
-const EYEBROW = 'text-[11px] tracking-[0.12em] text-muted-softer uppercase';
+/* De eyebrows van dit scherm staan op een witte kaart: body-soft haalt daar AA (4,97:1)
+   en blijft het zachtste niveau van de kaart. Op cream (de paginakop hieronder) lukt dat
+   net niet — daar staat body. */
+const EYEBROW = 'text-[11px] tracking-[0.12em] text-body-soft uppercase';
 const VELDLABEL_STIJL = 'text-[13px] text-body-soft';
 
 const chipBasis =
@@ -102,8 +104,7 @@ export default function GesprekPagina() {
             <span aria-hidden="true">←</span>
           </Link>
           <div className="flex min-w-0 flex-col gap-1">
-            {/* contrast-opvolgpunt: #A3A59A op cream ≈ 2,4:1 bij 11px — ontwerpwaarde. */}
-            <p className="truncate text-[11px] tracking-[0.14em] text-muted-softer uppercase">
+            <p className="truncate text-[11px] tracking-[0.14em] text-body uppercase">
               Wekelijks gesprek · {klant.naam}
             </p>
             <h1 className="font-serif text-[26px] tracking-[-0.01em] text-ink">
@@ -132,7 +133,7 @@ export default function GesprekPagina() {
                   onChange={(e) => zetNotitie(e.target.value)}
                   readOnly={opSlot}
                   placeholder="Wat viel op, wat zei ze zelf, waar loopt ze tegenaan…"
-                  className="min-h-[200px] w-full resize-y rounded-input border border-hairline-soft bg-surface-sunken px-[17px] py-[15px] text-[14px] leading-[1.65] text-ink placeholder:text-muted read-only:text-body focus:border-sage focus:outline-2 focus:outline-offset-0 focus:outline-sage/40"
+                  className="min-h-[200px] w-full resize-y rounded-input border border-hairline-soft bg-surface-sunken px-[17px] py-[15px] text-[14px] leading-[1.65] text-ink placeholder:text-body-soft read-only:text-body focus:border-sage focus:outline-2 focus:outline-offset-0 focus:outline-sage/40"
                 />
               </div>
 
@@ -205,8 +206,7 @@ export default function GesprekPagina() {
                     dagenMetLog={context.dagenMetLog}
                     variant="kaal"
                   />
-                  {/* contrast-opvolgpunt: #A3A59A op wit ≈ 2,5:1 bij 12,5px — ontwerpwaarde. */}
-                  <p className="text-[12.5px] leading-[1.55] text-muted-softer">
+                  <p className="text-[12.5px] leading-[1.55] text-body-soft">
                     {logsZin(context.gemiddelden, context.dagenMetLog, context.dagen.length)}
                   </p>
                 </>
@@ -221,7 +221,7 @@ export default function GesprekPagina() {
                 <h2 id="bijstellen-kop" className={EYEBROW}>
                   2 · Lau bijstellen
                 </h2>
-                <p className="text-xs text-muted-softer">
+                <p className="text-xs text-body-soft">
                   {voorstellen === null || voorstellen.length === 0
                     ? 'nog geen voorstellen'
                     : gesprek.aantalBeslisbaar === 0
@@ -249,7 +249,7 @@ export default function GesprekPagina() {
               )}
 
               {voorstellen !== null && voorstellen.length === 0 && (
-                <p className="rounded-input border border-dashed border-hairline px-5 py-6 text-center text-[13px] text-muted">
+                <p className="rounded-input border border-dashed border-hairline px-5 py-6 text-center text-[13px] text-body">
                   Lau zag in deze notitie geen aanleiding om het profiel bij te stellen.
                 </p>
               )}
@@ -266,7 +266,7 @@ export default function GesprekPagina() {
                     {gesprek.voorstellenBezig ? 'Lau denkt na…' : 'Voorstellen ophalen'}
                   </Knop>
                   {!heeftNotitie && (
-                    <p className="text-[12.5px] text-muted">
+                    <p className="text-[12.5px] text-body">
                       Schrijf eerst je notitie — de voorstellen bouwen daarop.
                     </p>
                   )}
@@ -274,7 +274,7 @@ export default function GesprekPagina() {
               )}
 
               {nogNietBeschikbaar && (
-                <p role="status" className="text-[12.5px] leading-[1.5] text-muted">
+                <p role="status" className="text-[12.5px] leading-[1.5] text-body">
                   {gesprek.nogNietMelding} Vastleggen kan wel: je notitie en signalen worden
                   gewoon bewaard.
                 </p>
@@ -292,9 +292,11 @@ export default function GesprekPagina() {
               aria-labelledby="preview-kop"
               className="flex flex-col gap-3 rounded-card-lg bg-sage-soft p-6"
             >
+              {/* Ontwerp: sage-mid (3,2:1 op sage-soft) — sage-deep is de eerste stap in
+                  dezelfde familie die AA haalt (5,3:1). */}
               <h2
                 id="preview-kop"
-                className="text-[11px] tracking-[0.12em] text-sage-mid uppercase"
+                className="text-[11px] tracking-[0.12em] text-sage-deep uppercase"
               >
                 3 · Zo klinkt Lau maandagochtend
               </h2>
@@ -306,7 +308,6 @@ export default function GesprekPagina() {
                     : 'Het model gaf geen opening terug — de volledige prompt staat er wel.')}
               </p>
 
-              {/* contrast-opvolgpunt: #4C6749 op #E7EEE3 ≈ 4,9:1 — ruim genoeg. */}
               <p className="text-[12.5px] leading-[1.6] text-sage-deep">
                 {previewToelichting(voorstellen, gesprek.aantalToegepast, preview !== null)}
                 {gesprek.previewVerouderd &&
@@ -414,13 +415,12 @@ function VoorstelKaart({
       }`}
     >
       <div className="flex flex-col gap-[7px]">
-        {/* contrast-opvolgpunt: #8C8F84 op #FBF9F5 ≈ 3,2:1 bij 12px — ontwerpwaarde. */}
-        <p className="text-xs text-muted">{VELDLABEL[voorstel.veld] ?? voorstel.veld}</p>
+        <p className="text-xs text-body">{VELDLABEL[voorstel.veld] ?? voorstel.veld}</p>
         <p className="text-[14px] leading-[1.55] text-ink">{voorstel.nieuw}</p>
         {voorstel.oud !== '' && (
-          // contrast-opvolgpunt: #A3A59A ≈ 2,5:1 bij 12,5px — ontwerpwaarde; de oude
-          // waarde is bewust de zwakste regel van de kaart.
-          <p className="text-[12.5px] leading-[1.5] text-muted-softer line-through">
+          // De oude waarde blijft de zwakste regel van de kaart (body-soft, 4,73:1 op
+          // surface-sunken en 4,86:1 op sage-tint) — plus de doorhaling.
+          <p className="text-[12.5px] leading-[1.5] text-body-soft line-through">
             {voorstel.oud}
           </p>
         )}
@@ -435,7 +435,7 @@ function VoorstelKaart({
         // Portiedoelen (en veldnamen die niet in het profiel bestaan) zijn toon-only:
         // getallen verschuiven is een bewust besluit in kolom 2 van het klantdossier,
         // niet iets wat via een zin in een voorstel de database in glijdt.
-        <p className="text-[12px] leading-[1.5] text-muted">
+        <p className="text-[12px] leading-[1.5] text-body">
           Ter info — dit veld stel je bewust bij in het profiel van de klant.
         </p>
       ) : beslist ? (
@@ -444,7 +444,7 @@ function VoorstelKaart({
           onClick={() => opBesluit('open')}
           disabled={opSlot}
           className={`self-start rounded-full px-[14px] py-2 text-[12.5px] transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage disabled:cursor-default ${
-            toegepast ? 'bg-sage-soft text-sage-deep' : 'bg-neutral-softer text-muted'
+            toegepast ? 'bg-sage-soft text-sage-deep' : 'bg-neutral-softer text-body'
           }`}
         >
           {toegepast ? 'Toegepast in profiel' : 'Overgeslagen'}
@@ -456,7 +456,9 @@ function VoorstelKaart({
             type="button"
             onClick={() => opBesluit('toegepast')}
             disabled={opSlot}
-            className={`${actiePil} bg-sage text-white hover:bg-sage-hover`}
+            // Wit op sage is 4,39:1; sage-deep haalt 6,28:1 en de hover 5,44:1 — de knop
+            // wordt op hover nog steeds lichter, zoals het ontwerp doet.
+            className={`${actiePil} bg-sage-deep text-white hover:bg-sage-hover`}
           >
             Toepassen
           </button>
@@ -464,7 +466,7 @@ function VoorstelKaart({
             type="button"
             onClick={() => opBesluit('overgeslagen')}
             disabled={opSlot}
-            className={`${actiePil} border border-hairline bg-surface text-muted hover:border-hairline-hover`}
+            className={`${actiePil} border border-hairline bg-surface text-body hover:border-hairline-hover`}
           >
             Overslaan
           </button>

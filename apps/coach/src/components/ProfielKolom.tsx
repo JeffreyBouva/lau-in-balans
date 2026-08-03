@@ -16,7 +16,7 @@ const UITLEG =
 
 const veldTekst =
   'w-full resize-y rounded-control border border-hairline-soft bg-surface px-3.5 py-3 ' +
-  'text-[13.5px] leading-[1.55] text-ink placeholder:text-muted focus:border-sage ' +
+  'text-[13.5px] leading-[1.55] text-ink placeholder:text-body-soft focus:border-sage ' +
   'focus:outline-2 focus:outline-offset-0 focus:outline-sage/40';
 
 const chipBasis =
@@ -35,12 +35,16 @@ type Variant = 'neutraal' | 'positief' | 'letop';
 const CHIPSTIJL: Record<Variant, string> = {
   neutraal: 'bg-neutral-softer text-body',
   positief: 'bg-sage-soft text-sage-deep',
-  // contrast-opvolgpunt: #93472B op #F6E7E0 ≈ 5,6:1 — ruim genoeg; hier alleen ter info.
   letop: 'bg-clay-soft text-clay-ink',
 };
 
-/** Weggeklikte chip: hij blijft staan (terugzetten moet kunnen), maar telt niet mee. */
-const CHIP_UIT = 'bg-neutral-softer text-muted line-through';
+/**
+ * Weggeklikte chip: hij blijft staan (terugzetten moet kunnen), maar telt niet mee.
+ * Het ontwerp maakt hem lichter (#8C8F84, 2,8:1 op het chipvlak); dat haalt AA niet en
+ * er zit geen leesbare tint tussen body en muted. De doorhaling draagt het verschil nu
+ * alleen — samen met aria-pressed, dat het sowieso al deed.
+ */
+const CHIP_UIT = 'bg-neutral-softer text-body line-through';
 
 /** De string[]-velden van AIProfile — in de UI één chip per item. */
 type LijstVeld = 'doelen' | 'knelpunten' | 'voorkeuren' | 'beperkingen' | 'checkinRitme';
@@ -172,12 +176,14 @@ export function ProfielKolom({
   return (
     <>
       <div className="flex items-center justify-between gap-3 px-6 pt-4 pb-3">
-        {/* contrast-opvolgpunt: #A3A59A op wit ≈ 2,5:1 — ontwerpwaarde voor de eyebrow. */}
-        <h2 className="text-[11px] tracking-[0.12em] text-muted-softer uppercase">AI-profiel</h2>
+        {/* Deze kolom staat op cream: daar is body het zachtste dat AA haalt (zie EYEBROW
+            in klant/[id]/page.tsx). */}
+        <h2 className="text-[11px] tracking-[0.12em] text-body uppercase">AI-profiel</h2>
         {toonFormulier && (
-          // contrast-opvolgpunt: #63805F op wit ≈ 3,9:1 bij 12px — het ontwerp zet beide
-          // savestatussen in sage; "niet bewaard" krijgt daarom geen eigen kleur.
-          <p role="status" className="text-xs text-sage">
+          // Het ontwerp zet beide savestatussen in sage (3,7:1 op cream); sage-deep is
+          // dezelfde kleur een stap donkerder (5,67:1). "Niet bewaard" krijgt nog steeds
+          // geen eigen kleur — de tekst zegt het.
+          <p role="status" className="text-xs text-sage-deep">
             {bewaard ? 'opgeslagen' : 'wijziging niet bewaard'}
           </p>
         )}
@@ -343,7 +349,7 @@ export function ProfielKolom({
                       aria-pressed={gekozen}
                       onClick={() => wijzig((f) => ({ ...f, veiligheidsvlag: optie.waarde }))}
                       className={`${chipBasis} ${
-                        gekozen ? CHIPSTIJL[variant] : 'border border-hairline-soft bg-surface text-muted'
+                        gekozen ? CHIPSTIJL[variant] : 'border border-hairline-soft bg-surface text-body'
                       }`}
                     >
                       {optie.label}
@@ -391,24 +397,23 @@ export function ProfielKolom({
           </>
         )}
 
-        {/* contrast-opvolgpunt: #8C8F84 op #FBF9F5 ≈ 3,2:1 bij 12px — ontwerpwaarden. */}
-        <p className="rounded-input border border-table-head bg-surface-sunken px-4 py-3.5 text-xs leading-[1.55] text-muted">
+        <p className="rounded-input border border-table-head bg-surface-sunken px-4 py-3.5 text-xs leading-[1.55] text-body">
           {UITLEG}
         </p>
 
         <details className="text-[12.5px] text-body">
-          <summary className="cursor-pointer rounded-full text-[11.5px] text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage">
+          <summary className="cursor-pointer rounded-full text-[11.5px] text-body focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage">
             Versiehistorie{versies.length > 0 ? ` (${versies.length})` : ''}
           </summary>
           {versies.length === 0 ? (
-            <p className="mt-2 text-[12.5px] text-muted">
+            <p className="mt-2 text-[12.5px] text-body">
               {profiel.laden ? 'Versies laden…' : 'Nog geen versies.'}
             </p>
           ) : (
             <ol className="mt-2 flex flex-col gap-1">
               {versies.map((versie) => (
-                <li key={versie.versie} className="flex flex-wrap items-center gap-x-1.5 text-[12px] text-muted">
-                  <span className="text-body tabular-nums">v{versie.versie}</span>
+                <li key={versie.versie} className="flex flex-wrap items-center gap-x-1.5 text-[12px] text-body">
+                  <span className="tabular-nums">v{versie.versie}</span>
                   <span aria-hidden="true">·</span>
                   <time dateTime={versie.created_at}>{datumLabel(versie.created_at)}</time>
                   <span aria-hidden="true">·</span>
@@ -426,8 +431,7 @@ export function ProfielKolom({
 function Veld({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-[7px]">
-      {/* contrast-opvolgpunt: #8C8F84 op wit ≈ 3,3:1 bij 12px — ontwerpwaarde. */}
-      <p className="text-xs text-muted">{label}</p>
+      <p className="text-xs text-body">{label}</p>
       {children}
     </div>
   );
@@ -490,7 +494,7 @@ function ChipInvoer({
       }}
       onBlur={opBevestig}
       placeholder="+ toevoegen"
-      className="w-[116px] rounded-full border border-dashed border-hairline bg-surface px-[13px] py-[7px] text-[12.5px] text-ink placeholder:text-muted focus:border-solid focus:border-sage focus:outline-none"
+      className="w-[116px] rounded-full border border-dashed border-hairline bg-surface px-[13px] py-[7px] text-[12.5px] text-ink placeholder:text-body-soft focus:border-solid focus:border-sage focus:outline-none"
     />
   );
 }
@@ -543,7 +547,7 @@ function Tekstveld({
 }) {
   return (
     <div className="flex flex-col gap-[7px]">
-      <label htmlFor={id} className="text-xs text-muted">
+      <label htmlFor={id} className="text-xs text-body">
         {label}
       </label>
       <textarea

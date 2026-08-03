@@ -20,7 +20,7 @@ export function Notities({ notities }: { notities: Notitie[] }) {
       </h2>
 
       {notities.length === 0 ? (
-        <p className="text-[12.5px] text-muted">Nog geen notities.</p>
+        <p className="text-[12.5px] text-body">Nog geen notities.</p>
       ) : (
         <ol className="flex flex-col gap-3.5">
           {notities.map((notitie) => (
@@ -28,8 +28,9 @@ export function Notities({ notities }: { notities: Notitie[] }) {
               key={notitie.id}
               className="flex flex-col gap-[7px] rounded-input border border-hairline-soft bg-surface px-4 py-3.5"
             >
-              {/* contrast-opvolgpunt: #A3A59A op wit ≈ 2,5:1 bij 11px — ontwerpwaarde. */}
-              <time dateTime={notitie.datum} className="text-[11px] text-muted-softer">
+              {/* De notitiekaart is wit, dus de datum mag in body-soft (4,97:1): zachter
+                  dan de notitie eronder, en toch te lezen. */}
+              <time dateTime={notitie.datum} className="text-[11px] text-body-soft">
                 {korteDatum(notitie.datum, nu)}
               </time>
               <p className="text-[13.5px] leading-[1.6] whitespace-pre-wrap text-body">
@@ -81,7 +82,7 @@ export function NotitieFormulier({
         value={concept}
         onChange={(e) => setConcept(e.target.value)}
         placeholder="Notitie toevoegen…"
-        className="min-h-[70px] w-full resize-none rounded-input border border-hairline-soft bg-surface px-3.5 py-3 text-[13.5px] leading-[1.55] text-ink placeholder:text-muted focus:border-sage focus:outline-2 focus:outline-offset-0 focus:outline-sage/40"
+        className="min-h-[70px] w-full resize-none rounded-input border border-hairline-soft bg-surface px-3.5 py-3 text-[13.5px] leading-[1.55] text-ink placeholder:text-body-soft focus:border-sage focus:outline-2 focus:outline-offset-0 focus:outline-sage/40"
       />
       <button
         type="submit"

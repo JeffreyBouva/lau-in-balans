@@ -40,8 +40,7 @@ export function Nav() {
     <header className="flex items-center gap-[18px] border-b border-hairline-soft bg-surface px-7 py-[18px]">
       <Link href="/" className={`${focusRing} font-serif text-[18px] text-ink`}>
         Lau in Balans{' '}
-        {/* contrast-opvolgpunt: #A3A59A op wit ≈ 2,5:1 — het ontwerp schrijft deze kleur voor. */}
-        <span className="font-sans text-[13px] text-muted-softer">· coach</span>
+        <span className="font-sans text-[13px] text-body-soft">· coach</span>
       </Link>
 
       <nav aria-label="Hoofdnavigatie">
@@ -70,10 +69,12 @@ export function Nav() {
         >
           Uitloggen
         </button>
-        {/* contrast-opvolgpunt: #8C8F84 op wit ≈ 3,3:1 — ontwerpwaarde voor de datum. */}
-        <time dateTime={vandaagISO()} className="text-[13px] text-muted">
+        <time dateTime={vandaagISO()} className="text-[13px] text-body">
           {langeDatum()}
         </time>
+        {/* contrast-opvolgpunt: #8C6A56 op #EFEBE2 ≈ 4,1:1 — bewust gelaten. Het monogram is
+            decoratie (aria-hidden; de naam staat eronder in de sr-only regel) en de
+            Laura-familie heeft geen donkerder ink die niet "hover" of "bubbel" betekent. */}
         <span className="flex size-[34px] items-center justify-center rounded-full bg-laura-avatar text-[13px] text-laura-avatar-ink">
           <span aria-hidden="true">{initialen(coach.naam)}</span>
           <span className="sr-only">Ingelogd als {coach.naam}</span>

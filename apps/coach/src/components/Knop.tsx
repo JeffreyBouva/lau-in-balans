@@ -12,7 +12,9 @@ const basis =
   'focus-visible:outline-sage disabled:cursor-not-allowed disabled:opacity-60';
 
 const varianten = {
-  primair: 'bg-sage-deep text-white hover:bg-sage disabled:hover:bg-sage-deep',
+  // Hover lichtte op naar sage; wit daarop is 4,39:1. Sage-hover is de tint ernaast die
+  // nog wél AA haalt (5,44:1) en de knop nog steeds zichtbaar laat oplichten.
+  primair: 'bg-sage-deep text-white hover:bg-sage-hover disabled:hover:bg-sage-deep',
   secundair:
     'border border-hairline bg-surface text-ink hover:border-hairline-hover disabled:hover:border-hairline',
 } as const;

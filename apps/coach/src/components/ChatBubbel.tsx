@@ -51,7 +51,10 @@ export function ChatBubbel({
     return (
       <div className="flex justify-end">
         <div className="flex max-w-[88%] flex-col gap-[7px] rounded-[14px_14px_4px_14px] bg-sage-soft px-3.5 py-3">
-          <span className="text-[10.5px] tracking-[0.1em] text-sage-mid uppercase">
+          {/* Ontwerp: sage-mid (3,2:1 op sage-soft). Sage-deep is de eerstvolgende stap in
+              dezelfde familie die AA haalt (5,3:1) en blijft lichter dan de sage-ink
+              regel eronder. */}
+          <span className="text-[10.5px] tracking-[0.1em] text-sage-deep uppercase">
             {log?.moment ?? 'Voedingslog'}
           </span>
           <p className="text-[12.5px] leading-[1.5] text-sage-ink">

@@ -4,7 +4,7 @@ import { useState, type FormEvent } from 'react';
 
 const veld =
   'w-full rounded-control border border-hairline-soft bg-surface px-3 py-2 text-[13px] ' +
-  'text-ink placeholder:text-muted focus:border-sage focus:outline-2 focus:outline-offset-0 ' +
+  'text-ink placeholder:text-body-soft focus:border-sage focus:outline-2 focus:outline-offset-0 ' +
   'focus:outline-sage/40';
 
 /** Zelfde knopvorm als "Bewaren" bij de notities — kolom 3 spreekt één taal (§8). */
@@ -95,8 +95,7 @@ export function LauGebruik({
       aria-labelledby="lau-gebruik-kop"
       className="rounded-input border border-hairline-soft bg-surface px-[17px] py-[15px]"
     >
-      {/* contrast-opvolgpunt: #8C8F84 op wit ≈ 3,3:1 bij 12px — ontwerpwaarde (§8-kaartkop). */}
-      <h2 id="lau-gebruik-kop" className="text-xs text-muted">
+      <h2 id="lau-gebruik-kop" className="text-xs text-body">
         Lau-gebruik
       </h2>
 
@@ -122,13 +121,13 @@ export function LauGebruik({
 
           {/* Ook mét een eigen limiet zichtbaar: anders is er geen enkele plek waar de
               coach ziet wat "leeg = de standaard" straks betekent. */}
-          <p className="mt-2 text-[11.5px] text-muted">Standaard: {standaardLimiet}/maand</p>
+          <p className="mt-2 text-[11.5px] text-body">Standaard: {standaardLimiet}/maand</p>
 
           <form onSubmit={opslaan} className="mt-3.5 border-t border-hairline-soft pt-3">
             <label htmlFor="ai-limiet" className="text-[13px] text-body">
               Eigen limiet
             </label>
-            <p id="ai-limiet-hint" className="mt-0.5 text-[11.5px] text-muted">
+            <p id="ai-limiet-hint" className="mt-0.5 text-[11.5px] text-body">
               Leeg = de standaard.
             </p>
             <input
@@ -161,7 +160,7 @@ export function LauGebruik({
               </p>
             )}
             {!fout && opgeslagen && (
-              <p role="status" className="mt-2 text-[11.5px] text-muted">
+              <p role="status" className="mt-2 text-[11.5px] text-body">
                 Opgeslagen.
               </p>
             )}

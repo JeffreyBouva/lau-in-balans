@@ -55,9 +55,11 @@ export default function KlantenPagina() {
           <div className="flex flex-col gap-1.5">
             <h1 className="font-serif text-[28px] tracking-[-0.01em] text-ink">Jouw klanten</h1>
             {/* Teller en pillen hangen aan de dáta, niet aan `laden`: een mislukte
-                achtergrond-refresh laat de lijst staan, dus ook zijn kop. */}
+                achtergrond-refresh laat de lijst staan, dus ook zijn kop.
+                De teller staat op cream, waar body-soft 4,49:1 haalt — net te weinig; in
+                de tabel eronder (wit) blijft body-soft wél staan. */}
             {klanten.length > 0 && (
-              <p className="text-sm text-body-soft">
+              <p className="text-sm text-body">
                 {actief} actief · {wachtenden} {wachtenden === 1 ? 'wacht' : 'wachten'} op jou
               </p>
             )}
@@ -91,9 +93,11 @@ export default function KlantenPagina() {
 
         {klanten.length > 0 && (
           <div className="overflow-hidden rounded-card border border-hairline-soft bg-surface">
-            {/* contrast-opvolgpunt: #A3A59A op wit ≈ 2,5:1 — ontwerpwaarde voor de tabelkop. */}
+            {/* Ontwerp zet de tabelkop in #A3A59A (2,5:1 op wit); body-soft is de zachtste
+                tint die AA haalt (4,97:1). De kop blijft zachter dan de rijen door 11px,
+                hoofdletters en tracking, niet meer door kleur alleen. */}
             <div
-              className={`${RASTER} border-b border-table-head px-6 py-3.5 text-[11px] tracking-[0.12em] text-muted-softer uppercase`}
+              className={`${RASTER} border-b border-table-head px-6 py-3.5 text-[11px] tracking-[0.12em] text-body-soft uppercase`}
             >
               {KOLOMMEN.map((kolom) => (
                 <div key={kolom}>{kolom}</div>
@@ -127,8 +131,9 @@ export default function KlantenPagina() {
           </div>
         )}
 
-        {/* contrast-opvolgpunt: #A3A59A op app-achtergrond ≈ 2,4:1 — ontwerpwaarde voor de voetnoot. */}
-        <p className="text-[13px] text-muted-softer">
+        {/* Op cream haalt body-soft net geen AA (4,49:1), dus staat deze voetnoot in body
+            (5,63:1) — de enige tekst op deze pagina die niet op wit ligt. */}
+        <p className="text-[13px] text-body">
           Klik een klant om mee te lezen, te reageren en het AI-profiel bij te stellen.
         </p>
       </div>
@@ -153,9 +158,10 @@ function Filterpil({
       aria-pressed={actief}
       className={`rounded-full border px-[15px] py-[9px] text-[12.5px] whitespace-nowrap transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sage ${
         actief
-          ? // contrast-opvolgpunt: wit op #63805F ≈ 4,4:1 bij 12,5px — het ontwerp vult de
-            // actieve pil met sage (de knop-variant `primair` gebruikt daarom sage-deep).
-            'border-sage bg-sage text-white'
+          ? // Het ontwerp vult de actieve pil met sage, maar wit daarop is 4,39:1. Sage-deep
+            // is dezelfde vulling een stap donkerder (6,28:1) — en de vulling die `Knop`
+            // met variant `primair` al gebruikt.
+            'border-sage-deep bg-sage-deep text-white'
           : 'border-hairline bg-surface text-body hover:border-hairline-hover'
       }`}
     >
@@ -187,15 +193,14 @@ function Klantrij({
         <span
           aria-hidden="true"
           className={`flex size-9 flex-none items-center justify-center rounded-full text-[13px] ${
-            klant.wachtOpJou ? 'bg-clay-soft text-clay-ink' : 'bg-neutral-soft text-body-soft'
+            klant.wachtOpJou ? 'bg-clay-soft text-clay-ink' : 'bg-neutral-soft text-body'
           }`}
         >
           {initialen(klant.naam)}
         </span>
         <span className="flex min-w-0 flex-col gap-[3px]">
           <span className="truncate text-[15px] text-ink">{klant.naam}</span>
-          {/* contrast-opvolgpunt: #A3A59A op wit ≈ 2,5:1 — ontwerpwaarde voor "week N". */}
-          <span className="text-xs text-muted-softer">
+          <span className="text-xs text-body-soft">
             week {weekNummer(klant.startdatum, vandaag)}
           </span>
         </span>
@@ -225,15 +230,13 @@ function Klantrij({
             style={{ width: `${Math.round((klant.logsDagen / 7) * 100)}%` }}
           />
         </span>
-        {/* contrast-opvolgpunt: #A3A59A op wit ≈ 2,5:1 — ontwerpwaarde voor "N/7". */}
-        <span aria-hidden="true" className="text-xs text-muted-softer">
+        <span aria-hidden="true" className="text-xs text-body-soft">
           {klant.logsDagen}/7
         </span>
         <span className="sr-only">{klant.logsDagen} van 7 dagen gelogd</span>
       </div>
 
-      {/* contrast-opvolgpunt: #8C8F84 op wit ≈ 3,3:1 — ontwerpwaarde voor de gespreksdatum. */}
-      <div className="text-[13px] text-muted">
+      <div className="text-[13px] text-body">
         {klant.laatsteGesprek ? (
           <time dateTime={klant.laatsteGesprek}>{korteDagDatum(klant.laatsteGesprek)}</time>
         ) : (
@@ -256,16 +259,17 @@ function statuspil(klant: KlantRij): { label: string; klasse: string } {
   switch (klant.status) {
     case 'actief':
       return { label: 'Actief', klasse: 'bg-sage-soft text-sage-deep' };
+    // De neutrale vlakken zijn te licht voor body-soft (4,18–4,29:1); body is hier het
+    // zachtste dat AA haalt (5,24 resp. 5,38:1) — net als bij de sage- en clay-pillen,
+    // waar het ontwerp zelf al de donkere ink-variant op het zachte vlak zet.
     case 'nieuw':
-      // contrast-opvolgpunt: #6E7168 op #EFEBE2 ≈ 4,2:1 bij 12px — ontwerpwaarden.
-      return { label: 'Nieuw', klasse: 'bg-neutral-soft text-body-soft' };
+      return { label: 'Nieuw', klasse: 'bg-neutral-soft text-body' };
     case 'stil':
-      // contrast-opvolgpunt: #8C8F84 op #F1EEE7 ≈ 2,8:1 bij 12px — ontwerpwaarden.
-      return { label: 'Stil', klasse: 'bg-neutral-softer text-muted' };
+      return { label: 'Stil', klasse: 'bg-neutral-softer text-body' };
     case 'gestopt':
       // Niet in §7 getekend (het ontwerp kent alleen de vier hierboven); de neutrale
       // vorm van "Nieuw" is de rustigste plek voor een afgesloten traject.
-      return { label: 'Gestopt', klasse: 'bg-neutral-soft text-body-soft' };
+      return { label: 'Gestopt', klasse: 'bg-neutral-soft text-body' };
   }
 }
 

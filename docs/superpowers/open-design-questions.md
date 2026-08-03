@@ -52,30 +52,91 @@ tijdens de bouw van de klant-app (fase 2, 2026-07-30).
 
 Verzameld tijdens de bouw van §7 (klantenlijst), §8 (klantdetail) en §9 (wekelijks gesprek).
 De maten en kleuren zijn gevolgd zoals de handoff ze voorschrijft; wat hieronder staat is
-bewust **niet** stil aangepast.
+bewust **niet** stil aangepast. Het contrastpunt is inmiddels wél opgelost (2026-08-03,
+feedbackronde 1 punt 9) — de maten, layout en fonts staan nog altijd zoals de handoff ze
+voorschrijft, alleen de tekstkleuren zijn binnen het palet een stap donkerder gezet.
 
-### Contrast onder de WCAG AA-drempel (4,5:1 voor tekst < 24px)
+### Contrast onder de WCAG AA-drempel (4,5:1 voor tekst < 24px) — OPGELOST 2026-08-03
 
-De handoff schrijft deze combinaties voor en ze zijn zo gebouwd. Ze staan in de code
-gemarkeerd met `contrast-opvolgpunt:`, zodat ze in één grep terug te vinden zijn.
+De vraag hieronder is beantwoord door Jeffrey (feedbackronde 1, punt 9): *"Het dashboard mist
+soms nog wel wat contrast, dan is de tekst te zacht gekleurd tegen de achtergrond. Kun je daar
+nog een optimalisatie op doen zonder het hele design naar de klote te helpen."* Alle 31
+`contrast-opvolgpunt`-markeringen zijn verwerkt; er staan er nog twee in de code (zie
+"Bewust gelaten" onderaan).
 
-| Paar | ≈ | Waar |
+> **De oorspronkelijke vraag was:** mogen de kleinste labels een tint donkerder (bijv.
+> `#A3A59A` → `#8C8F84` en `#8C8F84` → `#6E7168`), of is dit een bewuste keuze voor rust
+> boven contrast? Antwoord: donkerder mag, maar binnen het merkpalet en zonder layout-,
+> font- of maatwijzigingen.
+
+#### De regel die nu geldt
+
+Tekst die informatie draagt haalt ≥ 4,5:1. Het palet heeft precies drie tekstkleuren die dat
+lukt: `ink #262A24`, `body #5E6259` en `body-soft #6E7168`. `muted #8C8F84` (3,3:1 op wit) en
+`muted-softer #A3A59A` (2,5:1) halen het nergens en zijn daarom als tékstkleur uit het
+dashboard verdwenen — ze staan nog wel in `globals.css`, want dat bestand is de spiegel van
+`packages/shared/src/tokens.ts`.
+
+Twee zachtheidsniveaus blijven bestaan; welk niveau mag hangt af van de achtergrond:
+
+| Achtergrond | zachtste kleur die AA haalt | ratio |
 |---|---|---|
-| `#A3A59A` op wit | 2,5:1 | eyebrows, tabelkop, "week N", "N/7", voetnoten, doorgestreepte oude waarde (§9) |
-| `#A3A59A` op `#FBF9F5` / cream | 2,4:1 | hint-regel antwoordbalk, kop-eyebrow §9 |
-| `#8C8F84` op `#F1EEE7` | 2,8:1 | "Stil"-pil (§7) |
-| `#8C8F84` op `#FBF9F5` | 3,2:1 | uitleg-kaart kolom 2, veldnaam voorstelkaart (§9) |
-| `#8C8F84` op wit | 3,3:1 | metaregel klantdetail, datum in de chrome, kaartkoppen |
-| `#B0603F` op `#F6E7E0` | 3,5:1 | flag-banner-detail (§8) |
-| `#63805F` op wit | 3,9:1 | savestatus kolom 2 ("opgeslagen" ↔ "wijziging niet bewaard") |
-| `#6E7168` op `#EFEBE2` | 4,2:1 | inactieve filterpil (§7) |
-| wit op `#63805F` | 4,4:1 | actieve filterpil (§7), "Toepassen" (§9) — bij 12,5px |
+| wit `#FFFFFF` | `body-soft` | 4,97:1 |
+| surface-sunken `#FBF9F5` | `body-soft` | 4,73:1 |
+| sage-tint `#FBFDFA` | `body-soft` | 4,86:1 |
+| cream `#F6F3ED` | `body` (body-soft haalt 4,49:1 — 0,01 tekort) | 5,63:1 |
+| neutral-soft `#EFEBE2` / neutral-softer `#F1EEE7` | `body` | 5,24 / 5,38:1 |
 
-Ruim genoeg en dus géén punt: `#93472B` op `#F6E7E0` (5,6:1) en `#4C6749` op `#E7EEE3` (4,9:1).
+Toegepast als: `muted-softer` → `body-soft` (op cream/neutral → `body`), `muted` → `body`.
+Waar het ontwerp een soft/ink-paar heeft, is de ink-helft gekozen; waar het een accent
+gebruikte, de eerstvolgende donkerdere tint van dezelfde familie.
 
-**Vraag:** mogen de kleinste labels een tint donkerder (bijv. `#A3A59A` → `#8C8F84` en
-`#8C8F84` → `#6E7168`), of is dit een bewuste keuze voor rust boven contrast? Het gaat om
-tekst die betekenis draagt — een status-pil, een savestatus — niet om decoratie.
+#### Wat er is veranderd (gemeten, WCAG relative luminance)
+
+| Paar | voor | na | waar |
+|---|---|---|---|
+| `#A3A59A` → `#6E7168` op wit | 2,50 | **4,97** | tabelkop §7, "week N", "N/7", "· coach", voetnoot handmaten, notitiedatum, eyebrows §9, teller voorstellen, logs-zin |
+| `#A3A59A` → `#6E7168` op `#FBF9F5` | 2,38 | **4,73** | hint-regel antwoordbalk, doorgestreepte oude waarde §9 |
+| `#A3A59A` → `#5E6259` op cream | 2,26 | **5,63** | eyebrows §8 (de drie kolommen staan op cream), dagscheider in de chat, kop-eyebrow §9, voetnoot klantenlijst, "Lau coacht dagelijks" |
+| `#6E7168` → `#5E6259` op cream | 4,49 | **5,63** | teller onder de dashboardkop ("3 actief · 1 wacht op jou") |
+| `#8C8F84` → `#5E6259` op wit | 3,29 | **6,24** | gespreksdatum §7, datum in de chrome, metaregel klantdetail, kaartkoppen §8, "Overslaan" §9, uitgezette veiligheidschip |
+| `#8C8F84` → `#5E6259` op `#FBF9F5` | 3,13 | **5,93** | uitleg-kaart kolom 2, veldnaam voorstelkaart §9 |
+| `#8C8F84` → `#5E6259` op cream | 2,97 | **5,63** | veldlabels kolom 2, versiehistorie, lege-lijst-melding |
+| `#8C8F84` → `#5E6259` op `#F1EEE7` | 2,84 | **5,38** | "Stil"-pil §7, "Overgeslagen"-pil §9, uitgezette chip kolom 2 |
+| `#6E7168` → `#5E6259` op `#EFEBE2` | 4,18 | **5,24** | "Nieuw"/"Gestopt"-pil §7, avatar-initialen in de rij |
+| `#8C8F84` → `#6E7168` (placeholders) | 3,29 | **4,97** | alle input-/textarea-placeholders — bewust body-**soft** en niet body, zodat een leeg veld leeg blijft ogen |
+| `#63805F` → `#4C6749` op cream | 3,96 | **5,67** | savestatus kolom 2 ("opgeslagen" ↔ "wijziging niet bewaard") |
+| `#6D8A68` → `#4C6749` op `#E7EEE3` | 3,23 | **5,30** | eyebrow log-bubbel §8, eyebrow prompt-preview §9 |
+| `#B0603F` → `#93472B` op `#F6E7E0` | 3,80 | **5,49** | "Open sinds …" in de flag-banner §8 |
+| wit op `#63805F` → op `#4C6749` | 4,39 | **6,28** | actieve filterpil §7, "Wekelijks gesprek", "Toepassen" §9 |
+| wit op hover `#63805F` → `#55714F` | 4,39 | **5,44** | hover van `Knop` variant `primair` — licht nog steeds op, alleen een tint minder ver |
+
+(De oude tabel noemde 3,5:1 voor de flag-banner; nagerekend is dat 3,80:1.)
+
+#### Wat dit kost aan hiërarchie
+
+- **Ingeleverd, want het palet heeft geen tint tussen `muted` en `body-soft`:** waar
+  `muted` en `muted-softer` naast elkaar stonden op hetzelfde vlak, vallen ze nu samen.
+  Concreet: in de handmaten-kaart is de kop even donker als de regels eronder, en de
+  uitgezette chip in kolom 2 verschilt van een aanstaande chip alleen nog door de doorhaling
+  (plus `aria-pressed`, dat het al deed). Op de drie kolommen van §8 — die op cream staan —
+  vallen eyebrow en veldlabel samen in `body`.
+- **Behouden:** de zacht/zachter-tweedeling waar de achtergrond het toelaat (wit, sunken,
+  sage-tint) — daar staat het tertiaire niveau in `body-soft` en het secundaire in `body`.
+  En de hiërarchie die niet aan kleur hangt: 11px uppercase + 0,12em tracking voor eyebrows,
+  12px voor labels, 13,5–15px voor lopende tekst, serif voor koppen.
+
+#### Bewust gelaten
+
+- **Laura-monogram** (`#8C6A56` op `#EFEBE2`, 4,09:1) in de chrome en in de antwoordbalk.
+  Beide zijn `aria-hidden` decoratie — de naam staat er in een `sr-only`-regel resp. in het
+  label van het invoerveld naast — en de Laura-familie heeft geen donkerdere ink die niet
+  "hover" of "bubbel" betekent. Staat als enige nog met `contrast-opvolgpunt:` in de code.
+- **Niet-tekstuele elementen:** voortgangsbalken (`#C7BEAE` / sage), handmaat-markers,
+  hairlines, gestippelde randen, het clay-bolletje in de flag-banner. WCAG 1.4.3 gaat over
+  tekst; deze dragen geen informatie die niet ook in woorden staat.
+- **Uitgeschakelde knoppen** (`disabled:opacity-60/70`). WCAG zondert inactieve controls uit,
+  en de opacity is precies het signaal dát ze inactief zijn.
 
 ### Openstaande ontwerpvragen
 

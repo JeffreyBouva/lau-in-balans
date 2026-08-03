@@ -68,6 +68,8 @@ export function AntwoordBalk({
   return (
     <div className="flex flex-col gap-[9px] border-t border-table-head bg-surface-sunken px-6 pt-3 pb-5">
       <form onSubmit={opVerstuur} className="flex items-center gap-[9px]">
+        {/* contrast-opvolgpunt: #8C6A56 op #EFEBE2 ≈ 4,1:1 — bewust gelaten; het monogram is
+            decoratie (aria-hidden, het label van het veld noemt de afzender). */}
         <span
           aria-hidden="true"
           className="flex size-[26px] flex-none items-center justify-center rounded-full bg-laura-avatar font-serif text-xs text-laura-avatar-ink"
@@ -84,7 +86,7 @@ export function AntwoordBalk({
           onChange={(e) => setConcept(e.target.value)}
           // Enter verstuurt (§8): één regel, dus er is geen nieuwe regel om te maken.
           placeholder={`Reageer als ${coach} — ${klant} ziet dat dit van jou komt…`}
-          className="min-w-0 flex-1 rounded-full border border-hairline bg-surface px-[15px] py-3 text-[13.5px] text-ink placeholder:text-muted focus:border-sage focus:outline-2 focus:outline-offset-0 focus:outline-sage/40"
+          className="min-w-0 flex-1 rounded-full border border-hairline bg-surface px-[15px] py-3 text-[13.5px] text-ink placeholder:text-body-soft focus:border-sage focus:outline-2 focus:outline-offset-0 focus:outline-sage/40"
         />
         <button
           type="submit"
@@ -104,8 +106,9 @@ export function AntwoordBalk({
         <p aria-live="polite" className="sr-only">
           {netVerstuurd ? bevestiging : ''}
         </p>
-        {/* contrast-opvolgpunt: #A3A59A op #FBF9F5 ≈ 2,4:1 bij 11,5px — ontwerpwaarden. */}
-        <p className="text-[11.5px] text-muted-softer">
+        {/* De balk ligt op surface-sunken; daar haalt body-soft AA (4,73:1) en blijft de
+            hint zachter dan de tekst in het veld erboven. */}
+        <p className="text-[11.5px] text-body-soft">
           {netVerstuurd
             ? bevestiging
             : `${klant} ziet duidelijk dat dit bericht van jou komt, niet van Lau.`}

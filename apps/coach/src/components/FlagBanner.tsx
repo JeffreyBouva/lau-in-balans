@@ -31,10 +31,12 @@ export function FlagBanner({
         {zin}
         {tekst ? `: “${tekst}”` : '.'}
       </p>
-      {/* contrast-opvolgpunt: #B0603F op #F6E7E0 ≈ 3,5:1 bij 12,5px — ontwerpwaarden. */}
+      {/* Het ontwerp zet deze regel in clay (3,5:1 op clay-soft); clay-ink is de donkere
+          helft van hetzelfde soft/ink-paar (5,5:1). Hij blijft ondergeschikt aan de zin
+          links door 12,5px i.p.v. 13,5px en zijn plek helemaal rechts. */}
       <time
         dateTime={flag.created_at}
-        className="ml-auto flex-none text-[12.5px] whitespace-nowrap text-clay"
+        className="ml-auto flex-none text-[12.5px] whitespace-nowrap text-clay-ink"
       >
         Open sinds {openSindsLabel(flag.created_at, nu)}
       </time>
