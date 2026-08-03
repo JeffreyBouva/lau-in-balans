@@ -64,10 +64,10 @@ export function LauraSheet({ zichtbaar, onSluit }: { zichtbaar: boolean; onSluit
             Ze leest je gesprekken van deze week terug en reageert meestal dezelfde dag, uiterlijk de volgende ochtend.
           </Text>
           <View style={s.sentKaart}>
-            <Text style={s.sentKaartTekst}>Lau blijft gewoon beschikbaar. Je hoeft niet te wachten met vragen.</Text>
+            <Text style={s.sentKaartTekst}>Lau.ai blijft gewoon beschikbaar. Je hoeft niet te wachten met vragen.</Text>
           </View>
           <Pressable onPress={sluitEnReset} style={s.terug}>
-            <Text style={s.terugTekst}>Terug naar Lau</Text>
+            <Text style={s.terugTekst}>Terug naar Lau.ai</Text>
           </Pressable>
         </View>
       ) : (

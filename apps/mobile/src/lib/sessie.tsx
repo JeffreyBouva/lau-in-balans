@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { netteNaam } from '@/lib/naam';
 
 type SessieContext = {
   session: Session | null;
@@ -97,7 +98,10 @@ export function SessieProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password: wachtwoord,
-      options: { data: { naam: naam.trim() } },
+      // Nette naam bij het schrijven (F6): wat hier in de metadata belandt, wordt de
+      // clients-rij en staat straks in het dashboard van Laura. Bestaande rijen laten we
+      // met rust — de weergave-kant poetst die op.
+      options: { data: { naam: netteNaam(naam) } },
     });
     if (error) {
       if (error.code === 'user_already_exists') return { error: 'Dit e-mailadres is al in gebruik. Log in of kies een ander adres.' };

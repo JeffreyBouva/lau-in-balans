@@ -8,7 +8,7 @@ import { useKlantData } from '@/lib/klantdata';
 import { usePortiedoelen } from '@/lib/hooks/useProfiel';
 import { useOpSlot } from '@/lib/hooks/useOpSlot';
 import { useSheets } from '@/lib/sheets';
-import { LauraKnop } from '@/components/LauraKnop';
+import { SchermKop } from '@/components/SchermKop';
 import { HandmaatStepper } from '@/components/HandmaatStepper';
 import { SlotBalk } from '@/components/SlotBalk';
 import { CodeSheet } from '@/components/CodeSheet';
@@ -29,7 +29,7 @@ const UITLEG: TutorialStap[] = [
   },
   {
     titel: 'Geen calorieën',
-    tekst: 'Je hoeft niets te tellen. Twee tikken na een maaltijd is genoeg, en Lau denkt met je mee.',
+    tekst: 'Je hoeft niets te tellen. Twee tikken na een maaltijd is genoeg, en Lau.ai denkt met je mee.',
   },
 ];
 
@@ -83,19 +83,17 @@ export default function Eten() {
         contentContainerStyle={[s.inhoud, { paddingTop: insets.top + 20 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={s.header}>
+        {/* Header. Tijdens het laden bewust een no-op: nog onbekend of dit een free-klant is. */}
+        <SchermKop
+          openFlag={openFlag}
+          lauraLabel={opSlot ? 'Ik heb een code' : undefined}
+          onLaura={slotLaden ? () => {} : opSlot ? () => setCodeSheet(true) : openLaura}
+        >
           <View style={s.headerTekst}>
             <Text style={text.eyebrow}>{vandaagLabel}</Text>
             <Text style={s.titel}>Vandaag gegeten</Text>
           </View>
-          {/* Tijdens het laden bewust een no-op: nog onbekend of dit een free-klant is. */}
-          <LauraKnop
-            openFlag={openFlag}
-            label={opSlot ? 'Ik heb een code' : undefined}
-            onPress={slotLaden ? () => {} : opSlot ? () => setCodeSheet(true) : openLaura}
-          />
-        </View>
+        </SchermKop>
 
         {/* Introregel */}
         <Text style={s.intro}>
@@ -119,9 +117,9 @@ export default function Eten() {
           />
         ))}
 
-        {/* "Lau kijkt mee"-kaart */}
+        {/* "Lau.ai kijkt mee"-kaart */}
         <View style={s.lauKaart}>
-          <Text style={s.lauEyebrow}>Lau kijkt mee</Text>
+          <Text style={s.lauEyebrow}>Lau.ai kijkt mee</Text>
           <Text style={s.lauRegel}>{lauRegel}</Text>
         </View>
 
@@ -204,9 +202,8 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgApp },
   inhoud: { paddingHorizontal: 22, paddingBottom: 110, gap: 14 },
 
-  // header
-  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
-  headerTekst: { flex: 1, gap: 8 },
+  // header (de knoppenrij rechts zit in SchermKop)
+  headerTekst: { gap: 8 },
   titel: { ...text.schermTitel },
 
   // introregel

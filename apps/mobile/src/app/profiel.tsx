@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { HANDMATEN, type HandKey } from '@lau/shared';
 import { colors, radii, fontFamily, text } from '@/theme/tokens';
 import { supabase } from '@/lib/supabase';
+import { netteNaam } from '@/lib/naam';
 import { useSessie } from '@/lib/sessie';
 import { tik, stoot } from '@/lib/haptics';
 import { resetTutorials } from '@/lib/tutorials';
@@ -24,11 +25,11 @@ const MAX_PORTIEDOEL = 12; // zelfde plafond als de RPC en het coach-dashboard
 
 /** De vijf lijstvelden in schermvolgorde, met hun chip-suggesties. */
 const LIJST_VELDEN: { veld: ProfielLijstVeld; titel: string; uitleg: string; opties: string[] }[] = [
-  { veld: 'doelen', titel: 'Waar je naartoe wilt', uitleg: 'Meerdere mag. Lau werkt hiernaartoe.', opties: DOEL_OPTIES },
-  { veld: 'knelpunten', titel: 'Hoe je week eruitziet', uitleg: 'Zo weet Lau wanneer een advies realistisch is.', opties: WEEKVORM_OPTIES },
-  { veld: 'voorkeuren', titel: 'Wat je graag eet', uitleg: 'Lau stelt nooit iets voor waar jij niks mee kunt.', opties: VOORKEUR_OPTIES },
-  { veld: 'beperkingen', titel: 'Waar Lau op moet letten', uitleg: 'Allergieën, aandoeningen of medicatie.', opties: BEPERKING_OPTIES },
-  { veld: 'checkinRitme', titel: 'Wanneer je van Lau hoort', uitleg: 'Het ritme dat bij jouw dagen past.', opties: CHECKIN_RITME_OPTIES },
+  { veld: 'doelen', titel: 'Waar je naartoe wilt', uitleg: 'Meerdere mag. Lau.ai werkt hiernaartoe.', opties: DOEL_OPTIES },
+  { veld: 'knelpunten', titel: 'Hoe je week eruitziet', uitleg: 'Zo weet Lau.ai wanneer een advies realistisch is.', opties: WEEKVORM_OPTIES },
+  { veld: 'voorkeuren', titel: 'Wat je graag eet', uitleg: 'Lau.ai stelt nooit iets voor waar jij niks mee kunt.', opties: VOORKEUR_OPTIES },
+  { veld: 'beperkingen', titel: 'Waar Lau.ai op moet letten', uitleg: 'Allergieën, aandoeningen of medicatie.', opties: BEPERKING_OPTIES },
+  { veld: 'checkinRitme', titel: 'Wanneer je van Lau.ai hoort', uitleg: 'Het ritme dat bij jouw dagen past.', opties: CHECKIN_RITME_OPTIES },
 ];
 
 /** Lege extra-chips per lijstveld (nieuwe objecten: de state wordt erin bijgewerkt). */
@@ -80,12 +81,15 @@ export default function Profiel() {
   const [uitlogBezig, setUitlogBezig] = useState(false);
   const [uitlogFout, setUitlogFout] = useState<string | null>(null);
 
-  // Naam uit de eigen clients-rij (RLS laat de klant z'n eigen rij lezen).
+  // Naam uit de eigen clients-rij (RLS laat de klant z'n eigen rij lezen). We poetsen 'm
+  // bij weergave op (Google levert 'm soms in kleine letters); de opgeslagen waarde blijft
+  // zoals hij is — bestaande rijen corrigeren we niet retroactief.
   const [naam, setNaam] = useState<string | null>(null);
   useEffect(() => {
     supabase.from('clients').select('naam').single()
       .then(({ data }) => setNaam((data as { naam: string } | null)?.naam ?? null));
   }, []);
+  const getoondeNaam = netteNaam(naam ?? '') || '—';
 
   /** Elke bewerking wist de vorige bevestiging — anders blijft "Opgeslagen" staan
    *  boven ongesaved wijzigingen. */
@@ -131,7 +135,7 @@ export default function Profiel() {
     setBezig(false);
     if (error) { setOpslaanFout(error); return; } // invoer blijft staan, opnieuw proberen kan
     stoot();
-    setMelding('Opgeslagen — Lau rekent vanaf nu met je nieuwe doelen.');
+    setMelding('Opgeslagen — Lau.ai rekent vanaf nu met je nieuwe doelen.');
   }
 
   async function herhaalUitleg() {
@@ -184,7 +188,7 @@ export default function Profiel() {
         <View style={s.kaart}>
           <Text style={text.eyebrow}>Account</Text>
           <View style={{ gap: 4 }}>
-            <Text style={s.naam}>{naam ?? '—'}</Text>
+            <Text style={s.naam}>{getoondeNaam}</Text>
             <Text style={s.email}>{session?.user.email ?? ''}</Text>
           </View>
           {/* Zolang de tier laadt (of niet op te halen was) staat hier niets — geen
@@ -222,7 +226,7 @@ export default function Profiel() {
             <View style={s.kaart}>
               <Text style={text.eyebrow}>Mijn gegevens</Text>
               <Text style={s.kaartIntro}>
-                Wat je hier aanpast, weet Lau meteen. Laura ziet de wijziging in je profiel.
+                Wat je hier aanpast, weet Lau.ai meteen. Laura ziet de wijziging in je profiel.
               </Text>
               {LIJST_VELDEN.map((v) => (
                 <ChipGroep

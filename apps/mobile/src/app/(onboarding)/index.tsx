@@ -9,6 +9,7 @@ import { HANDMATEN, type Veiligheidsvlag } from '@lau/shared';
 import { colors, radii, fontFamily, text } from '@/theme/tokens';
 import { useSessie } from '@/lib/sessie';
 import { supabase } from '@/lib/supabase';
+import { netteVoornaam } from '@/lib/naam';
 import { PrimaireKnop } from '@/components/PrimaireKnop';
 import { Chip } from '@/components/Chip';
 import { VoortgangsBalk } from '@/components/VoortgangsBalk';
@@ -27,7 +28,7 @@ const VEILIGHEID_OPTIES: { label: string; waarde: Veiligheidsvlag }[] = [
   { label: 'Ja, daar wil ik voorzichtig mee zijn', waarde: 'voorzichtig' },
 ];
 
-const CTAS = ['Laten we beginnen', 'Verder', 'Verder', 'Verder', 'Verder', 'Duidelijk', 'Verder', 'Naar Lau'];
+const CTAS = ['Laten we beginnen', 'Verder', 'Verder', 'Verder', 'Verder', 'Duidelijk', 'Verder', 'Naar Lau.ai'];
 
 export default function Onboarding() {
   const insets = useSafeAreaInsets();
@@ -38,10 +39,12 @@ export default function Onboarding() {
   const [bezig, setBezig] = useState(false);
 
   // Echte voornaam voor de afsluiting (klant mag z'n eigen clients-rij lezen via RLS).
+  // netteVoornaam poetst een kleine-letter-naam (Google-login) op bij weergave; de
+  // opgeslagen waarde blijft zoals hij is.
   const [voornaam, setVoornaam] = useState<string | null>(null);
   useEffect(() => {
     supabase.from('clients').select('naam').single()
-      .then(({ data }) => setVoornaam((data as { naam: string } | null)?.naam?.split(' ')[0] ?? null));
+      .then(({ data }) => setVoornaam(netteVoornaam((data as { naam: string } | null)?.naam) || null));
   }, []);
 
   // lauFade: opacity 0→1 + translateY 6→0 bij elke stap-wissel.
@@ -94,10 +97,10 @@ export default function Onboarding() {
         <>
           <View style={s.cirkel}><Text style={s.cirkelL}>L</Text></View>
           <Text style={text.onboardingHero}>Fijn dat je er bent.</Text>
-          <Text style={s.alinea}>Ik ben Lau, je dagelijkse coach in deze app. Laura kent je verhaal, leest mee en stelt mij elke week bij op wat jij nodig hebt.</Text>
+          <Text style={s.alinea}>Ik ben Lau.ai, je dagelijkse coach in deze app. Laura kent je verhaal, leest mee en stelt mij elke week bij op wat jij nodig hebt.</Text>
           <Text style={s.alinea}>We beginnen met een paar vragen. Geen formulier — gewoon een kennismaking. Je kunt alles later aanpassen.</Text>
           <View style={[s.kaart, { marginTop: 4 }]}>
-            <Text style={s.kaartTekst}>Lau geeft coaching en leefstijladvies, geen medisch advies. Bij klachten of twijfel verwijzen we je naar je huisarts of diëtist.</Text>
+            <Text style={s.kaartTekst}>Lau.ai geeft coaching en leefstijladvies, geen medisch advies. Bij klachten of twijfel verwijzen we je naar je huisarts of diëtist.</Text>
           </View>
         </>
       ),

@@ -10,26 +10,26 @@ import { useOpSlot } from '@/lib/hooks/useOpSlot';
 import { useSheets } from '@/lib/sheets';
 import { chatSuggesties } from '@/lib/suggesties';
 import { tik, stoot } from '@/lib/haptics';
-import { LauraKnop } from '@/components/LauraKnop';
+import { SchermKop } from '@/components/SchermKop';
 import { SlotKaart } from '@/components/SlotKaart';
 import { CodeSheet } from '@/components/CodeSheet';
 import { Bericht } from '@/components/Bericht';
 import { TypIndicator } from '@/components/TypIndicator';
 import { Tutorial, type TutorialStap } from '@/components/Tutorial';
 
-// Eerste-keer-uitleg (spec § 3): wie Lau is · loggen vs. suggesties · Laura leest mee.
+// Eerste-keer-uitleg (spec § 3): wie Lau.ai is · loggen vs. suggesties · Laura leest mee.
 const UITLEG: TutorialStap[] = [
   {
-    titel: 'Dit is Lau',
-    tekst: 'Stel gerust je vraag over eten, honger of een lastige dag. Lau denkt met je mee, ook \'s avonds laat.',
+    titel: 'Dit is Lau.ai',
+    tekst: 'Stel gerust je vraag over eten, honger of een lastige dag. Lau.ai denkt met je mee, ook \'s avonds laat.',
   },
   {
     titel: 'Loggen of vragen',
-    tekst: 'Met "Ik heb gegeten" leg je een maaltijd vast. De rondjes ernaast sturen meteen een vraag naar Lau.',
+    tekst: 'Met "Ik heb gegeten" leg je een maaltijd vast. De rondjes ernaast sturen meteen een vraag naar Lau.ai.',
   },
   {
     titel: 'Laura leest mee',
-    tekst: 'Lau geeft geen medisch advies. Laura kijkt mee in jullie gesprek en stelt Lau op jou af.',
+    tekst: 'Lau.ai geeft geen medisch advies. Laura kijkt mee in jullie gesprek en stelt Lau.ai op jou af.',
   },
 ];
 
@@ -94,29 +94,36 @@ export default function Chat() {
   // wanneer de tier omklapt en kan die z'n sluit-animatie afmaken.
   return (
     <View style={s.root}>
-      {/* Header */}
-      <View style={[s.header, { paddingTop: insets.top + 22 }]}>
-        <View style={s.avatar}>
-          <Text style={s.avatarL}>L</Text>
+      {/* Header. Op slot is er nog geen coach om te bereiken; tijdens het laden weten we
+          het nog niet — dan óók geen Laura-knop, zodat een free-klant geen flag kan
+          sturen. Het profiel-icoon blijft wél staan: daar zitten uitloggen en de code. */}
+      <SchermKop
+        uitlijning="midden"
+        style={[s.header, { paddingTop: insets.top + 22 }]}
+        openFlag={openFlag}
+        onLaura={openLaura}
+        toonLaura={!toonSlot && !slotLaden}
+      >
+        <View style={s.headerLinks}>
+          <View style={s.avatar}>
+            <Text style={s.avatarL}>L</Text>
+          </View>
+          <View style={s.headerTekst}>
+            <Text style={text.chatNaam}>Lau.ai</Text>
+            <Text style={text.caption}>
+              {toonSlot || slotLaden ? 'AI-voedingscoach' : `Ingesteld door Laura${weekNr != null ? ` · week ${weekNr}` : ''}`}
+            </Text>
+          </View>
         </View>
-        <View style={s.headerTekst}>
-          <Text style={text.chatNaam}>Lau.ai</Text>
-          <Text style={text.caption}>
-            {toonSlot || slotLaden ? 'AI-voedingscoach' : `Ingesteld door Laura${weekNr != null ? ` · week ${weekNr}` : ''}`}
-          </Text>
-        </View>
-        {/* Op slot is er nog geen coach om te bereiken; tijdens het laden weten we het
-            nog niet — dan óók geen knop, zodat een free-klant geen flag kan sturen. */}
-        {!toonSlot && !slotLaden && <LauraKnop openFlag={openFlag} onPress={openLaura} />}
-      </View>
+      </SchermKop>
 
       {/* Drie standen: slot · laden (alleen header, leest als "aan het laden") · open.
           Zo flitst de chat-UI niet voorbij bij een free-klant tijdens de tier-load. */}
       {toonSlot ? (
         <SlotKaart
           variant="scherm"
-          titel="Lau denkt met je mee — dag en nacht"
-          uitleg="Stel vragen over je eten, krijg warme coaching in handmaten en bouw samen aan je ritme. Laura leest mee en stelt Lau op jou af."
+          titel="Lau.ai denkt met je mee — dag en nacht"
+          uitleg="Stel vragen over je eten, krijg warme coaching in handmaten en bouw samen aan je ritme. Laura leest mee en stelt Lau.ai op jou af."
           onCode={() => setCodeSheet(true)}
         />
       ) : slotLaden ? null : (
@@ -149,7 +156,7 @@ export default function Chat() {
                   <Ionicons name="moon-outline" size={13} color={colors.mutedSoft} />
                 </View>
                 <Text style={s.limietTekst}>
-                  Je Lau-gesprekken voor deze maand zijn op. Bespreek het met Laura — zij kan er meer voor je aanzetten.
+                  Je Lau.ai-gesprekken voor deze maand zijn op. Bespreek het met Laura — zij kan er meer voor je aanzetten.
                 </Text>
               </View>
             )}
@@ -159,7 +166,7 @@ export default function Chat() {
               <View style={s.infoCirkel}>
                 <Text style={s.infoI}>i</Text>
               </View>
-              <Text style={s.disclaimerTekst}>Lau geeft geen medisch advies. Laura leest mee.</Text>
+              <Text style={s.disclaimerTekst}>Lau.ai geeft geen medisch advies. Laura leest mee.</Text>
             </View>
           </ScrollView>
 
@@ -202,7 +209,7 @@ export default function Chat() {
               // editable={false} maakt het veld visueel dood, maar zegt een schermlezer
               // niets — deze regel wel (zelfde signaal als op de verzendknop hieronder).
               accessibilityState={{ disabled: limietBereikt }}
-              placeholder={limietBereikt ? 'Lau is er volgende maand weer voor je' : 'Schrijf iets aan Lau…'}
+              placeholder={limietBereikt ? 'Lau.ai is er volgende maand weer voor je' : 'Schrijf iets aan Lau.ai…'}
               placeholderTextColor={colors.mutedSoft}
               returnKeyType="send"
               blurOnSubmit={false}
@@ -236,17 +243,15 @@ export default function Chat() {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgApp },
 
-  // header
+  // header (de knoppenrij rechts zit in SchermKop)
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 13,
     paddingHorizontal: 22,
     paddingBottom: 14,
     backgroundColor: colors.bgApp,
     borderBottomWidth: 1,
     borderBottomColor: colors.hairlineSofter,
   },
+  headerLinks: { flexDirection: 'row', alignItems: 'center', gap: 13 },
   avatar: {
     width: 42,
     height: 42,

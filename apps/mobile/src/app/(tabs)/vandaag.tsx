@@ -2,18 +2,17 @@ import { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import {
   HANDMATEN, weekNummer, vandaagISO, naarISODatum, type Porties,
 } from '@lau/shared';
 import { colors, radii, fontFamily, text } from '@/theme/tokens';
 import { supabase } from '@/lib/supabase';
-import { tik } from '@/lib/haptics';
+import { netteVoornaam } from '@/lib/naam';
 import { useKlantData } from '@/lib/klantdata';
 import { useOpSlot } from '@/lib/hooks/useOpSlot';
 import { usePortiedoelen } from '@/lib/hooks/useProfiel';
 import { useSheets } from '@/lib/sheets';
-import { LauraKnop } from '@/components/LauraKnop';
+import { SchermKop } from '@/components/SchermKop';
 import { SlotKaart } from '@/components/SlotKaart';
 import { CodeSheet } from '@/components/CodeSheet';
 import { Tutorial, type TutorialStap } from '@/components/Tutorial';
@@ -73,8 +72,9 @@ export default function Vandaag() {
   // Week-gemiddelden verversen na terugkeer (bijv. na een log-save in de sheet).
   useFocusEffect(useCallback(() => { herlaad(); }, [herlaad]));
 
-  // Header
-  const voornaam = klant?.naam?.split(' ')[0] ?? '';
+  // Header. De naam uit de database kan in kleine letters staan (Google-login); we
+  // poetsen 'm bij weergave op — de opgeslagen waarde laten we met rust.
+  const voornaam = netteVoornaam(klant?.naam);
   const hero = voornaam ? `Je vindt je ritme, ${voornaam}.` : 'Je vindt je ritme.';
   const weekNr = klant ? weekNummer(klant.startdatum, vandaagISO()) : null;
 
@@ -124,38 +124,24 @@ export default function Vandaag() {
         contentContainerStyle={[s.inhoud, { paddingTop: insets.top + 20 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={s.header}>
+        {/* Header. De Laura-knop ziet er in alle standen hetzelfde uit (niets te flitsen).
+            Tijdens het laden is de tik bewust een no-op: dan weten we nog niet of dit een
+            free-klant is, en Laura's inbox is voor klanten mét traject. */}
+        <SchermKop
+          openFlag={openFlag}
+          lauraLabel={opSlot ? 'Ik heb een code' : undefined}
+          onLaura={slotLaden ? () => {} : opSlot ? () => setCodeSheet(true) : openLaura}
+        >
           <View style={s.headerTekst}>
             {weekNr != null && <Text style={text.eyebrow}>Week {weekNr}</Text>}
             <Text style={s.hero}>{hero}</Text>
           </View>
-          {/* De knop ziet er in alle standen hetzelfde uit (niets te flitsen). Tijdens het
-              laden is de tik bewust een no-op: dan weten we nog niet of dit een free-klant
-              is, en Laura's inbox is voor klanten mét traject. */}
-          <View style={s.headerKnoppen}>
-            <LauraKnop
-              openFlag={openFlag}
-              label={opSlot ? 'Ik heb een code' : undefined}
-              onPress={slotLaden ? () => {} : opSlot ? () => setCodeSheet(true) : openLaura}
-            />
-            {/* Profiel: eigen gegevens, doelen, code verzilveren en uitloggen. */}
-            <Pressable
-              onPress={() => { tik(); router.push('/profiel'); }}
-              accessibilityRole="button"
-              accessibilityLabel="Profiel"
-              hitSlop={8}
-              style={({ pressed }) => [s.profielKnop, pressed && s.gedrukt]}
-            >
-              <Ionicons name="person-circle-outline" size={28} color={colors.muted} />
-            </Pressable>
-          </View>
-        </View>
+        </SchermKop>
 
         {/* Contactkaart */}
         {slotLaden ? null : opSlot ? (
           <SlotKaart
-            titel="Contact met Lau en Laura"
+            titel="Contact met Lau.ai en Laura"
             uitleg="Zie hier hoe vaak jullie contact hadden en waar jullie samen aan werken."
             onCode={() => setCodeSheet(true)}
           />
@@ -244,12 +230,8 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgApp },
   inhoud: { paddingHorizontal: 22, paddingBottom: 110, gap: 18 },
 
-  // header
-  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
-  headerTekst: { flex: 1, gap: 8 },
-  headerKnoppen: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  profielKnop: { width: 36, height: 36, borderRadius: radii.pill, alignItems: 'center', justifyContent: 'center' },
-  gedrukt: { opacity: 0.55, transform: [{ scale: 0.92 }] },
+  // header (de knoppenrij rechts zit in SchermKop)
+  headerTekst: { gap: 8 },
   hero: { fontFamily: fontFamily.serif, fontSize: 30, lineHeight: 37, letterSpacing: -0.4, color: colors.ink },
 
   // contactkaart

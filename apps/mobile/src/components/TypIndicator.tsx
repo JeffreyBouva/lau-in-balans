@@ -27,7 +27,7 @@ function Bol({ delay }: { delay: number }) {
 
 export function TypIndicator() {
   return (
-    <View style={s.bubbel} accessibilityLabel="Lau typt">
+    <View style={s.bubbel} accessibilityLabel="Lau.ai typt">
       <Bol delay={0} />
       <Bol delay={200} />
       <Bol delay={400} />
