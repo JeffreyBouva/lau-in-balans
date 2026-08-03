@@ -15,6 +15,10 @@ import {
 import * as Haptics from 'expo-haptics';
 import { colors, radii, shadow } from '@/theme/tokens';
 
+/** Duur van de sluit-animatie. Wie een sheet door een andere vervangt, wacht dit af —
+ *  twee tegelijk gepresenteerde modals nemen elkaar op native mee in hun val. */
+export const SHEET_SLUIT_MS = 240;
+
 /**
  * Herbruikbare bottom-sheet (handoff § 5). Scrim-tik sluit; de sheet-body vangt de tik
  * zelf op (zit als broer bóven de scrim). Openen: spring-up (subtiele iOS-settle) mét een
@@ -67,7 +71,7 @@ export function Sheet({
     } else {
       Animated.timing(y, {
         toValue: schermH,
-        duration: 240,
+        duration: SHEET_SLUIT_MS,
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }).start(({ finished }) => {

@@ -17,9 +17,11 @@ import {
 import {
   DOEL_OPTIES, WEEKVORM_OPTIES, VOORKEUR_OPTIES, BEPERKING_OPTIES, CHECKIN_RITME_OPTIES,
 } from '@/state/onboarding';
+import { useSlotSheets } from '@/lib/hooks/useSlotSheets';
 import { Chip } from '@/components/Chip';
 import { PrimaireKnop } from '@/components/PrimaireKnop';
 import { CodeSheet } from '@/components/CodeSheet';
+import { CodeAanvraagSheet } from '@/components/CodeAanvraagSheet';
 
 const MAX_PORTIEDOEL = 12; // zelfde plafond als de RPC en het coach-dashboard
 
@@ -77,7 +79,8 @@ export default function Profiel() {
   const [bezig, setBezig] = useState(false);
   const [melding, setMelding] = useState<string | null>(null);
   const [opslaanFout, setOpslaanFout] = useState<string | null>(null);
-  const [codeSheet, setCodeSheet] = useState(false);
+  // Code invullen én een code aanvragen — beide alleen zichtbaar bij free (zie hieronder).
+  const { codeOpen, aanvraagOpen, openCode, openAanvraag, sluit, naarAanvraag } = useSlotSheets();
   const [uitlogBezig, setUitlogBezig] = useState(false);
   const [uitlogFout, setUitlogFout] = useState<string | null>(null);
 
@@ -204,7 +207,10 @@ export default function Profiel() {
           )}
           <View style={s.knopRij}>
             {tier === 'free' && (
-              <SecundaireKnop label="Ik heb een code" onPress={() => { tik(); setCodeSheet(true); }} />
+              <>
+                <SecundaireKnop label="Ik heb een code" onPress={() => { tik(); openCode(); }} />
+                <SecundaireKnop label="Vraag een code aan" onPress={() => { tik(); openAanvraag(); }} />
+              </>
             )}
             <SecundaireKnop label="Uitloggen" onPress={uitloggen} bezig={uitlogBezig} />
           </View>
@@ -289,7 +295,8 @@ export default function Profiel() {
         </View>
       </ScrollView>
 
-      <CodeSheet zichtbaar={codeSheet} onSluit={() => setCodeSheet(false)} />
+      <CodeSheet zichtbaar={codeOpen} onSluit={sluit} onAanvraag={naarAanvraag} />
+      <CodeAanvraagSheet zichtbaar={aanvraagOpen} onSluit={sluit} />
     </View>
   );
 }

@@ -13,11 +13,13 @@ import { useSessie } from '@/lib/sessie';
 import { useKlantData } from '@/lib/klantdata';
 import { useOpSlot } from '@/lib/hooks/useOpSlot';
 import { usePortiedoelen } from '@/lib/hooks/useProfiel';
+import { useSlotSheets } from '@/lib/hooks/useSlotSheets';
 import { useSheets } from '@/lib/sheets';
 import { useTutorialDoel } from '@/lib/tutorialdoelen';
 import { SchermKop } from '@/components/SchermKop';
 import { SlotKaart } from '@/components/SlotKaart';
 import { CodeSheet } from '@/components/CodeSheet';
+import { CodeAanvraagSheet } from '@/components/CodeAanvraagSheet';
 import { Tutorial, type TutorialStap } from '@/components/Tutorial';
 
 const WEEKDAG = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
@@ -74,7 +76,8 @@ export default function Vandaag() {
   // niet aan "staan de sloten aan" (ops kan die uitzetten zonder dat free een traject krijgt).
   const { tier, tierLaden } = useSessie();
   // De Laura-sheet is coach-contact; bij free opent de knop de code-sheet in plaats daarvan.
-  const [codeSheet, setCodeSheet] = useState(false);
+  // Daarnaast de aanvraag-sheet, voor wie nog géén code heeft (feedback § 3).
+  const { codeOpen, aanvraagOpen, openCode, openAanvraag, sluit, naarAanvraag } = useSlotSheets();
 
   // Uit te lichten elementen voor de eerste-keer-uitleg. Op slot staat er een SlotKaart in
   // plaats van de contactkaart; dan meet stap 1 niets en valt de uitleg terug op de kaart.
@@ -153,7 +156,7 @@ export default function Vandaag() {
         <SchermKop
           openFlag={openFlag}
           lauraLabel={opSlot ? 'Ik heb een code' : undefined}
-          onLaura={slotLaden ? () => {} : opSlot ? () => setCodeSheet(true) : openLaura}
+          onLaura={slotLaden ? () => {} : opSlot ? openCode : openLaura}
           knoppenDoel={DOEL_KNOPPEN}
         >
           <View style={s.headerTekst}>
@@ -172,7 +175,8 @@ export default function Vandaag() {
           <SlotKaart
             titel="Contact met Lau.ai en Laura"
             uitleg="Zie hier op welke dagen jullie contact hadden — en hoe je week eruitziet."
-            onCode={() => setCodeSheet(true)}
+            onCode={openCode}
+            onAanvraag={openAanvraag}
           />
         ) : (
           <View style={s.contactKaart} {...contactDoel}>
@@ -224,8 +228,9 @@ export default function Vandaag() {
             De slot-kaart die hier voor free stond, is mee verdwenen: die beloofde inhoud
             die een coached klant nu ook niet krijgt. */}
 
-        {/* Buiten de slot-conditie: zo overleeft de sheet het omklappen naar coached. */}
-        <CodeSheet zichtbaar={codeSheet} onSluit={() => setCodeSheet(false)} />
+        {/* Buiten de slot-conditie: zo overleven de sheets het omklappen naar coached. */}
+        <CodeSheet zichtbaar={codeOpen} onSluit={sluit} onAanvraag={naarAanvraag} />
+        <CodeAanvraagSheet zichtbaar={aanvraagOpen} onSluit={sluit} />
       </ScrollView>
 
       {/* Als laatste kind: de eerste-keer-uitleg legt zich over het hele scherm. */}

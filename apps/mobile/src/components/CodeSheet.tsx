@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { verzilverCode } from '@/lib/codes';
 import { useSessie } from '@/lib/sessie';
 import { colors, fontFamily, text } from '@/theme/tokens';
@@ -10,8 +10,17 @@ import { CodeInvoer } from '@/components/CodeInvoer';
 /**
  * Code verzilveren vanaf een slot-staat. Na succes: tier herladen — de app klapt open.
  * Het toetsenbord vangt `Sheet` zelf op (schermvullende KAV daar); hier geen tweede.
+ *
+ * `onAanvraag` hangt de uitweg voor wie géén code heeft onder de invoer (feedback § 3).
+ * Het scherm sluit deze sheet en opent de aanvraag-sheet; hier is dat één callback.
+ * Zo is de aanvraag overal bereikbaar waar de code-invoer dat is — ook op Eten, waar de
+ * knop rechtsboven de enige slot-ingang is.
  */
-export function CodeSheet({ zichtbaar, onSluit }: { zichtbaar: boolean; onSluit: () => void }) {
+export function CodeSheet({ zichtbaar, onSluit, onAanvraag }: {
+  zichtbaar: boolean;
+  onSluit: () => void;
+  onAanvraag?: () => void;
+}) {
   const { herlaadTier } = useSessie();
   const [code, setCode] = useState('');
   const [fout, setFout] = useState<string | null>(null);
@@ -62,6 +71,19 @@ export function CodeSheet({ zichtbaar, onSluit }: { zichtbaar: boolean; onSluit:
           onVoltooi={verzilver} editable={!bezig} autoFocus />
         {fout && <Text style={[text.bodyKlein, { color: colors.clayInk }]}>{fout}</Text>}
         <PrimaireKnop label="Verzilveren" onPress={verzilver} bezig={bezig} />
+        {onAanvraag && (
+          // Blijft staan tijdens het verzilveren (geen springende layout), maar ligt stil:
+          // halverwege een RPC naar een andere sheet stappen hoort niet.
+          <Pressable
+            onPress={onAanvraag}
+            disabled={bezig}
+            accessibilityRole="button"
+            hitSlop={6}
+            style={({ pressed }) => [s.aanvraag, (pressed || bezig) && { opacity: 0.6 }]}
+          >
+            <Text style={s.aanvraagTekst}>Nog geen code? Vraag er een aan</Text>
+          </Pressable>
+        )}
       </View>
     </Sheet>
   );
@@ -70,4 +92,7 @@ export function CodeSheet({ zichtbaar, onSluit }: { zichtbaar: boolean; onSluit:
 const s = StyleSheet.create({
   inhoud: { paddingHorizontal: 26, paddingTop: 6, paddingBottom: 34, gap: 16 },
   titel: { fontFamily: fontFamily.serif, fontSize: 26, letterSpacing: -0.26, color: colors.ink },
+  aanvraag: { alignSelf: 'center', paddingVertical: 4 },
+  aanvraagTekst: { fontFamily: fontFamily.sans, fontSize: 13.5, lineHeight: 20, color: colors.bodySoft,
+    textDecorationLine: 'underline' },
 });

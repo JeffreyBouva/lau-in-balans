@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
@@ -7,12 +7,14 @@ import { colors, radii, fontFamily, text } from '@/theme/tokens';
 import { useKlantData } from '@/lib/klantdata';
 import { usePortiedoelen } from '@/lib/hooks/useProfiel';
 import { useOpSlot } from '@/lib/hooks/useOpSlot';
+import { useSlotSheets } from '@/lib/hooks/useSlotSheets';
 import { useSheets } from '@/lib/sheets';
 import { useTutorialDoel } from '@/lib/tutorialdoelen';
 import { SchermKop } from '@/components/SchermKop';
 import { HandmaatStepper } from '@/components/HandmaatStepper';
 import { SlotBalk } from '@/components/SlotBalk';
 import { CodeSheet } from '@/components/CodeSheet';
+import { CodeAanvraagSheet } from '@/components/CodeAanvraagSheet';
 import { Tutorial, type TutorialStap } from '@/components/Tutorial';
 
 const WEEKDAG = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
@@ -57,7 +59,9 @@ export default function Eten() {
   // om een code. Er verandert niets aan de layout, dus hier valt niets te flitsen: zolang
   // het oordeel laadt is opSlot false en gedraagt de knop zich als vanouds.
   const { opSlot, laden: slotLaden } = useOpSlot();
-  const [codeSheet, setCodeSheet] = useState(false);
+  // Dit scherm heeft geen SlotKaart; de weg naar een aanvraag loopt hier via de link
+  // onder de code-invoer (CodeSheet → naarAanvraag), zodat ook Eten geen doodlopend eind is.
+  const { codeOpen, aanvraagOpen, openCode, sluit, naarAanvraag } = useSlotSheets();
 
   // De weekkaart als uit te lichten element; de eerste portiekaart regelt dat zelf (de
   // hook hoort bij de kaart die 'm rendert).
@@ -109,7 +113,7 @@ export default function Eten() {
         <SchermKop
           openFlag={openFlag}
           lauraLabel={opSlot ? 'Ik heb een code' : undefined}
-          onLaura={slotLaden ? () => {} : opSlot ? () => setCodeSheet(true) : openLaura}
+          onLaura={slotLaden ? () => {} : opSlot ? openCode : openLaura}
         >
           <View style={s.headerTekst}>
             <Text style={text.eyebrow}>{vandaagLabel}</Text>
@@ -179,8 +183,9 @@ export default function Eten() {
           ))}
         </View>
 
-        {/* Buiten de slot-conditie: zo overleeft de sheet het omklappen naar coached. */}
-        <CodeSheet zichtbaar={codeSheet} onSluit={() => setCodeSheet(false)} />
+        {/* Buiten de slot-conditie: zo overleven de sheets het omklappen naar coached. */}
+        <CodeSheet zichtbaar={codeOpen} onSluit={sluit} onAanvraag={naarAanvraag} />
+        <CodeAanvraagSheet zichtbaar={aanvraagOpen} onSluit={sluit} />
       </ScrollView>
 
       {/* Als laatste kind: de eerste-keer-uitleg legt zich over het hele scherm. */}

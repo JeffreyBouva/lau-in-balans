@@ -7,6 +7,7 @@ import { colors, radii, fontFamily, text } from '@/theme/tokens';
 import { supabase } from '@/lib/supabase';
 import { useKlantData } from '@/lib/klantdata';
 import { useOpSlot } from '@/lib/hooks/useOpSlot';
+import { useSlotSheets } from '@/lib/hooks/useSlotSheets';
 import { useSheets } from '@/lib/sheets';
 import { chatSuggesties } from '@/lib/suggesties';
 import { tik, stoot } from '@/lib/haptics';
@@ -14,6 +15,7 @@ import { useTutorialDoel } from '@/lib/tutorialdoelen';
 import { SchermKop } from '@/components/SchermKop';
 import { SlotKaart } from '@/components/SlotKaart';
 import { CodeSheet } from '@/components/CodeSheet';
+import { CodeAanvraagSheet } from '@/components/CodeAanvraagSheet';
 import { Bericht } from '@/components/Bericht';
 import { TypIndicator } from '@/components/TypIndicator';
 import { Tutorial, type TutorialStap } from '@/components/Tutorial';
@@ -58,7 +60,8 @@ export default function Chat() {
   // staat, en zo flitst het slot niet voorbij bij een coached klant of bij sloten-uit.
   const { opSlot, laden: slotLaden } = useOpSlot();
   const toonSlot = opSlot && !slotLaden;
-  const [codeSheet, setCodeSheet] = useState(false);
+  // Code invullen én een code aanvragen (feedback § 3); er staat er altijd hoogstens één open.
+  const { codeOpen, aanvraagOpen, openCode, openAanvraag, sluit, naarAanvraag } = useSlotSheets();
 
   // Uit te lichten elementen voor de eerste-keer-uitleg (de Laura-knop zit in SchermKop).
   const kopDoel = useTutorialDoel(DOEL_KOP);
@@ -140,7 +143,8 @@ export default function Chat() {
           variant="scherm"
           titel="Lau.ai denkt met je mee — dag en nacht"
           uitleg="Stel vragen over je eten, krijg warme coaching in handmaten en bouw samen aan je ritme. Laura leest mee en stelt Lau.ai op jou af."
-          onCode={() => setCodeSheet(true)}
+          onCode={openCode}
+          onAanvraag={openAanvraag}
         />
       ) : slotLaden ? null : (
         <>
@@ -249,8 +253,9 @@ export default function Chat() {
         </>
       )}
 
-      {/* Buiten de slot-conditie: zo overleeft de sheet het omklappen naar coached. */}
-      <CodeSheet zichtbaar={codeSheet} onSluit={() => setCodeSheet(false)} />
+      {/* Buiten de slot-conditie: zo overleven de sheets het omklappen naar coached. */}
+      <CodeSheet zichtbaar={codeOpen} onSluit={sluit} onAanvraag={naarAanvraag} />
+      <CodeAanvraagSheet zichtbaar={aanvraagOpen} onSluit={sluit} />
 
       {/* Als laatste kind: de eerste-keer-uitleg legt zich over het hele scherm. Op slot
           (en zolang het oordeel laadt) valt er niets uit te leggen — dan monteren we 'm

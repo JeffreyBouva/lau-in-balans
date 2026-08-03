@@ -11,9 +11,17 @@ import { colors, radii, fontFamily } from '@/theme/tokens';
  * kaarten op één scherm zouden anders elk hun eigen sheet meeslepen, en de sheet moet het
  * omklappen naar coached overleven om z'n sluit-animatie te kunnen afmaken. Na een
  * geslaagde verzilvering hoeft deze kaart zelf niets: het scherm rendert z'n open versie.
+ *
+ * `onAanvraag` is de tweede weg (feedback § 3): wie géén code heeft, kan er een aanvragen.
+ * Bewust een rustige tekstlink onder de pil — wie wél een code heeft, moet die als eerste
+ * zien.
  */
-export function SlotKaart({ titel, uitleg, onCode, variant = 'kaart' }: {
-  titel: string; uitleg: string; onCode: () => void; variant?: 'kaart' | 'scherm';
+export function SlotKaart({ titel, uitleg, onCode, onAanvraag, variant = 'kaart' }: {
+  titel: string;
+  uitleg: string;
+  onCode: () => void;
+  onAanvraag?: () => void;
+  variant?: 'kaart' | 'scherm';
 }) {
   return (
     <View style={variant === 'scherm' ? s.scherm : s.kaart}>
@@ -31,6 +39,16 @@ export function SlotKaart({ titel, uitleg, onCode, variant = 'kaart' }: {
       >
         <Text style={s.knopTekst}>Ik heb een code</Text>
       </Pressable>
+      {onAanvraag && (
+        <Pressable
+          accessibilityRole="button"
+          hitSlop={6}
+          style={({ pressed }) => [s.aanvraag, pressed && { opacity: 0.6 }]}
+          onPress={onAanvraag}
+        >
+          <Text style={s.aanvraagTekst}>Nog geen code? Vraag er een aan</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -47,4 +65,7 @@ const s = StyleSheet.create({
   knop: { marginTop: 12, paddingVertical: 10, paddingHorizontal: 18, borderRadius: radii.pill,
     borderWidth: 1, borderColor: colors.sage, backgroundColor: colors.sageSoft },
   knopTekst: { fontFamily: fontFamily.sansMedium, fontSize: 13, color: colors.sageDeep },
+  aanvraag: { marginTop: 10, paddingVertical: 4 },
+  aanvraagTekst: { fontFamily: fontFamily.sans, fontSize: 13, lineHeight: 20, color: colors.bodySoft,
+    textDecorationLine: 'underline' },
 });
