@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ontbreektNog } from '@/lib/migratie';
 import { supabase } from '@/lib/supabase';
 
 export type InviteCode = {
@@ -20,23 +21,6 @@ type Rij = Omit<InviteCode, 'klantNaam'>;
 const LAADFOUT = 'De invite-codes laden lukte niet — probeer opnieuw.';
 const MAAKFOUT = 'Een nieuwe code maken lukte niet — probeer het opnieuw.';
 const TREKFOUT = 'Deze code intrekken lukte niet — mogelijk is hij net gebruikt.';
-
-/**
- * Herkent "dit object bestaat nog niet" — dan is de fase5-migratie nog niet gepusht.
- * PGRST202 = functie niet in de schema-cache · 42883 = undefined_function ·
- * 42P01 = undefined_table · 42501 = geen execute-recht (de grant hoort bij dezelfde
- * migratie). Een ingelogde coach kan die codes na de push niet meer krijgen.
- *
- * LET OP: een ontbrekende SELECT-policy geeft géén fout maar 0 rijen — de lijst oogt
- * dan gewoon leeg. Pas de "Nieuwe code"-knop legt het verschil bloot; daarom zet die
- * de vlag ook, en niet alleen de laadbeurt.
- */
-function ontbreektNog(error: { code?: string; message?: string } | null): boolean {
-  if (!error) return false;
-  if (['PGRST202', '42883', '42P01', '42501'].includes(error.code ?? '')) return true;
-  const m = (error.message ?? '').toLowerCase();
-  return m.includes('schema cache'); // bewust smal: 'does not exist' matcht ook onverwante schemafouten
-}
 
 /**
  * Eigen invite-codes, nieuwste eerst. Een coach_id-filter is overbodig: de policy
